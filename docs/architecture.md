@@ -2,7 +2,9 @@
 
 A ground-up rebuild of [VDB](https://github.com/smeea/vdb) (React 19 + Flask + SQLAlchemy)
 as an offline-first, WebAssembly-powered app with SQLite as the single storage technology
-and MCP as the primary machine API.
+and MCP as the primary machine API. **Scope: the V5 format only** — the card pool is the
+VEKN V5-legal list, filtered at data-pipeline time (see docs/data.md); all filter
+options and archives derive from that pool.
 
 ## Guiding decisions (see docs/adr/ for full records)
 

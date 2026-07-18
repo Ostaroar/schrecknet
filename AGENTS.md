@@ -17,6 +17,13 @@ This file is the canonical, tool-agnostic instruction set for any AI coding agen
   offline-first
 - **Docker** image built by GitHub Actions → GHCR
 
+**Scope: V5 only.** The site hosts exclusively the V5 format of VTES: the card
+pool is the VEKN V5-legal list (Fifth Edition-era products). The data pipeline
+filters to that pool; legality checking implements V5 rules (plus custom limited
+formats *within* the V5 pool); filter options (clans, sects, titles, disciplines,
+sets, precons) are derived from the pool at build time, never hardcoded from the
+full VTES universe. TWD/TDA ingestion keeps only decks that are V5-legal.
+
 **Prime directive: feature parity.** The rebuild must not lose a single vdb feature.
 `docs/feature-parity.md` is the authoritative checklist — when you implement something,
 check it off there in the same PR. When behavior is ambiguous, verify against the live

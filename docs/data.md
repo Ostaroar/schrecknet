@@ -13,6 +13,11 @@
 A small Rust (or Python, TBD in implementation) tool that:
 
 1. Downloads pinned-version source files (checksums recorded in `data/lock.json`)
+1a. **Filters to the V5-legal pool** — the VEKN V5 format card list (KRCG carries
+    per-card legality/set data). Cards outside the pool are dropped entirely, which
+    also shrinks `cards.sqlite`. Filter option lists (clans, sects, titles,
+    disciplines, groups, sets, precons, artists) are emitted from the surviving
+    pool, never hardcoded. TWD/TDA decks that aren't fully V5-legal are excluded.
 2. Normalizes into the SQLite schema below
 3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group,
    every TWD deck resolves to known cards, …)

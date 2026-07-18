@@ -16,8 +16,13 @@ what you need to implement the app correctly — consult KRCG rulings for edge c
   Combat, Equipment, Event, Political Action, Power, Reaction, Retainer, Conviction.
   Many require a discipline, clan, sect, title, or minimum capacity to play; some cost
   blood or pool. "Burn Option" cards may be discarded for a redraw.
-- **Banned** cards exist (tracked per date); formats: standard, **V5** (Fifth Edition
-  legal subset), **2-Players**, and custom *limited* formats (allowed sets/cards).
+- **Banned** cards exist (tracked per date). VTES at large has several formats
+  (standard, V5, 2-Players, custom limited) — **this site hosts only V5**: the
+  VEKN-defined pool of Fifth Edition-era products (core box, clan expansions like
+  the Sabbat box, New Blood / precon lines). Practical consequences: mostly
+  groups 6–7 crypt (plus V5 reprints), a reduced clan/sect/title roster, and far
+  fewer sets — always derive option lists from the pool, don't enumerate the
+  full VTES universe. Custom limited formats remain possible *within* the pool.
 
 ## Common jargon (used in filters/tags)
 - **TWD** — Tournament Winning Deck; **TWDA** — their archive. **TDA** — Tournament

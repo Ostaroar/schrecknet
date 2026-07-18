@@ -15,7 +15,7 @@ Transport: **Streamable HTTP** (current MCP spec revision) at `/mcp`, plus **std
 | `get_card` | Card by id/name → text, sets, printings, artists, rulings, translations, TWD stats |
 | `list_decks` / `get_deck` | Authenticated user's decks (or public deck by share id) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |
-| `validate_deck` | Legality report for standard / V5 / 2-Players / custom limited formats |
+| `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |
 | `import_deck` / `export_deck` | Formats: VDB URL, plain text, Lackey, JOL, TWD, XLSX |
 | `diff_decks` | Structured diff of two decks/revisions |
 | `draw_hand` | Draw simulator: opening crypt/library hands with seeded RNG |

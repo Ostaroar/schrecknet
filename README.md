@@ -2,7 +2,12 @@
 
 A ground-up rebuild of [VDB](https://github.com/smeea/vdb) — card search, deck
 building, inventory management and tournament-deck archives for
-**Vampire: The Eternal Struggle (VTES)** — with a modern engine:
+**Vampire: The Eternal Struggle (VTES)** — with a modern engine.
+
+**Scope: this site hosts the V5 format exclusively.** The card pool is the
+VEKN-defined V5-legal list (Fifth Edition-era products); deck legality, search
+filters, archives and precons all derive from that pool. Every VDB *capability*
+is preserved (see the parity checklist) — applied to the V5 pool.
 
 - ⚡ **WebAssembly core** — one Rust crate for deck logic, running in the browser
   (WASM) and on the server (native). Search, deck building, draw simulation, diffs

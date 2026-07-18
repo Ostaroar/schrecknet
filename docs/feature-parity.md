@@ -4,6 +4,14 @@ Source of truth for "no missing features". Compiled from a live survey of https:
 (2026-07-18) and the `smeea/vdb` source tree (`frontend/src/pages/`). Every item must be
 checked off (or explicitly descoped with a note) before v1.0.
 
+**V5 scope (2026-07-18):** the site hosts only the V5 format. Read every item below
+against the V5 card pool: filter *capabilities* are kept 1:1, but their option lists
+(clans, sects, titles, disciplines, groups, sets, precons, artists) are derived from
+the V5-legal pool at build time — options with zero matching cards don't render.
+Legality = V5 rules (+ custom limited formats within the pool); "standard 60–90"
+checks are replaced by V5 deck-construction rules. TWD/TDA/PDA hold only V5-legal
+decks.
+
 Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during implementation
 
 ## Navigation / Shell
@@ -68,8 +76,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Crypt & library sections with quantity steppers, grouped by card type
 - ☐ Deck stats: crypt count + avg/min/max capacity, group legality, library count,
       type distribution, discipline distribution, cost curves (blood/pool)
-- ☐ Format legality checks: standard (60–90 library, 12+ crypt), V5, 2-Players,
-      Custom limited formats ✎ (limited format editor: allowed sets/cards)
+- ☐ Format legality checks: V5 (site default — the only base format), plus custom
+      limited formats within the V5 pool ✎ (limited format editor: allowed sets/cards);
+      2-Players variant within V5 ✎ (keep only if the V5 pool supports it)
 - ☐ Deck tags (auto-derived archetype tags + user tags) ✎
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☐ Clone / copy deck
@@ -88,6 +97,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
 
 ## Tournament Winning Decks (`/twd`)
+*(V5 scope: the archive ingests only V5-legal decks — filtered by event format tag
+where available, else by validating the deck list against the V5 pool ✎)*
 - ☐ TWD search: year range, players range, contains crypt card(s) (+ "with star"),
       contains library card(s), library size buckets (60–67/68–75/76–83/84–90),
       clan/path (+ mono-clan), sect, capacity average buckets (1-4/4-6/6-8/8-11),

@@ -7,7 +7,8 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
 - Monorepo scaffolding: `core/` (Rust, wasm-pack), `server/` (axum), `frontend/`
   (Vite + React 19 + TS + Tailwind 4), `data/` pipeline skeleton
 - CI: lint + test + build; Docker workflow → GHCR; card-data workflow
-- `cards.sqlite` v1 built from KRCG/VEKN; loads in browser via SQLite WASM + OPFS
+- `cards.sqlite` v1 built from KRCG/VEKN, **filtered to the V5-legal pool**;
+  loads in browser via SQLite WASM + OPFS
 
 ## Phase 1 — Card search (offline-first)
 - Crypt + Library search with **all** filters; results list + card detail page
@@ -16,7 +17,7 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
 - MCP: `search_crypt`, `search_library`, `get_card` + REST mirrors
 
 ## Phase 2 — Deck builder
-- Local (anonymous) decks in OPFS; full editor with stats, legality, tags
+- Local (anonymous) decks in OPFS; full editor with stats, V5 legality, tags
 - Import/export all formats; deck-in-URL sharing; clone; diff; draw simulator
 - Proxy PDF generation; precon browser; table seating tool
 - MCP: deck tools (`create_deck` … `draw_hand`)
