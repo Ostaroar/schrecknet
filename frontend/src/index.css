@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* SchreckNet design tokens — docs/design.md is the source of truth. */
+@theme {
+  --color-ground: #120c0f;
+  --color-surface: #1a1215;
+  --color-raised: #241a1f;
+  --color-line: #332630;
+  --color-line-soft: #2c2127;
+  --color-ink: #ece4e6;
+  --color-ink-muted: #a08f95;
+  --color-ink-dim: #6e5f65;
+  --color-blood: #b32e40;
+  --color-blood-hi: #d04b58;
+  --color-gold: #c9a15a;
+  --color-ok: #6fae84;
+  --font-display: Palatino, "Palatino Linotype", Georgia, serif;
+}
+
+body {
+  background-color: var(--color-ground);
+  color: var(--color-ink);
+}

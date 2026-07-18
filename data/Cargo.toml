@@ -1,0 +1,10 @@
+[package]
+name = "schrecknet-data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SchreckNet card-data pipeline: KRCG/VEKN sources -> V5-filtered cards.sqlite"
+
+[dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = { workspace = true }

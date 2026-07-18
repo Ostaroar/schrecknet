@@ -72,26 +72,30 @@ marked ✎ specifically need that verification.
 - i18n: all UI strings through the i18n layer from day one; card-text translations
   come from the data pipeline, not the UI bundle.
 
-## Commands (once scaffolding lands — keep this section updated!)
+## Commands (keep this section updated!)
 
 ```bash
+# rust workspace (core + server + data)
+cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+
+# core to wasm (bindings pkg for the frontend arrives in Phase 1)
+cargo build -p schrecknet-core --target wasm32-unknown-unknown
+wasm-pack build core --target web
+
+# server (serves frontend/dist + /healthz + /api/v1/meta on :8000)
+cargo run -p schrecknet-server
+# env: SCHRECKNET_BIND, SCHRECKNET_STATIC_DIR, SCHRECKNET_CARDS_DB, SCHRECKNET_APP_DB
+
+# data pipeline -> dist/cards.sqlite + cards.meta.json
+cargo run -p schrecknet-data -- build --out dist
+
 # frontend
-cd frontend && npm i && npm run dev        # Vite dev server
-npm run build && npm run test
-
-# core (wasm)
-cd core && wasm-pack build --target web    # emits frontend/src/wasm/
-cargo test
-
-# server
-cd server && cargo run                     # serves frontend dist + API + MCP on :8000
-# MCP stdio mode: cargo run -- --mcp-stdio
-
-# data pipeline
-cd data && cargo run -- build              # → dist/cards.sqlite + cards.meta.json
+cd frontend && npm install && npm run dev   # Vite dev server, proxies /api to :8000
+npm run build                               # tsc --noEmit && vite build
 
 # full container
-docker build -t vtesonsteroids . && docker run -p 8000:8000 vtesonsteroids
+docker build -t schrecknet . && docker run -p 8000:8000 schrecknet
 ```
 
 ## Definition of done for any PR

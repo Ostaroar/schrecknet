@@ -1,0 +1,15 @@
+[package]
+name = "schrecknet-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SchreckNet domain core: deck logic for VTES V5, compiled to WASM and native"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
