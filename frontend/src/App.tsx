@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import CryptSearch from './components/CryptSearch'
 import LibrarySearch from './components/LibrarySearch'
+import CardPage from './components/CardPage'
+import CommandPalette from './components/CommandPalette'
 import { getCardsMeta, type CardMeta } from './lib/db'
-
-type Tab = 'crypt' | 'library'
+import { useHashRoute, navigate } from './lib/route'
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
-  const [tab, setTab] = useState<Tab>('crypt')
+  const route = useHashRoute()
 
   useEffect(() => {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
@@ -20,27 +21,42 @@ export default function App() {
           S
         </span>
         <span className="font-display text-xl tracking-wide">SchreckNet</span>
+        <kbd className="hidden rounded-md border border-line px-2 py-0.5 font-mono text-[10px] text-ink-dim sm:block">
+          ⌘K
+        </kbd>
         <span className="ml-auto rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted">
           {meta ? `${meta.crypt} crypt · ${meta.library} library` : 'V5 only'}
         </span>
       </header>
 
-      <nav className="mb-4 flex gap-1">
-        {(['crypt', 'library'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={
-              'rounded-lg px-3 py-1.5 font-display text-sm capitalize ' +
-              (tab === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
-            }
-          >
-            {t} search
-          </button>
-        ))}
-      </nav>
+      {route.page !== 'card' && (
+        <nav className="mb-4 flex gap-1">
+          {(['crypt', 'library'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => navigate({ page: t })}
+              className={
+                'rounded-lg px-3 py-1.5 font-display text-sm capitalize ' +
+                (route.page === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
+              }
+            >
+              {t} search
+            </button>
+          ))}
+        </nav>
+      )}
 
-      <main className="flex-1 pb-10">{tab === 'crypt' ? <CryptSearch /> : <LibrarySearch />}</main>
+      <main className="flex-1 pb-10">
+        {route.page === 'card' ? (
+          <CardPage id={route.id} />
+        ) : route.page === 'library' ? (
+          <LibrarySearch />
+        ) : (
+          <CryptSearch />
+        )}
+      </main>
+
+      <CommandPalette />
 
       <footer className="py-6 text-center text-xs text-ink-dim">
         Portions of the materials are the copyrights and trademarks of Paradox

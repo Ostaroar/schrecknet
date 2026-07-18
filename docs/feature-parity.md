@@ -16,7 +16,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 
 ## Navigation / Shell
 - ☐ Top navigation: Account/Login, About, PDA, TDA, TWD, Inventory, Decks, Crypt, Library
-- ☐ Quick card search by name (global, keyboard-accessible — rebuild as ⌘K command palette)
+- ☑ Quick card search by name — ⌘K/Ctrl+K command palette, prefix-ranked,
+      across both kinds, keyboard-driven (↑↓/Enter/Esc), jumps to the card page
 - ☐ Language switcher for card texts (EN/ES/FR/PT-BR) ✎
 - ☐ Responsive mobile layout + installable PWA (offline card search)
 - ☐ Changelog page
@@ -76,19 +77,17 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Set / Precon / Artist filters (same as crypt)
 
 ## Card Detail (`/cards/:id`)
-- ☑ Full card text — MVP live as an inline expand panel on search results
-      (frontend/src/components/CardDetailPanel.tsx), not yet a dedicated
-      routed page/deep link
+- ☑ Full card text — inline expand panel on search results AND a routed page
+      (frontend/src/components/CardPage.tsx) with full translations shown
 - ☐ Card image (incl. legacy/alternate printings) with set-specific scans ✎
 - ☐ Icon inline rendering within card text (disciplines, clans, costs)
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text live; ☐ links to source not rendered yet
 - ☑ Artist credit(s) — live
 - ☐ TWD appearances / usage statistics ✎
-- ☑ Card text translations — presence (language list) shown; ☐ full translated
-      text not yet displayed
-- ☐ Shareable deep link per card (needs a router — not added yet, see ADR
-      follow-up notes in docs/roadmap.md)
+- ☑ Card text translations — full translated name + text on the card page
+- ☑ Shareable deep link per card — `#/cards/{id}` hash routes (tiny hand-rolled
+      router in frontend/src/lib/route.ts; no router dep, per AGENTS.md rule 7)
 
 ## Deck Building (`/decks`)
 - ☐ Create / rename / delete decks; deck name, author, description

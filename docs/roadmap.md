@@ -28,7 +28,10 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
 - ☐ Remaining crypt filters (sect, title, votes, traits, set/precon/artist,
   per-discipline level mixing, OR-groups) + remaining library filters
   (discipline, costs, traits) + routed card detail page
-- ☐ Quick-search command palette (⌘K); card images; sets/printings UI; rulings UI
+- ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
+  card page with shareable `#/cards/{id}` deep links, full translations,
+  printings + rulings UI; hash router hand-rolled to avoid a router dep
+- ☐ Card images; rulings source links
 - ☐ PWA install + true offline (swap sql.js → official SQLite WASM + OPFS per
   docs/adr/0004's follow-up)
 - ☐ i18n UI using the `translations` table already populated by the pipeline

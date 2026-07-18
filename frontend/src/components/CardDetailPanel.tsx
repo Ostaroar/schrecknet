@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCard, type CardDetail } from '../lib/cardDetail'
+import { routeTo } from '../lib/route'
 
 export default function CardDetailPanel({ id }: { id: number }) {
   const [card, setCard] = useState<CardDetail | null>(null)
@@ -51,6 +52,10 @@ export default function CardDetailPanel({ id }: { id: number }) {
           Translated: {card.translations.map((t) => t.lang.toUpperCase()).join(', ')}
         </span>
       )}
+
+      <a href={routeTo({ page: 'card', id: card.id })} className="justify-self-start text-xs text-blood-hi hover:underline">
+        Full page & share link →
+      </a>
     </div>
   )
 }
