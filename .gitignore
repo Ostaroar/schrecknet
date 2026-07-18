@@ -8,3 +8,4 @@ target/
 .DS_Store
 frontend/src/wasm/
 data/cache/
+.cache/

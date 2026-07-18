@@ -11,10 +11,19 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
   loads in browser via SQLite WASM + OPFS
 
 ## Phase 1 — Card search (offline-first)
-- Crypt + Library search with **all** filters; results list + card detail page
-- Quick-search command palette (⌘K); card images; rulings; sets/printings
-- PWA install + offline; i18n scaffolding for card translations
-- MCP: `search_crypt`, `search_library`, `get_card` + REST mirrors
+- ☑ Real `cards.sqlite`: `schrecknet-data` fetches KRCG's live export, filters to
+  the V5 pool (662 cards: 218 crypt / 444 library, groups 5–7), populates cards,
+  disciplines (superior/inferior), printings, sets, artists, rulings,
+  translations, and an FTS5 index — verified end-to-end with `sqlite3` queries
+- ☐ Crypt + Library search with **all** filters; results list + card detail page
+- ☐ Quick-search command palette (⌘K); card images; sets/printings UI; rulings UI
+- ☐ PWA install + offline; SQLite WASM + OPFS in the browser (pipeline output
+  ready; browser-side loading is the remaining piece)
+- ☐ i18n UI using the `translations` table already populated by the pipeline
+- ☐ MCP: `search_crypt`, `search_library`, `get_card` + REST mirrors
+- ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
+  clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
+  comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL
 
 ## Phase 2 — Deck builder
 - Local (anonymous) decks in OPFS; full editor with stats, V5 legality, tags

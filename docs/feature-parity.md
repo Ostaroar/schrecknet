@@ -33,6 +33,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Votes filter (numeric)
 - ☐ Title filter: Primogen, Prince, Justicar, Inner Circle, Baron, 1 vote, 2 votes,
       Bishop, Archbishop, Priscus, Cardinal, Regent, Magaji, Non-titled
+      (data present: `cards.title`; V5 pool titles seen so far: Primogen, Prince,
+      Justicar, Bishop, Archbishop, Priscus, Cardinal — Baron/Inner Circle/Regent/
+      Magaji not yet in the V5 pool ✎ recheck as new sets ship)
 - ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
       Maneuver, Additional Strike, Aggravated, Prevent, Press, Enter combat, Unlock,
       Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement,
@@ -134,8 +137,11 @@ where available, else by validating the deck list against the V5 pool ✎)*
       report forms ✎ (behind role flag)
 
 ## Non-functional parity
-- ☐ Card data pipeline from VEKN official card list / KRCG static files, with
-      update script (original updates via `misc/` scripts)
+- ☑ Card data pipeline from VEKN official card list / KRCG static files, with
+      update script (original updates via `misc/` scripts) — `schrecknet-data build`
+      fetches KRCG's `vtes.json`, filters to the V5 pool (`data/src/v5pool.rs`),
+      populates cards/disciplines/printings/artists/rulings/translations/FTS.
+      ✎ still missing: VEKN official list cross-check, incremental/diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)
 - ☐ Keyboard-first UX on desktop, touch-first on mobile
 - ☐ Dark Pack legal notice on every page footer ✎

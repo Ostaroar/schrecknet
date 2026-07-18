@@ -88,6 +88,8 @@ cargo run -p schrecknet-server
 # env: SCHRECKNET_BIND, SCHRECKNET_STATIC_DIR, SCHRECKNET_CARDS_DB, SCHRECKNET_APP_DB
 
 # data pipeline -> dist/cards.sqlite + cards.meta.json
+# fetches https://static.krcg.org/data/vtes.json (needs network); cached 24h
+# under data/.cache/ (gitignored) via SCHRECKNET_DATA_CACHE
 cargo run -p schrecknet-data -- build --out dist
 
 # frontend
