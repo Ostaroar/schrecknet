@@ -19,17 +19,22 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
   group filter, capacity-sorted results, superior/inferior discipline badges —
   server serves `cards.sqlite` at `/data/`, frontend loads it via sql.js
   (docs/adr/0004) and queries it client-side after the initial fetch
+- ☑ Library search MVP, verified live in-browser + REST + MCP: text/name search,
+  type filter (exact-token, pool-derived options), clan requirement filter,
+  discipline + blood/pool cost display
 - ☐ Remaining crypt filters (sect, title, capacity range, votes, traits,
-  set/precon/artist) + Library search + card detail page
+  set/precon/artist) + remaining library filters (discipline, costs, traits) +
+  card detail page
 - ☐ Quick-search command palette (⌘K); card images; sets/printings UI; rulings UI
 - ☐ PWA install + true offline (swap sql.js → official SQLite WASM + OPFS per
   docs/adr/0004's follow-up)
 - ☐ i18n UI using the `translations` table already populated by the pipeline
-- ☑ MCP `search_crypt` tool live (rmcp, Streamable HTTP at `/mcp`), verified with
-  a real client handshake (initialize → tools/list → tools/call) returning
-  correct V5 data; `/api/v1/crypt/search` REST mirror calls the identical
-  `server/src/cards_db.rs` service function (AGENTS.md hard rule #2)
-- ☐ `search_library`, `get_card` + their REST mirrors; MCP resources (`card://`, `db://cards/meta`)
+- ☑ MCP `search_crypt` + `search_library` tools live (rmcp, Streamable HTTP at
+  `/mcp`), verified with a real client handshake (initialize → tools/list →
+  tools/call) returning correct V5 data; `/api/v1/crypt/search` and
+  `/api/v1/library/search` REST mirrors call the identical
+  `server/src/cards_db.rs` service functions (AGENTS.md hard rule #2)
+- ☐ `get_card` + REST mirror; MCP resources (`card://`, `db://cards/meta`)
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
   comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL

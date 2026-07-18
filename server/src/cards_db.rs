@@ -39,6 +39,32 @@ pub struct CryptCard {
     pub disciplines: Vec<Discipline>,
 }
 
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
+pub struct LibrarySearchParams {
+    /// Substring match against card name or card text.
+    #[serde(default)]
+    pub text: String,
+    /// Exact card type, e.g. "Master", "Action", "Combat" (matches cards with
+    /// this type among possibly several — see `types` on the result).
+    #[serde(default)]
+    pub card_type: Option<String>,
+    /// Clan/path requirement (substring match, e.g. "Tremere"). Most library
+    /// cards have no clan requirement.
+    #[serde(default)]
+    pub clan: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LibraryCard {
+    pub id: i64,
+    pub name: String,
+    pub types: Vec<String>,
+    pub clan: Option<String>,
+    pub blood_cost: Option<String>,
+    pub pool_cost: Option<String>,
+    pub disciplines: Vec<String>,
+}
+
 pub fn open(data_dir: &str) -> rusqlite::Result<Connection> {
     Connection::open(format!("{data_dir}/cards.sqlite"))
 }
@@ -80,6 +106,48 @@ pub fn search_crypt(
     rows.collect()
 }
 
+pub fn search_library(
+    conn: &Connection,
+    params: &LibrarySearchParams,
+) -> rusqlite::Result<Vec<LibraryCard>> {
+    let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
+    let mut stmt = conn.prepare(
+        "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
+                GROUP_CONCAT(cd.discipline) AS disc
+         FROM cards c
+         LEFT JOIN card_disciplines cd ON cd.card_id = c.id
+         WHERE c.kind = 'library'
+           AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
+           AND (?2 IS NULL OR c.types LIKE ?2)
+           AND (?3 IS NULL OR c.clan LIKE '%' || ?3 || '%')
+         GROUP BY c.id
+         ORDER BY c.name ASC
+         LIMIT 200",
+    )?;
+
+    let rows = stmt.query_map(
+        rusqlite::params![params.text.trim(), type_pattern, params.clan],
+        |row| {
+            let types_json: String = row.get(2)?;
+            let disc: Option<String> = row.get(6)?;
+            let clan: Option<String> = row.get(3)?;
+            Ok(LibraryCard {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                types: serde_json::from_str(&types_json).unwrap_or_default(),
+                clan: clan.filter(|c| !c.is_empty()),
+                blood_cost: row.get(4)?,
+                pool_cost: row.get(5)?,
+                disciplines: disc
+                    .map(|d| d.split(',').map(str::to_string).collect())
+                    .unwrap_or_default(),
+            })
+        },
+    )?;
+
+    rows.collect()
+}
+
 fn parse_disciplines(disc: Option<String>) -> Vec<Discipline> {
     let Some(disc) = disc else { return Vec::new() };
     let mut list: Vec<Discipline> = disc
@@ -104,13 +172,16 @@ mod tests {
     fn seed(conn: &Connection) {
         conn.execute_batch(
             "CREATE TABLE cards(id INT, kind TEXT, name TEXT, name_ascii TEXT, card_text TEXT,
-               clan TEXT, capacity INT, grp INT, title TEXT);
+               clan TEXT, capacity INT, grp INT, title TEXT,
+               types TEXT, blood_cost TEXT, pool_cost TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              INSERT INTO cards VALUES
-               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal'),
-               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL),
-               (3,'library','Villein','villein','','',NULL,NULL,NULL);
-             INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1);",
+               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL),
+               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL),
+               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2'),
+               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL),
+               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2');
+             INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);",
         )
         .unwrap();
     }
@@ -162,5 +233,56 @@ mod tests {
         assert!(aaradhya.disciplines[0].superior);
         assert_eq!(aaradhya.disciplines[1].code, "for");
         assert!(!aaradhya.disciplines[1].superior);
+    }
+
+    #[test]
+    fn library_search_filters_to_library_only_and_sorts_by_name() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let results = search_library(&conn, &LibrarySearchParams::default()).unwrap();
+        assert_eq!(
+            results.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            vec!["Absolute Tyranny", "Arcane Library", "Villein"]
+        );
+    }
+
+    #[test]
+    fn library_type_filter_matches_exact_type_not_substring() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // "Master" must not spuriously match a type array that doesn't contain it.
+        let params = LibrarySearchParams {
+            card_type: Some("Master".into()),
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(
+            results.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            vec!["Arcane Library", "Villein"]
+        );
+    }
+
+    #[test]
+    fn library_clan_requirement_filter() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = LibrarySearchParams {
+            clan: Some("Tremere".into()),
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Arcane Library");
+    }
+
+    #[test]
+    fn library_cards_with_no_clan_requirement_report_none() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let results = search_library(&conn, &LibrarySearchParams::default()).unwrap();
+        let villein = results.iter().find(|c| c.name == "Villein").unwrap();
+        assert_eq!(villein.clan, None);
+        assert_eq!(villein.types, vec!["Master"]);
+        assert_eq!(villein.pool_cost, Some("2".to_string()));
     }
 }

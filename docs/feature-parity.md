@@ -53,11 +53,16 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       deck is active ("Show Deck" split view)
 
 ## Library Card Search (`/library`)
-- ☐ Name / text / regex search (same modes as crypt)
-- ☐ Type filter (Master, Action, Action Modifier, Ally, Combat, Equipment, Event,
-      Political Action, Power, Reaction, Retainer, Conviction, multi-type combos)
-- ☐ Discipline filter (incl. multi-discipline)
-- ☐ Clan / Path requirement filter
+- ☑ Name / text search — MVP live (frontend/src/components/LibrarySearch.tsx);
+      ☐ still missing "Only in Name"/"Only in Text" mode toggle and Regex mode
+- ☑ Type filter — MVP live, options derived from the V5 pool at query time
+      (9 types present: Action, Action Modifier, Ally, Combat, Equipment,
+      Master, Political Action, Reaction, Retainer — Event/Power/Conviction
+      not yet in the V5 pool ✎ recheck as new sets ship); exact-token matching
+      verified (querying "Master" does not spuriously match "Action Modifier")
+- ☐ Discipline filter (incl. multi-discipline) — discipline data already
+      queried/displayed on results, filter control not built yet
+- ☑ Clan / Path requirement filter — MVP live
 - ☐ Sect requirement filter
 - ☐ Title requirement filter
 - ☐ Blood cost / Pool cost filters (`<=`, `>=`, `=`)

@@ -5,22 +5,37 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Json};
 
-use crate::cards_db::{self, CryptSearchParams};
+use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::AppState;
 
 pub async fn search_crypt(
     State(state): State<AppState>,
     Query(params): Query<CryptSearchParams>,
 ) -> impl IntoResponse {
+    run(state, move |conn| cards_db::search_crypt(conn, &params)).await
+}
+
+pub async fn search_library(
+    State(state): State<AppState>,
+    Query(params): Query<LibrarySearchParams>,
+) -> impl IntoResponse {
+    run(state, move |conn| cards_db::search_library(conn, &params)).await
+}
+
+async fn run<T, F>(state: AppState, f: F) -> axum::response::Response
+where
+    T: serde::Serialize + Send + 'static,
+    F: FnOnce(&rusqlite::Connection) -> rusqlite::Result<T> + Send + 'static,
+{
     let data_dir = state.data_dir.clone();
-    let result = tokio::task::spawn_blocking(move || -> rusqlite::Result<_> {
+    let result = tokio::task::spawn_blocking(move || -> rusqlite::Result<T> {
         let conn = cards_db::open(&data_dir)?;
-        cards_db::search_crypt(&conn, &params)
+        f(&conn)
     })
     .await;
 
     match result {
-        Ok(Ok(cards)) => Json(cards).into_response(),
+        Ok(Ok(value)) => Json(value).into_response(),
         Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }

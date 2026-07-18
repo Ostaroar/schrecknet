@@ -8,7 +8,7 @@ use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{ServerCapabilities, ServerInfo};
 use rmcp::{tool, tool_handler, tool_router, ServerHandler};
 
-use crate::cards_db::{self, CryptSearchParams};
+use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 
 #[derive(Clone)]
 pub struct SchreckNetMcp {
@@ -36,16 +36,37 @@ impl SchreckNetMcp {
         &self,
         Parameters(params): Parameters<CryptSearchParams>,
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
-        let conn = cards_db::open(&self.data_dir)
-            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
-        let results = cards_db::search_crypt(&conn, &params)
-            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
-        let json = serde_json::to_string(&results)
-            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
-        Ok(rmcp::model::CallToolResult::success(vec![
-            rmcp::model::ContentBlock::text(json),
-        ]))
+        let conn = self.open()?;
+        json_result(cards_db::search_crypt(&conn, &params))
     }
+
+    #[tool(
+        description = "Search VTES V5 library cards by name/text, card type (e.g. Master, \
+        Action, Combat), and clan/path requirement. Returns cards sorted by name."
+    )]
+    async fn search_library(
+        &self,
+        Parameters(params): Parameters<LibrarySearchParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(cards_db::search_library(&conn, &params))
+    }
+
+    fn open(&self) -> Result<rusqlite::Connection, rmcp::ErrorData> {
+        cards_db::open(&self.data_dir)
+            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))
+    }
+}
+
+fn json_result<T: serde::Serialize>(
+    result: rusqlite::Result<T>,
+) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+    let value = result.map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+    let json = serde_json::to_string(&value)
+        .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+    Ok(rmcp::model::CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(json),
+    ]))
 }
 
 #[tool_handler]

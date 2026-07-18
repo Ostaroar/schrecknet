@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import CryptSearch from './components/CryptSearch'
+import LibrarySearch from './components/LibrarySearch'
 import { getCardsMeta, type CardMeta } from './lib/db'
+
+type Tab = 'crypt' | 'library'
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
+  const [tab, setTab] = useState<Tab>('crypt')
 
   useEffect(() => {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
@@ -21,10 +25,22 @@ export default function App() {
         </span>
       </header>
 
-      <main className="flex-1 pb-10">
-        <h1 className="mb-4 font-display text-2xl">Crypt search</h1>
-        <CryptSearch />
-      </main>
+      <nav className="mb-4 flex gap-1">
+        {(['crypt', 'library'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={
+              'rounded-lg px-3 py-1.5 font-display text-sm capitalize ' +
+              (tab === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
+            }
+          >
+            {t} search
+          </button>
+        ))}
+      </nav>
+
+      <main className="flex-1 pb-10">{tab === 'crypt' ? <CryptSearch /> : <LibrarySearch />}</main>
 
       <footer className="py-6 text-center text-xs text-ink-dim">
         Portions of the materials are the copyrights and trademarks of Paradox
