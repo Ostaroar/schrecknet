@@ -3,6 +3,7 @@
 //! (AGENTS.md hard rule #2) — neither surface ships a capability alone.
 
 mod api;
+mod card_detail;
 mod cards_db;
 mod mcp;
 
@@ -43,6 +44,7 @@ async fn main() {
         .route("/api/v1/meta", get(meta))
         .route("/api/v1/crypt/search", get(api::search_crypt))
         .route("/api/v1/library/search", get(api::search_library))
+        .route("/api/v1/cards/{id}", get(api::get_card))
         .with_state(state)
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { searchCrypt, listClans, listGroups, type CryptCard } from '../lib/cryptSearch'
+import CardDetailPanel from './CardDetailPanel'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
   return (
@@ -23,6 +24,7 @@ export default function CryptSearch() {
   const [results, setResults] = useState<CryptCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
     Promise.all([listClans(), listGroups()])
@@ -102,19 +104,25 @@ export default function CryptSearch() {
           <p className="text-xs text-ink-dim">{results.length} crypt cards</p>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {results.map((c) => (
-              <div key={c.id} className="grid grid-cols-[26px_1fr_auto_auto] items-center gap-3 px-4 py-2 text-sm">
-                <span className="grid size-[22px] place-items-center rounded-full bg-blood/20 font-mono text-[11.5px] font-semibold text-blood-hi">
-                  {c.capacity}
-                </span>
-                <span className="truncate">{c.name}</span>
-                <span className="flex gap-1">
-                  {c.disciplines.map((d) => (
-                    <DisciplineBadge key={d.code} {...d} />
-                  ))}
-                </span>
-                <span className="text-right text-xs uppercase tracking-wide text-ink-muted">
-                  {c.clan} · G{c.grp}
-                </span>
+              <div key={c.id}>
+                <button
+                  onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                  className="grid w-full grid-cols-[26px_1fr_auto_auto] items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
+                >
+                  <span className="grid size-[22px] place-items-center rounded-full bg-blood/20 font-mono text-[11.5px] font-semibold text-blood-hi">
+                    {c.capacity}
+                  </span>
+                  <span className="truncate">{c.name}</span>
+                  <span className="flex gap-1">
+                    {c.disciplines.map((d) => (
+                      <DisciplineBadge key={d.code} {...d} />
+                    ))}
+                  </span>
+                  <span className="text-right text-xs uppercase tracking-wide text-ink-muted">
+                    {c.clan} · G{c.grp}
+                  </span>
+                </button>
+                {expanded === c.id && <CardDetailPanel id={c.id} />}
               </div>
             ))}
             {results.length === 0 && (

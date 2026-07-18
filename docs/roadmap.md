@@ -34,7 +34,12 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
   tools/call) returning correct V5 data; `/api/v1/crypt/search` and
   `/api/v1/library/search` REST mirrors call the identical
   `server/src/cards_db.rs` service functions (AGENTS.md hard rule #2)
-- ☐ `get_card` + REST mirror; MCP resources (`card://`, `db://cards/meta`)
+- ☑ `get_card` MCP tool + `/api/v1/cards/{id}` REST mirror + click-to-expand
+  detail panel in the browser (crypt/library field gating verified against
+  two real bugs found live: `types` leaking onto crypt cards, and library
+  cards' clan *requirement* wrongly nulled — both fixed with regression tests)
+- ☐ MCP resources (`card://`, `db://cards/meta`); a routed detail page with
+  shareable deep links (needs a router — not added yet)
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
   comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL

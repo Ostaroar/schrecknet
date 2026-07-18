@@ -75,14 +75,19 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Set / Precon / Artist filters (same as crypt)
 
 ## Card Detail (`/cards/:id`)
+- ☑ Full card text — MVP live as an inline expand panel on search results
+      (frontend/src/components/CardDetailPanel.tsx), not yet a dedicated
+      routed page/deep link
 - ☐ Card image (incl. legacy/alternate printings) with set-specific scans ✎
-- ☐ Full card text with icon inline rendering (disciplines, clans, costs)
-- ☐ Sets & printings list (incl. precons)
-- ☐ Rulings (KRCG rulings database) with links
-- ☐ Artist credit(s)
+- ☐ Icon inline rendering within card text (disciplines, clans, costs)
+- ☑ Sets & printings list (incl. precons) — live
+- ☑ Rulings (KRCG rulings database) — text live; ☐ links to source not rendered yet
+- ☑ Artist credit(s) — live
 - ☐ TWD appearances / usage statistics ✎
-- ☐ Card text translations ✎
-- ☐ Shareable deep link per card
+- ☑ Card text translations — presence (language list) shown; ☐ full translated
+      text not yet displayed
+- ☐ Shareable deep link per card (needs a router — not added yet, see ADR
+      follow-up notes in docs/roadmap.md)
 
 ## Deck Building (`/decks`)
 - ☐ Create / rename / delete decks; deck name, author, description

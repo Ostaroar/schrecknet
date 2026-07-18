@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { searchLibrary, listLibraryTypes, listLibraryClans, type LibraryCard } from '../lib/librarySearch'
+import CardDetailPanel from './CardDetailPanel'
 
 function CostPill({ blood, pool }: { blood: string | null; pool: string | null }) {
   if (!blood && !pool) return null
@@ -20,6 +21,7 @@ export default function LibrarySearch() {
   const [results, setResults] = useState<LibraryCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
     Promise.all([listLibraryTypes(), listLibraryClans()])
@@ -99,23 +101,29 @@ export default function LibrarySearch() {
           <p className="text-xs text-ink-dim">{results.length} library cards</p>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {results.map((c) => (
-              <div key={c.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2 text-sm">
-                <span className="truncate">{c.name}</span>
-                <span className="flex gap-1">
-                  {c.disciplines.map((d) => (
-                    <span
-                      key={d}
-                      className="inline-grid h-[17px] min-w-[26px] place-items-center rounded border border-line px-[3px] font-mono text-[9.5px] font-bold uppercase tracking-wide text-ink-muted"
-                    >
-                      {d}
-                    </span>
-                  ))}
-                  <CostPill blood={c.blood_cost} pool={c.pool_cost} />
-                </span>
-                <span className="text-right text-xs uppercase tracking-wide text-ink-muted">
-                  {c.types.join(' / ')}
-                  {c.clan ? ` · ${c.clan}` : ''}
-                </span>
+              <div key={c.id}>
+                <button
+                  onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                  className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
+                >
+                  <span className="truncate">{c.name}</span>
+                  <span className="flex gap-1">
+                    {c.disciplines.map((d) => (
+                      <span
+                        key={d}
+                        className="inline-grid h-[17px] min-w-[26px] place-items-center rounded border border-line px-[3px] font-mono text-[9.5px] font-bold uppercase tracking-wide text-ink-muted"
+                      >
+                        {d}
+                      </span>
+                    ))}
+                    <CostPill blood={c.blood_cost} pool={c.pool_cost} />
+                  </span>
+                  <span className="text-right text-xs uppercase tracking-wide text-ink-muted">
+                    {c.types.join(' / ')}
+                    {c.clan ? ` · ${c.clan}` : ''}
+                  </span>
+                </button>
+                {expanded === c.id && <CardDetailPanel id={c.id} />}
               </div>
             ))}
             {results.length === 0 && (

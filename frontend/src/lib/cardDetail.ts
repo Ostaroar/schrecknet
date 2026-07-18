@@ -1,0 +1,111 @@
+// get_card — mirrors server/src/card_detail.rs exactly (same joins, same
+// crypt/library field gating) so all three surfaces (MCP, REST, browser)
+// return the identical shape for the same id.
+
+import { query } from './db'
+
+export interface Discipline {
+  code: string
+  superior: boolean
+}
+
+export interface Printing {
+  set: string
+  precon: string | null
+  rarity: string | null
+  first_print: boolean
+}
+
+export interface Ruling {
+  text: string
+  refs: unknown
+}
+
+export interface Translation {
+  lang: string
+  name: string | null
+  card_text: string | null
+}
+
+export interface CardDetail {
+  id: number
+  kind: 'crypt' | 'library'
+  name: string
+  card_text: string | null
+  clan: string | null
+  capacity: number | null
+  group: number | null
+  title: string | null
+  types: string[] | null
+  blood_cost: string | null
+  pool_cost: string | null
+  disciplines: Discipline[]
+  printings: Printing[]
+  artists: string[]
+  rulings: Ruling[]
+  translations: Translation[]
+}
+
+export async function getCard(id: number): Promise<CardDetail | null> {
+  const [base] = await query<{
+    kind: string
+    name: string
+    card_text: string | null
+    clan: string | null
+    capacity: number | null
+    grp: number | null
+    title: string | null
+    types: string | null
+    blood_cost: string | null
+    pool_cost: string | null
+  }>(
+    `SELECT kind, name, card_text, clan, capacity, grp, title, types, blood_cost, pool_cost
+     FROM cards WHERE id = ?1`,
+    [id],
+  )
+  if (!base) return null
+
+  const isCrypt = base.kind === 'crypt'
+  const [disciplines, printings, artists, rulings, translations] = await Promise.all([
+    query<{ discipline: string; superior: number }>(
+      `SELECT discipline, superior FROM card_disciplines WHERE card_id = ?1 ORDER BY superior DESC, discipline`,
+      [id],
+    ),
+    query<{ set_name: string; precon: string | null; rarity: string | null; first_print: number }>(
+      `SELECT s.name AS set_name, p.precon, p.rarity, p.first_print
+       FROM printings p JOIN sets s ON s.id = p.set_id
+       WHERE p.card_id = ?1 ORDER BY s.release_date`,
+      [id],
+    ),
+    query<{ name: string }>(
+      `SELECT a.name FROM card_artists ca JOIN artists a ON a.id = ca.artist_id WHERE ca.card_id = ?1`,
+      [id],
+    ),
+    query<{ text: string; refs: string }>(`SELECT text, refs FROM rulings WHERE card_id = ?1`, [id]),
+    query<Translation>(`SELECT lang, name, card_text FROM translations WHERE card_id = ?1`, [id]),
+  ])
+
+  return {
+    id,
+    kind: isCrypt ? 'crypt' : 'library',
+    name: base.name,
+    card_text: base.card_text,
+    clan: base.clan || null,
+    capacity: isCrypt ? base.capacity : null,
+    group: isCrypt ? base.grp : null,
+    title: isCrypt ? base.title : null,
+    types: isCrypt || !base.types ? null : (JSON.parse(base.types) as string[]),
+    blood_cost: isCrypt ? null : base.blood_cost,
+    pool_cost: isCrypt ? null : base.pool_cost,
+    disciplines: disciplines.map((d) => ({ code: d.discipline, superior: d.superior === 1 })),
+    printings: printings.map((p) => ({
+      set: p.set_name,
+      precon: p.precon,
+      rarity: p.rarity,
+      first_print: p.first_print === 1,
+    })),
+    artists: artists.map((a) => a.name),
+    rulings: rulings.map((r) => ({ text: r.text, refs: JSON.parse(r.refs) })),
+    translations,
+  }
+}
