@@ -25,7 +25,11 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
 - ☐ PWA install + true offline (swap sql.js → official SQLite WASM + OPFS per
   docs/adr/0004's follow-up)
 - ☐ i18n UI using the `translations` table already populated by the pipeline
-- ☐ MCP: `search_crypt`, `search_library`, `get_card` + REST mirrors
+- ☑ MCP `search_crypt` tool live (rmcp, Streamable HTTP at `/mcp`), verified with
+  a real client handshake (initialize → tools/list → tools/call) returning
+  correct V5 data; `/api/v1/crypt/search` REST mirror calls the identical
+  `server/src/cards_db.rs` service function (AGENTS.md hard rule #2)
+- ☐ `search_library`, `get_card` + their REST mirrors; MCP resources (`card://`, `db://cards/meta`)
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
   comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL

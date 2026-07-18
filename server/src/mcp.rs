@@ -1,0 +1,66 @@
+//! MCP server: the primary machine API (docs/api.md, ADR 0003). Tools call
+//! the exact same `cards_db` functions the REST mirror uses in `api.rs` —
+//! AGENTS.md hard rule #2, both or neither.
+
+use std::sync::Arc;
+
+use rmcp::handler::server::wrapper::Parameters;
+use rmcp::model::{ServerCapabilities, ServerInfo};
+use rmcp::{tool, tool_handler, tool_router, ServerHandler};
+
+use crate::cards_db::{self, CryptSearchParams};
+
+#[derive(Clone)]
+pub struct SchreckNetMcp {
+    data_dir: Arc<String>,
+    // Read by the #[tool_handler]-generated ServerHandler::call_tool/list_tools
+    // impl below, which rustc's dead_code pass doesn't trace through the macro.
+    #[allow(dead_code)]
+    tool_router: rmcp::handler::server::router::tool::ToolRouter<Self>,
+}
+
+#[tool_router]
+impl SchreckNetMcp {
+    pub fn new(data_dir: String) -> Self {
+        Self {
+            data_dir: Arc::new(data_dir),
+            tool_router: Self::tool_router(),
+        }
+    }
+
+    #[tool(
+        description = "Search VTES V5 crypt (vampire) cards by name/text, clan, and group. \
+        Returns cards sorted by capacity descending, with discipline levels (superior/inferior)."
+    )]
+    async fn search_crypt(
+        &self,
+        Parameters(params): Parameters<CryptSearchParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = cards_db::open(&self.data_dir)
+            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+        let results = cards_db::search_crypt(&conn, &params)
+            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+        let json = serde_json::to_string(&results)
+            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+        Ok(rmcp::model::CallToolResult::success(vec![
+            rmcp::model::ContentBlock::text(json),
+        ]))
+    }
+}
+
+#[tool_handler]
+impl ServerHandler for SchreckNetMcp {
+    fn get_info(&self) -> ServerInfo {
+        let mut info = ServerInfo::default();
+        info.server_info =
+            rmcp::model::Implementation::new("schrecknet", env!("CARGO_PKG_VERSION"))
+                .with_title("SchreckNet — VTES V5 card search & deck building");
+        info.capabilities = ServerCapabilities::builder().enable_tools().build();
+        info.instructions = Some(
+            "SchreckNet hosts the V5 format of VTES exclusively. search_crypt searches \
+             the V5-legal crypt pool only — there is no classic-era card data here."
+                .into(),
+        );
+        info
+    }
+}

@@ -2,15 +2,16 @@
 
 ## MCP server
 
-Transport: **Streamable HTTP** (current MCP spec revision) at `/mcp`, plus **stdio**
-(`server --mcp-stdio`) for local clients. Implemented with the official Rust MCP SDK
-(`rmcp`). Sessions are stateless-capable so the endpoint scales horizontally.
+Transport: **Streamable HTTP** (current MCP spec revision) at `/mcp` — **live**, built
+with the official Rust SDK (`rmcp` 2.x, `server/src/mcp.rs`), verified with a real
+client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** transport
+(`server --mcp-stdio`) for local clients is not yet implemented.
 
-### Tools (initial surface)
+### Tools
 
 | Tool | Description |
 | --- | --- |
-| `search_crypt` | Search crypt cards; input mirrors every UI filter (disciplines incl. superior/inferior + OR-groups, capacity, clan/path, sect, votes, titles, groups, traits, set/precon/artist, text/name/regex) |
+| `search_crypt` | **Live.** MVP filters: text/name search, clan, group (`server/src/cards_db.rs`). Remaining vdb filters (disciplines incl. superior/inferior + OR-groups, capacity range, sect, votes, titles, traits, set/precon/artist, regex mode) land incrementally — see docs/feature-parity.md |
 | `search_library` | Search library cards; full filter parity likewise |
 | `get_card` | Card by id/name → text, sets, printings, artists, rulings, translations, TWD stats |
 | `list_decks` / `get_deck` | Authenticated user's decks (or public deck by share id) |
@@ -35,12 +36,16 @@ allowed for read-only card/TWD tools.
 
 ## REST API
 
-`/api/v1/…` mirrors the MCP tools 1:1 (same handler layer). An **OpenAPI 3.1**
-document is generated from code (`utoipa`) and served at `/api/openapi.json` with
-Swagger UI at `/api/docs`. Cursor pagination, ETag caching on card data, JSON only.
+`/api/v1/…` mirrors the MCP tools 1:1, calling the same service functions.
+`GET /api/v1/crypt/search` is **live** (`server/src/api.rs`), mirroring the
+`search_crypt` MCP tool exactly. OpenAPI 3.1 generation (`utoipa`) and Swagger UI
+are not yet wired up — tracked for when the REST surface grows past one endpoint.
 
 ## Design rule
 
-Every capability ships in **both** surfaces or neither — handlers live in one service
-layer in `server/src/service/`, with MCP and REST as thin adapters. Adding a feature
-without exposing it through MCP is a review blocker (see AGENTS.md).
+Every capability ships in **both** surfaces or neither. Today that means
+`server/src/cards_db.rs` (the one service function) called identically from
+`server/src/mcp.rs` (MCP adapter) and `server/src/api.rs` (REST adapter) — this
+splits into a proper `server/src/service/` module once there's more than one
+capability to organize. Adding a feature without exposing it through MCP is a
+review blocker (see AGENTS.md).
