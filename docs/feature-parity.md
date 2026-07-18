@@ -26,11 +26,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 ## Crypt Card Search (`/crypt`)
 - ☑ Name / text search — MVP live (frontend/src/components/CryptSearch.tsx);
       ☐ still missing "Only in Name" / "Only in Text" mode toggle and Regex mode
-- ☐ Discipline filter: per-discipline icon toggle, superior/inferior levels, "+OR DIS" groups
-      (discipline data + superior/inferior rendering already correct — see
-      card_disciplines table and DisciplineBadge component; the filter UI itself
-      isn't built yet, only clan/group are)
-- ☐ Capacity filter: `<=`, `>=`, `=` with value range (two slots)
+- ☑ Discipline filter MVP: per-discipline three-state toggle (off → required
+      any level → superior only), require-ALL semantics, verified on real data
+      (superior mode correctly excludes inferior matches). ☐ still missing:
+      per-discipline level mixing (MVP applies "superior" to the whole
+      selection), "+OR DIS" groups ✎
+- ☑ Capacity filter: min/max range (inclusive) — live on all three surfaces
 - ☑ Group filter: single-select MVP live, correctly limited to the V5 pool's
       groups (5–7); ☐ multi-select still needed
 - ☑ Clan / Path filter — MVP live, options derived from the V5 pool (14 clans)

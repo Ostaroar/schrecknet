@@ -20,6 +20,41 @@ pub struct CryptSearchParams {
     /// Crypt group (V5 pool is limited to groups 5-7).
     #[serde(default)]
     pub group: Option<i64>,
+    /// Minimum capacity (inclusive).
+    #[serde(default)]
+    pub capacity_min: Option<i64>,
+    /// Maximum capacity (inclusive).
+    #[serde(default)]
+    pub capacity_max: Option<i64>,
+    /// Lowercase discipline codes (e.g. ["dom","for"]); a card must have ALL
+    /// of them, at either level. REST accepts a comma-separated string.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub disciplines: Vec<String>,
+    /// If true, every discipline in `disciplines` must be at superior level.
+    #[serde(default)]
+    pub disciplines_superior: bool,
+}
+
+/// Accepts either a JSON array (MCP) or a comma-separated string (REST query
+/// strings can't express arrays with axum's default Query extractor).
+fn deserialize_disciplines<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ListOrCsv {
+        List(Vec<String>),
+        Csv(String),
+    }
+    Ok(match ListOrCsv::deserialize(deserializer)? {
+        ListOrCsv::List(list) => list,
+        ListOrCsv::Csv(csv) => csv
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect(),
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -73,7 +108,9 @@ pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
 ) -> rusqlite::Result<Vec<CryptCard>> {
-    let mut stmt = conn.prepare(
+    // The per-discipline EXISTS clauses are built dynamically (the count
+    // varies) but every value is bound — no string interpolation of input.
+    let mut sql = String::from(
         "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
                 GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
          FROM cards c
@@ -82,13 +119,35 @@ pub fn search_crypt(
            AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
            AND (?2 IS NULL OR c.clan LIKE '%' || ?2 || '%')
            AND (?3 IS NULL OR c.grp = ?3)
-         GROUP BY c.id
-         ORDER BY c.capacity DESC, c.name ASC
-         LIMIT 200",
-    )?;
+           AND (?4 IS NULL OR c.capacity >= ?4)
+           AND (?5 IS NULL OR c.capacity <= ?5)",
+    );
+    let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
+        Box::new(params.text.trim().to_owned()),
+        Box::new(params.clan.clone()),
+        Box::new(params.group),
+        Box::new(params.capacity_min),
+        Box::new(params.capacity_max),
+    ];
+    for code in &params.disciplines {
+        sql.push_str(&format!(
+            " AND EXISTS (SELECT 1 FROM card_disciplines cdx
+                WHERE cdx.card_id = c.id AND cdx.discipline = ?{n} AND cdx.superior >= ?{m})",
+            n = bound.len() + 1,
+            m = bound.len() + 2,
+        ));
+        bound.push(Box::new(code.to_lowercase()));
+        bound.push(Box::new(params.disciplines_superior as i64));
+    }
+    sql.push_str(
+        " GROUP BY c.id
+          ORDER BY c.capacity DESC, c.name ASC
+          LIMIT 200",
+    );
 
+    let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
-        rusqlite::params![params.text.trim(), params.clan, params.group],
+        rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
             let disc: Option<String> = row.get(6)?;
             Ok(CryptCard {
@@ -233,6 +292,68 @@ mod tests {
         assert!(aaradhya.disciplines[0].superior);
         assert_eq!(aaradhya.disciplines[1].code, "for");
         assert!(!aaradhya.disciplines[1].superior);
+    }
+
+    #[test]
+    fn capacity_range_filter() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = CryptSearchParams {
+            capacity_min: Some(9),
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya"); // cap 10; Abaddon (8) excluded
+        let params = CryptSearchParams {
+            capacity_max: Some(8),
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Abaddon");
+    }
+
+    #[test]
+    fn discipline_filter_requires_all_listed() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Aaradhya has dom(sup)+for(inf); Abaddon has aus(sup) only.
+        let params = CryptSearchParams {
+            disciplines: vec!["dom".into(), "for".into()],
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+    }
+
+    #[test]
+    fn superior_flag_excludes_inferior_matches() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Aaradhya's `for` is inferior — requiring superior must exclude her.
+        let params = CryptSearchParams {
+            disciplines: vec!["for".into()],
+            disciplines_superior: true,
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+        // …but plain `for` (any level) matches.
+        let params = CryptSearchParams {
+            disciplines: vec!["for".into()],
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &params).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn discipline_csv_deserializes_from_query_string() {
+        let params: CryptSearchParams =
+            serde_urlencoded::from_str("disciplines=DOM,%20for").unwrap();
+        assert_eq!(params.disciplines, vec!["dom", "for"]);
+        let params: CryptSearchParams = serde_json::from_str(r#"{"disciplines":["dom"]}"#).unwrap();
+        assert_eq!(params.disciplines, vec!["dom"]);
     }
 
     #[test]

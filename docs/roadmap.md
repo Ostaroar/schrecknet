@@ -22,9 +22,12 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
 - ☑ Library search MVP, verified live in-browser + REST + MCP: text/name search,
   type filter (exact-token, pool-derived options), clan requirement filter,
   discipline + blood/pool cost display
-- ☐ Remaining crypt filters (sect, title, capacity range, votes, traits,
-  set/precon/artist) + remaining library filters (discipline, costs, traits) +
-  card detail page
+- ☑ Crypt discipline filter (3-state toggle: any/superior, require-ALL via
+  dynamic EXISTS clauses — bound params only) + capacity min/max range, on all
+  three surfaces; REST accepts `disciplines=dom,for` CSV, MCP takes a JSON array
+- ☐ Remaining crypt filters (sect, title, votes, traits, set/precon/artist,
+  per-discipline level mixing, OR-groups) + remaining library filters
+  (discipline, costs, traits) + routed card detail page
 - ☐ Quick-search command palette (⌘K); card images; sets/printings UI; rulings UI
 - ☐ PWA install + true offline (swap sql.js → official SQLite WASM + OPFS per
   docs/adr/0004's follow-up)

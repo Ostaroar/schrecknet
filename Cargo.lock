@@ -1005,6 +1005,7 @@ dependencies = [
  "schrecknet-core",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "tokio",
  "tower-http",
 ]

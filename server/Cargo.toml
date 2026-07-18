@@ -15,3 +15,6 @@ rmcp = { version = "2.2.0", features = ["server", "transport-streamable-http-ser
 serde = { workspace = true, features = ["derive"] }
 schemars = "1.2.1"
 rusqlite = { version = "0.32", features = ["bundled"] }
+
+[dev-dependencies]
+serde_urlencoded = "0.7.1"

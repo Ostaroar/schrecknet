@@ -1,7 +1,8 @@
-// Crypt search query builder. Phase 1 MVP covers text/name search, clan, and
-// group — the remaining vdb filter families (sect, title, capacity range,
-// traits, set/precon/artist — see docs/feature-parity.md) land incrementally
-// behind this same query() seam.
+// Crypt search query builder — mirrors server/src/cards_db.rs::search_crypt
+// exactly (same filters, same dynamically-built EXISTS clauses per required
+// discipline) so the browser and server agree. Remaining vdb filter families
+// (sect, title, votes, traits, set/precon/artist — docs/feature-parity.md)
+// land incrementally behind this same query() seam.
 
 import { query } from './db'
 
@@ -9,6 +10,20 @@ export interface CryptFilters {
   text: string
   clan: string | null
   group: number | null
+  capacityMin: number | null
+  capacityMax: number | null
+  disciplines: string[]
+  disciplinesSuperior: boolean
+}
+
+export const emptyCryptFilters: CryptFilters = {
+  text: '',
+  clan: null,
+  group: null,
+  capacityMin: null,
+  capacityMax: null,
+  disciplines: [],
+  disciplinesSuperior: false,
 }
 
 export interface Discipline {
@@ -49,8 +64,7 @@ function parseDisciplines(disc: string | null): Discipline[] {
 }
 
 export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
-  const rows = await query<CryptRow>(
-    `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
+  let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
@@ -58,11 +72,23 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
        AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
        AND (?2 IS NULL OR c.clan LIKE '%' || ?2 || '%')
        AND (?3 IS NULL OR c.grp = ?3)
-     GROUP BY c.id
-     ORDER BY c.capacity DESC, c.name ASC
-     LIMIT 200`,
-    [filters.text.trim(), filters.clan, filters.group],
-  )
+       AND (?4 IS NULL OR c.capacity >= ?4)
+       AND (?5 IS NULL OR c.capacity <= ?5)`
+  const params: (string | number | null)[] = [
+    filters.text.trim(),
+    filters.clan,
+    filters.group,
+    filters.capacityMin,
+    filters.capacityMax,
+  ]
+  for (const code of filters.disciplines) {
+    sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
+       WHERE cdx.card_id = c.id AND cdx.discipline = ?${params.length + 1} AND cdx.superior >= ?${params.length + 2})`
+    params.push(code.toLowerCase(), filters.disciplinesSuperior ? 1 : 0)
+  }
+  sql += ` GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC LIMIT 200`
+
+  const rows = await query<CryptRow>(sql, params)
   return rows.map((r) => ({ ...r, disciplines: parseDisciplines(r.disc) }))
 }
 
@@ -78,4 +104,12 @@ export async function listGroups(): Promise<number[]> {
     `SELECT DISTINCT grp FROM cards WHERE kind = 'crypt' ORDER BY grp`,
   )
   return rows.map((r) => r.grp)
+}
+
+export async function listCryptDisciplines(): Promise<string[]> {
+  const rows = await query<{ discipline: string }>(
+    `SELECT DISTINCT cd.discipline FROM card_disciplines cd
+     JOIN cards c ON c.id = cd.card_id WHERE c.kind = 'crypt' ORDER BY cd.discipline`,
+  )
+  return rows.map((r) => r.discipline)
 }
