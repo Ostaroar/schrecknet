@@ -15,10 +15,15 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
   the V5 pool (662 cards: 218 crypt / 444 library, groups 5–7), populates cards,
   disciplines (superior/inferior), printings, sets, artists, rulings,
   translations, and an FTS5 index — verified end-to-end with `sqlite3` queries
-- ☐ Crypt + Library search with **all** filters; results list + card detail page
+- ☑ Crypt search MVP, verified live in-browser: text/name search, clan filter,
+  group filter, capacity-sorted results, superior/inferior discipline badges —
+  server serves `cards.sqlite` at `/data/`, frontend loads it via sql.js
+  (docs/adr/0004) and queries it client-side after the initial fetch
+- ☐ Remaining crypt filters (sect, title, capacity range, votes, traits,
+  set/precon/artist) + Library search + card detail page
 - ☐ Quick-search command palette (⌘K); card images; sets/printings UI; rulings UI
-- ☐ PWA install + offline; SQLite WASM + OPFS in the browser (pipeline output
-  ready; browser-side loading is the remaining piece)
+- ☐ PWA install + true offline (swap sql.js → official SQLite WASM + OPFS per
+  docs/adr/0004's follow-up)
 - ☐ i18n UI using the `translations` table already populated by the pipeline
 - ☐ MCP: `search_crypt`, `search_library`, `get_card` + REST mirrors
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable

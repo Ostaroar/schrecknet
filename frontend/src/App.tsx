@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react'
-
-interface ServerMeta {
-  name: string
-  version: string
-  scope: string
-}
+import CryptSearch from './components/CryptSearch'
+import { getCardsMeta, type CardMeta } from './lib/db'
 
 export default function App() {
-  const [meta, setMeta] = useState<ServerMeta | null>(null)
-  const [offline, setOffline] = useState(false)
+  const [meta, setMeta] = useState<CardMeta | null>(null)
 
   useEffect(() => {
-    fetch('/api/v1/meta')
-      .then((r) => (r.ok ? (r.json() as Promise<ServerMeta>) : Promise.reject(new Error(`${r.status}`))))
-      .then(setMeta)
-      .catch(() => setOffline(true))
+    getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
 
   return (
@@ -25,32 +17,13 @@ export default function App() {
         </span>
         <span className="font-display text-xl tracking-wide">SchreckNet</span>
         <span className="ml-auto rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted">
-          V5 only
+          {meta ? `${meta.crypt} crypt · ${meta.library} library` : 'V5 only'}
         </span>
       </header>
 
-      <main className="grid flex-1 place-items-center">
-        <div className="w-full max-w-md rounded-xl border border-line bg-surface p-6">
-          <h1 className="font-display text-2xl">Phase 0</h1>
-          <p className="mt-2 text-sm text-ink-muted">
-            Scaffold is up: Rust core (native + WASM), server, data pipeline, this
-            frontend. Card search arrives in Phase 1.
-          </p>
-          <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <dt className="text-ink-dim">server</dt>
-            <dd className="text-right font-mono">
-              {meta ? (
-                <span className="text-ok">v{meta.version}</span>
-              ) : offline ? (
-                <span className="text-ink-dim">offline</span>
-              ) : (
-                '…'
-              )}
-            </dd>
-            <dt className="text-ink-dim">scope</dt>
-            <dd className="text-right font-mono">{meta?.scope ?? 'v5'}</dd>
-          </dl>
-        </div>
+      <main className="flex-1 pb-10">
+        <h1 className="mb-4 font-display text-2xl">Crypt search</h1>
+        <CryptSearch />
       </main>
 
       <footer className="py-6 text-center text-xs text-ink-dim">

@@ -26,7 +26,7 @@ COPY --from=rust-build /src/target/release/schrecknet-server /app/server
 COPY --from=rust-build /out/cards.sqlite /app/data/cards.sqlite
 COPY --from=web-build /src/frontend/dist /app/static
 ENV SCHRECKNET_STATIC_DIR=/app/static \
-    SCHRECKNET_CARDS_DB=/app/data/cards.sqlite \
+    SCHRECKNET_DATA_DIR=/app/data \
     SCHRECKNET_APP_DB=/data/app.sqlite \
     SCHRECKNET_BIND=0.0.0.0:8000
 VOLUME /data

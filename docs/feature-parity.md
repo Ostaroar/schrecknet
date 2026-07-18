@@ -24,11 +24,16 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ About page (credits, Dark Pack notice, related projects, donations/contacts)
 
 ## Crypt Card Search (`/crypt`)
-- ☐ Name / text search, with "Only in Name", "Only in Text", and Regex modes
+- ☑ Name / text search — MVP live (frontend/src/components/CryptSearch.tsx);
+      ☐ still missing "Only in Name" / "Only in Text" mode toggle and Regex mode
 - ☐ Discipline filter: per-discipline icon toggle, superior/inferior levels, "+OR DIS" groups
+      (discipline data + superior/inferior rendering already correct — see
+      card_disciplines table and DisciplineBadge component; the filter UI itself
+      isn't built yet, only clan/group are)
 - ☐ Capacity filter: `<=`, `>=`, `=` with value range (two slots)
-- ☐ Group filter: groups 1–7, multi-select (grouping rules: group X and X±1 legal together)
-- ☐ Clan / Path filter
+- ☑ Group filter: single-select MVP live, correctly limited to the V5 pool's
+      groups (5–7); ☐ multi-select still needed
+- ☑ Clan / Path filter — MVP live, options derived from the V5 pool (14 clans)
 - ☐ Sect filter (Camarilla, Sabbat, Laibon, Independent, Anarch, Imbued)
 - ☐ Votes filter (numeric)
 - ☐ Title filter: Primogen, Prince, Justicar, Inner Circle, Baron, 1 vote, 2 votes,

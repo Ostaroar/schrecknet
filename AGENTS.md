@@ -83,17 +83,19 @@ cargo test --workspace
 cargo build -p schrecknet-core --target wasm32-unknown-unknown
 wasm-pack build core --target web
 
-# server (serves frontend/dist + /healthz + /api/v1/meta on :8000)
+# server (serves frontend/dist + /healthz + /api/v1/meta + /data/* on :8000)
 cargo run -p schrecknet-server
-# env: SCHRECKNET_BIND, SCHRECKNET_STATIC_DIR, SCHRECKNET_CARDS_DB, SCHRECKNET_APP_DB
+# env: SCHRECKNET_BIND, SCHRECKNET_STATIC_DIR, SCHRECKNET_DATA_DIR (dir
+# containing cards.sqlite + cards.meta.json, served at /data/*), SCHRECKNET_APP_DB
 
 # data pipeline -> dist/cards.sqlite + cards.meta.json
 # fetches https://static.krcg.org/data/vtes.json (needs network); cached 24h
-# under data/.cache/ (gitignored) via SCHRECKNET_DATA_CACHE
+# under .cache/ (gitignored) via SCHRECKNET_DATA_CACHE
 cargo run -p schrecknet-data -- build --out dist
 
-# frontend
-cd frontend && npm install && npm run dev   # Vite dev server, proxies /api to :8000
+# frontend — run the server first (`cargo run -p schrecknet-server`, needs
+# dist/cards.sqlite built above) so /api and /data proxy correctly
+cd frontend && npm install && npm run dev   # Vite dev server, proxies /api + /data to :8000
 npm run build                               # tsc --noEmit && vite build
 
 # full container
