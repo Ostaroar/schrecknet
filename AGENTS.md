@@ -5,7 +5,7 @@ This file is the canonical, tool-agnostic instruction set for any AI coding agen
 
 ## What this project is
 
-**VTEsOnSteroids** — a ground-up rebuild of [smeea/vdb](https://github.com/smeea/vdb)
+**SchreckNet** — a ground-up rebuild of [smeea/vdb](https://github.com/smeea/vdb)
 (the VTES card search / deck builder at vdb.im) with:
 
 - **WebAssembly**: one Rust `core/` crate for all domain logic, compiled to WASM for

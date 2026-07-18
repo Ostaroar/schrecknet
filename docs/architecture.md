@@ -1,4 +1,4 @@
-# Architecture — VTEsOnSteroids
+# Architecture — SchreckNet
 
 A ground-up rebuild of [VDB](https://github.com/smeea/vdb) (React 19 + Flask + SQLAlchemy)
 as an offline-first, WebAssembly-powered app with SQLite as the single storage technology

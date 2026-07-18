@@ -1,4 +1,4 @@
-# Feature Parity Checklist — VDB → VTEsOnSteroids
+# Feature Parity Checklist — VDB → SchreckNet
 
 Source of truth for "no missing features". Compiled from a live survey of https://vdb.im
 (2026-07-18) and the `smeea/vdb` source tree (`frontend/src/pages/`). Every item must be

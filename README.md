@@ -1,4 +1,4 @@
-# VTEsOnSteroids
+# SchreckNet
 
 A ground-up rebuild of [VDB](https://github.com/smeea/vdb) — card search, deck
 building, inventory management and tournament-deck archives for
