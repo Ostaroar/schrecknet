@@ -1,0 +1,117 @@
+# Architecture — VTEsOnSteroids
+
+A ground-up rebuild of [VDB](https://github.com/smeea/vdb) (React 19 + Flask + SQLAlchemy)
+as an offline-first, WebAssembly-powered app with SQLite as the single storage technology
+and MCP as the primary machine API.
+
+## Guiding decisions (see docs/adr/ for full records)
+
+1. **One Rust core, two targets.** All domain logic lives in the `core/` Rust crate:
+   deck parsing/serialization (VDB URL, Lackey, JOL, TWD text), format legality
+   validation, draw simulation, deck diff, seating algorithm, proxy layout. It compiles
+   to **WebAssembly** for the browser and links natively into the server. One
+   implementation, zero drift between client and server behavior.
+
+2. **SQLite everywhere.**
+   - *Card database* (`cards.sqlite`): built at CI time from KRCG static files + VEKN
+     official card list. Read-only, versioned, shipped to the browser (~a few MB,
+     served with long-lived cache headers + content hash).
+   - *Browser*: official **SQLite WASM** build with **OPFS** persistence. Card search
+     filters compile to SQL over FTS5 + indexed columns → instant, fully offline search.
+     Anonymous users' decks/inventory live in a local `user.sqlite` (OPFS).
+   - *Server*: the same `cards.sqlite` plus `app.sqlite` (accounts, decks, inventory,
+     PDA) via `rusqlite`. WAL mode. Litestream-compatible layout for backups.
+     Postgres is deliberately **not** in scope "for beginning" — the schema avoids
+     SQLite-only features where reasonable to keep the door open.
+
+3. **Frontend: React 19 + TypeScript + Vite + Tailwind CSS 4.** Same family as the
+   original (which eases feature-by-feature porting) but strictly typed, with a modern
+   design system (see docs/design.md), dark/light themes, and a PWA service worker.
+
+4. **Server: Rust (axum), one binary.** Serves the static frontend, the JSON REST API
+   (OpenAPI 3.1 document generated from code), and the **MCP server**.
+
+5. **MCP as the primary machine API.** Model Context Protocol over **Streamable HTTP**
+   (current spec revision), plus a stdio transport for local use. REST/OpenAPI remains
+   as the compatibility layer for non-MCP clients. See docs/api.md.
+
+6. **Docker via GitHub Actions.** Multi-stage build → single small image (distroless),
+   multi-arch (amd64/arm64), pushed to GHCR on main + version tags. The card-data
+   pipeline runs as a separate scheduled workflow that rebuilds `cards.sqlite` and opens
+   a PR when upstream card data changes.
+
+## Repository layout
+
+```
+/
+├── AGENTS.md               # canonical agent instructions (all assistants)
+├── CLAUDE.md               # Claude Code entrypoint → AGENTS.md + Claude specifics
+├── docs/
+│   ├── architecture.md     # this file
+│   ├── feature-parity.md   # exhaustive VDB parity checklist (source of truth)
+│   ├── data.md             # card data pipeline & SQLite schemas
+│   ├── api.md              # MCP tools + REST surface
+│   ├── design.md           # design system, mockups reference
+│   ├── domain-vtes.md      # VTES rules primer & glossary for agents
+│   ├── roadmap.md          # phased milestones
+│   └── adr/                # architecture decision records
+├── core/                   # Rust crate: domain logic (wasm + native)
+├── server/                 # Rust axum binary (REST + MCP + static hosting)
+├── frontend/               # React 19 + TS + Vite + Tailwind 4 PWA
+├── data/                   # card-data pipeline (KRCG/VEKN → cards.sqlite)
+├── Dockerfile
+└── .github/workflows/      # docker.yml, ci.yml, card-data.yml
+```
+
+## Runtime topology
+
+```mermaid
+flowchart LR
+    subgraph Browser [Browser — offline-first PWA]
+        UI[React 19 UI]
+        WASMCore[core.wasm<br/>deck engine]
+        SQLW[(SQLite WASM<br/>cards.sqlite + user.sqlite<br/>in OPFS)]
+        UI --> WASMCore
+        UI --> SQLW
+    end
+
+    subgraph Server [server binary — axum]
+        Static[static frontend]
+        REST[REST · OpenAPI 3.1]
+        MCP[MCP · Streamable HTTP]
+        NativeCore[core &#40;native&#41;]
+        DB[(cards.sqlite<br/>app.sqlite)]
+        REST --> NativeCore --> DB
+        MCP --> NativeCore
+    end
+
+    Browser -- "sync: accounts, decks,<br/>inventory, PDA/TWD" --> REST
+    Agents[AI agents / tools] --> MCP
+    CI[GitHub Actions<br/>card-data pipeline] -- "cards.sqlite" --> Server
+```
+
+Search, deck building, stats, draw simulation, diff, proxy generation and format
+validation all run **client-side** (WASM + SQLite WASM) and keep working offline.
+The server is only needed for accounts, cross-device sync, PDA/TWD community data,
+and the machine APIs.
+
+## Key flows
+
+- **Card search**: filter UI state → query builder (TS) → SQL against local SQLite →
+  results. The same query builder runs server-side for the MCP `search_cards` tool
+  (generated from one shared filter-schema definition in `core/`).
+- **Deck edit (logged in)**: optimistic local write (OPFS) → sync mutation to REST →
+  conflict resolution by revision counter (decks carry a monotonically increasing rev;
+  branches are first-class rows, mirroring vdb's branch feature).
+- **Anonymous deck sharing**: `core/` encodes the deck into a compact URL-safe string
+  (same idea as vdb's deck-in-URL), so decks are shareable without accounts.
+- **TWD/PDA data**: TWD archive ingested by the data pipeline into `cards.sqlite`
+  companion tables; PDA is server-side (app.sqlite) with public read API.
+
+## Security & legal
+
+- Auth: username + password (argon2id), optional email for reset — parity with vdb;
+  passkeys (WebAuthn) as a modern additive option. Session cookies (HttpOnly, SameSite).
+- Rate limiting on auth + write endpoints (tower middleware).
+- Card images & names © Paradox Interactive AB, used under the **Dark Pack** agreement;
+  the required notice appears in the app footer and README. Code is MIT.

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+target/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.env
+.DS_Store
+frontend/src/wasm/
+data/cache/

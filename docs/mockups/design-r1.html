@@ -1,0 +1,742 @@
+<meta charset="utf-8">
+<title>VTEsOnSteroids — Design Mockups R1</title>
+<style>
+  /* ---------- page chrome tokens (theme-aware) ---------- */
+  :root{
+    --pg-bg:#f7f3f1; --pg-surface:#fffdfc; --pg-line:#e4dad6; --pg-ink:#241c1e;
+    --pg-muted:#7a6a6e; --pg-accent:#a12a3a; --pg-chip:#efe7e4;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --pg-bg:#151013; --pg-surface:#1d1619; --pg-line:#342a2f; --pg-ink:#ece4e6;
+           --pg-muted:#a08f95; --pg-accent:#d0576a; --pg-chip:#271e22; }
+  }
+  :root[data-theme="dark"]{ --pg-bg:#151013; --pg-surface:#1d1619; --pg-line:#342a2f;
+    --pg-ink:#ece4e6; --pg-muted:#a08f95; --pg-accent:#d0576a; --pg-chip:#271e22; }
+  :root[data-theme="light"]{ --pg-bg:#f7f3f1; --pg-surface:#fffdfc; --pg-line:#e4dad6;
+    --pg-ink:#241c1e; --pg-muted:#7a6a6e; --pg-accent:#a12a3a; --pg-chip:#efe7e4; }
+
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+  body{ background:var(--pg-bg); color:var(--pg-ink);
+    font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; margin:0; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px 96px; }
+  .display{ font-family:Palatino,"Palatino Linotype","URW Palladio L",Georgia,serif; }
+  .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-variant-numeric:tabular-nums; }
+
+  header.masthead{ padding:56px 0 8px; }
+  .eyebrow{ text-transform:uppercase; letter-spacing:.14em; font-size:11.5px;
+    color:var(--pg-muted); }
+  h1{ font-size:clamp(34px,5vw,52px); line-height:1.08; margin:.35em 0 .3em;
+    text-wrap:balance; font-weight:600; }
+  .lede{ max-width:62ch; color:var(--pg-muted); font-size:16.5px; }
+  .lede b{ color:var(--pg-ink); font-weight:600; }
+
+  nav.jump{ position:sticky; top:0; z-index:9; background:var(--pg-bg);
+    border-bottom:1px solid var(--pg-line); margin:28px -24px 40px; padding:10px 24px;
+    display:flex; gap:6px; flex-wrap:wrap; }
+  nav.jump a{ color:var(--pg-muted); text-decoration:none; font-size:13px;
+    padding:5px 11px; border-radius:999px; }
+  nav.jump a:hover,nav.jump a:focus-visible{ color:var(--pg-ink);
+    background:var(--pg-chip); outline:none; }
+  nav.jump a:focus-visible{ box-shadow:0 0 0 2px var(--pg-accent); }
+  nav.jump .n{ color:var(--pg-accent); margin-right:4px; }
+
+  section{ margin:64px 0; }
+  h2{ font-size:24px; font-weight:600; margin:0 0 6px; text-wrap:balance; }
+  h2 .num{ color:var(--pg-accent); font-weight:400; margin-right:10px; }
+  .secdesc{ color:var(--pg-muted); max-width:68ch; margin:0 0 22px; }
+
+  /* ---------- token board ---------- */
+  .tokens{ display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+    gap:10px; margin-bottom:18px; }
+  .sw{ border:1px solid var(--pg-line); border-radius:10px; overflow:hidden;
+    background:var(--pg-surface); }
+  .sw .c{ height:52px; } .sw .t{ padding:7px 10px 8px; }
+  .sw .t b{ display:block; font-size:12.5px; font-weight:600; }
+  .sw .t span{ font-size:11px; color:var(--pg-muted); }
+  .typeboard{ display:grid; gap:0; border:1px solid var(--pg-line); border-radius:12px;
+    background:var(--pg-surface); }
+  .typeboard>div{ padding:14px 18px; display:flex; align-items:baseline; gap:18px;
+    flex-wrap:wrap; }
+  .typeboard>div+div{ border-top:1px solid var(--pg-line); }
+  .typeboard .role{ width:150px; font-size:11px; text-transform:uppercase;
+    letter-spacing:.12em; color:var(--pg-muted); }
+
+  /* ---------- screen frame layout ---------- */
+  .shot{ display:grid; grid-template-columns:minmax(0,1fr) 250px; gap:22px;
+    align-items:start; }
+  @media (max-width:900px){ .shot{ grid-template-columns:minmax(0,1fr); } }
+  aside.notes{ font-size:13.5px; color:var(--pg-muted); position:sticky; top:56px; }
+  aside.notes ul{ margin:6px 0 0; padding-left:16px; display:grid; gap:7px; }
+  aside.notes li::marker{ color:var(--pg-accent); }
+  aside.notes .nt{ text-transform:uppercase; letter-spacing:.12em; font-size:10.5px; }
+
+  .framewrap{ overflow-x:auto; border-radius:14px;
+    box-shadow:0 24px 60px -28px rgba(20,5,10,.45); }
+  .browser{ min-width:1020px; border:1px solid #3a2c33; border-radius:14px;
+    overflow:hidden; background:#120c0f; }
+  .browser .bar{ display:flex; align-items:center; gap:10px; padding:9px 14px;
+    background:#1a1215; border-bottom:1px solid #2c2127; }
+  .browser .bar .dots i{ display:inline-block; width:10px; height:10px;
+    border-radius:50%; background:#3a2c33; margin-right:5px; }
+  .browser .bar .url{ flex:1; max-width:380px; margin:0 auto; background:#120c0f;
+    border:1px solid #2c2127; border-radius:7px; padding:3px 12px; font-size:11.5px;
+    color:#a08f95; text-align:center; }
+  .phone{ width:min(390px,100%); margin:0 auto; border:1px solid #3a2c33;
+    border-radius:34px; overflow:hidden; background:#120c0f; padding:10px 10px 0;
+    box-sizing:border-box; }
+
+  /* ---------- the app design system (committed dark) ---------- */
+  .app{ --bg:#120c0f; --panel:#1a1215; --raised:#241a1f; --line:#332630;
+    --line2:#2c2127; --ink:#ece4e6; --mut:#a08f95; --dim:#6e5f65;
+    --blood:#b32e40; --blood-hi:#d04b58; --gold:#c9a15a; --ok:#6fae84;
+    background:var(--bg); color:var(--ink);
+    font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .app *{ box-sizing:border-box; }
+  .app .serif{ font-family:Palatino,"Palatino Linotype",Georgia,serif; }
+
+  /* top nav */
+  .tnav{ display:flex; align-items:center; gap:22px; padding:0 20px; height:52px;
+    background:var(--panel); border-bottom:1px solid var(--line2); }
+  .brand{ display:flex; align-items:center; gap:9px; font-family:Palatino,Georgia,serif;
+    font-size:17px; letter-spacing:.02em; }
+  .brand .sigil{ width:26px; height:26px; border-radius:7px; background:var(--blood);
+    color:#fff; display:grid; place-items:center; font-size:15px; font-weight:700; }
+  .tnav .links{ display:flex; gap:2px; }
+  .tnav .links a{ color:var(--mut); text-decoration:none; padding:5px 11px;
+    border-radius:7px; font-size:13px; }
+  .tnav .links a.on{ color:var(--ink); background:var(--raised); }
+  .kbar{ margin-left:auto; display:flex; align-items:center; gap:8px;
+    background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:5px 12px; color:var(--dim); font-size:12.5px; min-width:210px; }
+  .kbar kbd{ margin-left:auto; background:var(--raised); border:1px solid var(--line);
+    border-radius:5px; padding:0 6px; font-size:10.5px; color:var(--mut);
+    font-family:inherit; }
+  .avatar{ width:28px; height:28px; border-radius:50%; background:var(--raised);
+    border:1px solid var(--line); display:grid; place-items:center; font-size:11px;
+    color:var(--gold); }
+
+  /* generic app atoms */
+  .btn{ display:inline-flex; align-items:center; gap:6px; border-radius:8px;
+    padding:6px 13px; font-size:12.5px; border:1px solid var(--line);
+    background:var(--raised); color:var(--ink); }
+  .btn.primary{ background:var(--blood); border-color:transparent; color:#fff; }
+  .btn.ghost{ background:transparent; color:var(--mut); }
+  .chip{ display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+    padding:2px 10px; font-size:11.5px; background:var(--raised); color:var(--mut);
+    border:1px solid var(--line); }
+  .chip.on{ background:rgba(179,46,64,.16); color:#e8aab2; border-color:#5c2a33; }
+  .chip .x{ color:var(--dim); }
+  .badge-ok{ color:var(--ok); border:1px solid rgba(111,174,132,.4);
+    border-radius:999px; padding:1px 9px; font-size:11px; }
+  .cap{ display:inline-grid; place-items:center; width:22px; height:22px;
+    border-radius:50%; background:rgba(179,46,64,.18); color:#e8aab2;
+    font-size:11.5px; font-weight:600; }
+  .dis{ display:inline-grid; place-items:center; min-width:26px; height:17px;
+    padding:0 3px; border-radius:4px; font-size:9.5px; font-weight:700;
+    letter-spacing:.04em; font-family:ui-monospace,Menlo,monospace; }
+  .dis.sup{ background:var(--gold); color:#241a06; }
+  .dis.inf{ background:transparent; color:var(--mut); border:1px solid var(--line); }
+  .clan{ font-size:10.5px; color:var(--mut); text-transform:uppercase;
+    letter-spacing:.08em; }
+  .num{ font-family:ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; }
+
+  /* screen 1 : crypt search */
+  .s1{ display:grid; grid-template-columns:252px minmax(0,1fr) 284px; gap:0; }
+  .filters{ background:var(--panel); border-right:1px solid var(--line2);
+    padding:14px; display:grid; gap:14px; align-content:start; }
+  .fgroup .fl{ font-size:10.5px; text-transform:uppercase; letter-spacing:.12em;
+    color:var(--dim); margin-bottom:7px; display:flex; justify-content:space-between; }
+  .fgroup .fl a{ color:var(--blood-hi); text-decoration:none; text-transform:none;
+    letter-spacing:0; }
+  .search-in{ display:flex; background:var(--bg); border:1px solid var(--line);
+    border-radius:8px; padding:6px 10px; color:var(--ink); font-size:13px; gap:8px; }
+  .seg{ display:flex; background:var(--bg); border:1px solid var(--line);
+    border-radius:7px; overflow:hidden; margin-top:7px; }
+  .seg span{ flex:1; text-align:center; padding:3px 0; font-size:11px;
+    color:var(--dim); }
+  .seg span.on{ background:var(--raised); color:var(--ink); }
+  .disgrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; }
+  .disgrid .dis{ width:100%; height:22px; font-size:10px; cursor:default; }
+  .selrow{ display:flex; align-items:center; justify-content:space-between;
+    background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:6px 10px; font-size:12.5px; color:var(--mut); }
+  .selrow b{ color:var(--ink); font-weight:500; }
+  .grouprow{ display:flex; gap:4px; }
+  .grouprow i{ flex:1; text-align:center; font-style:normal; border-radius:6px;
+    border:1px solid var(--line); padding:3px 0; font-size:11.5px; color:var(--dim); }
+  .grouprow i.on{ background:rgba(179,46,64,.16); color:#e8aab2;
+    border-color:#5c2a33; }
+  .ck{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--mut);
+    padding:2px 0; }
+  .ck i{ width:14px; height:14px; border-radius:4px; border:1px solid var(--line);
+    font-style:normal; }
+  .ck.on{ color:var(--ink); }
+  .ck.on i{ background:var(--blood); border-color:transparent; position:relative; }
+  .ck.on i::after{ content:"✓"; color:#fff; font-size:10px; position:absolute;
+    inset:0; display:grid; place-items:center; }
+
+  .results{ padding:0 0 8px; }
+  .rhead{ display:flex; align-items:center; gap:12px; padding:11px 16px;
+    border-bottom:1px solid var(--line2); color:var(--mut); font-size:12px; }
+  .rhead .count b{ color:var(--ink); }
+  .rhead .sort{ margin-left:auto; }
+  .row{ display:grid; grid-template-columns:26px minmax(0,1fr) 150px 64px 40px;
+    align-items:center; gap:10px; padding:8px 16px;
+    border-bottom:1px solid var(--line2); }
+  .row:hover{ background:var(--panel); }
+  .row .nm{ font-size:13.5px; } .row .nm small{ color:var(--gold); font-size:10px;
+    vertical-align:super; margin-left:3px; }
+  .row .meta{ display:flex; gap:4px; justify-content:flex-end; }
+  .row .grp{ color:var(--dim); font-size:11px; text-align:right; }
+  .row .add{ width:22px; height:22px; border-radius:6px; border:1px solid var(--line);
+    display:grid; place-items:center; color:var(--dim); font-size:14px; }
+  .row:hover .add{ color:#fff; background:var(--blood); border-color:transparent; }
+
+  .preview{ border-left:1px solid var(--line2); background:var(--panel);
+    padding:16px; display:grid; gap:12px; align-content:start; }
+  .cardface{ background:linear-gradient(168deg,#241a1f, #1a1013 62%);
+    border:1px solid #40303a; border-radius:12px; padding:16px; min-height:300px; }
+  .cardface .cf-top{ display:flex; justify-content:space-between;
+    align-items:baseline; border-bottom:1px solid #40303a; padding-bottom:9px; }
+  .cardface h4{ margin:0; font-family:Palatino,Georgia,serif; font-size:17px;
+    font-weight:600; }
+  .cardface .cf-cap{ font-size:19px; color:#e8aab2; }
+  .cardface .cf-line{ margin:9px 0 4px; }
+  .cardface p{ font-size:12.5px; color:var(--mut); margin:9px 0 0; line-height:1.55; }
+  .cardface p b{ color:var(--gold); font-weight:600; }
+  .cf-foot{ display:flex; justify-content:space-between; margin-top:14px;
+    color:var(--dim); font-size:10.5px; }
+  .pv-sub{ display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* screen 2 : deck builder */
+  .dhead{ display:flex; align-items:center; gap:12px; padding:13px 20px;
+    border-bottom:1px solid var(--line2); flex-wrap:wrap; }
+  .dhead h3{ margin:0; font-family:Palatino,Georgia,serif; font-size:19px;
+    font-weight:600; }
+  .dhead .branch{ display:flex; align-items:center; gap:6px; font-size:12px;
+    color:var(--mut); background:var(--raised); border:1px solid var(--line);
+    border-radius:7px; padding:4px 10px; }
+  .dhead .actions{ margin-left:auto; display:flex; gap:7px; flex-wrap:wrap; }
+  .s2{ display:grid; grid-template-columns:minmax(0,5fr) minmax(0,6fr) 272px; }
+  .col{ border-right:1px solid var(--line2); padding:14px 16px; }
+  .colhead{ display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:8px; }
+  .colhead h5{ margin:0; font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--dim); }
+  .colhead .num{ color:var(--mut); font-size:11.5px; }
+  .typehead{ margin:12px 0 4px; color:var(--gold); font-size:10.5px;
+    letter-spacing:.1em; text-transform:uppercase; }
+  .crow{ display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:8px;
+    align-items:center; padding:4px 0; }
+  .crow .q{ display:flex; align-items:center; gap:2px; }
+  .crow .q i{ width:17px; height:17px; border-radius:5px; border:1px solid var(--line);
+    display:grid; place-items:center; font-style:normal; color:var(--dim);
+    font-size:11px; }
+  .crow .q b{ width:20px; text-align:center; font-weight:500; }
+  .crow .nm{ font-size:13px; white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; }
+  .crow .tail{ display:flex; gap:4px; align-items:center; }
+
+  .stats{ padding:14px 16px; background:var(--panel); display:grid; gap:14px;
+    align-content:start; }
+  .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .tile{ background:var(--raised); border:1px solid var(--line); border-radius:9px;
+    padding:9px 11px; }
+  .tile b{ display:block; font-size:19px; font-weight:600;
+    font-family:ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; }
+  .tile span{ font-size:10.5px; color:var(--dim); letter-spacing:.08em;
+    text-transform:uppercase; }
+  .tile.okc b{ color:var(--ok); font-size:13px; padding-top:3px; }
+  .bars{ display:grid; gap:6px; }
+  .bars .b{ display:grid; grid-template-columns:44px minmax(0,1fr) 26px; gap:8px;
+    align-items:center; font-size:11px; color:var(--mut); }
+  .bars .b .tr{ display:block; height:13px; border-radius:0 4px 4px 0;
+    background:var(--blood-hi); position:relative; }
+  .bars .b>span:nth-child(2){ display:block; min-width:0; }
+  .bars .b .val{ text-align:right; color:var(--ink); }
+  .htip{ position:absolute; top:-30px; left:12%; background:#000; color:#ece4e6;
+    border:1px solid var(--line); font-size:10.5px; padding:3px 8px; border-radius:6px;
+    white-space:nowrap; }
+  .htip::after{ content:""; position:absolute; top:100%; left:12px;
+    border:4px solid transparent; border-top-color:#000; }
+  .drawbar{ grid-column:1/-1; display:flex; gap:10px; align-items:center;
+    border-top:1px solid var(--line2); background:var(--panel); padding:10px 20px; }
+  .mini{ width:40px; height:56px; border-radius:6px; background:var(--raised);
+    border:1px solid var(--line); display:grid; place-items:center; text-align:center;
+    font-size:8.5px; color:var(--mut); padding:3px; line-height:1.25; }
+  .mini.cr{ border-color:#5c2a33; background:rgba(179,46,64,.12); }
+
+  /* screen 3 : TWD */
+  .s3{ padding:16px 20px; display:grid; gap:12px; }
+  .fbar{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .twd{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px;
+    background:var(--panel); border:1px solid var(--line2); border-radius:11px;
+    padding:13px 16px; }
+  .twd h4{ margin:0; font-size:14.5px; font-weight:600;
+    font-family:Palatino,Georgia,serif; }
+  .twd .ev{ color:var(--mut); font-size:12px; }
+  .twd .right{ text-align:right; display:grid; gap:4px; justify-items:end; }
+  .twd .open{ color:var(--blood-hi); font-size:12.5px; text-decoration:none; }
+  .twd .tags{ display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+  .twd .lineup{ color:var(--dim); font-size:11.5px; margin-top:2px; }
+  .twd .lineup b{ color:var(--mut); font-weight:500; }
+
+  /* screen 4 : mobile */
+  .m-nav{ display:flex; justify-content:space-around; border-top:1px solid var(--line2);
+    background:var(--panel); padding:8px 0 16px; margin:0 -10px; }
+  .m-nav div{ display:grid; justify-items:center; gap:3px; font-size:9.5px;
+    color:var(--dim); }
+  .m-nav div.on{ color:var(--blood-hi); }
+  .m-nav i{ width:20px; height:20px; border-radius:6px; background:var(--raised);
+    font-style:normal; }
+  .m-nav div.on i{ background:var(--blood); }
+  .m-head{ display:flex; align-items:center; gap:9px; padding:12px 6px 10px; }
+  .m-head h4{ margin:0; font-family:Palatino,Georgia,serif; font-size:16px;
+    font-weight:600; flex:1; }
+  .m-body{ padding:0 6px; display:grid; gap:7px; }
+  .shot2{ display:grid; grid-template-columns:minmax(280px,420px) minmax(0,1fr);
+    gap:22px; align-items:start; }
+  @media (max-width:900px){ .shot2{ grid-template-columns:minmax(0,1fr); } }
+
+  footer.pgfoot{ margin-top:72px; border-top:1px solid var(--pg-line);
+    padding-top:18px; color:var(--pg-muted); font-size:12.5px; max-width:75ch; }
+</style>
+
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">VTEsOnSteroids · Design direction · R1 · 2026-07-18</div>
+  <h1 class="display">Old blood, new interface.</h1>
+  <p class="lede">A rebuild of <b>VDB</b> for Vampire: The Eternal Struggle —
+  <b>every existing feature</b>, re-set in a dark-first, keyboard-first design.
+  The whole card database lives in your browser (SQLite&nbsp;+&nbsp;WASM), so every screen
+  below works offline and reacts instantly. Palatino-family serifs carry the old-world
+  voice; the UI around them stays quiet, modern, and fast.</p>
+</header>
+
+<nav class="jump" aria-label="Sections">
+  <a href="#tokens"><span class="n">◆</span>Tokens</a>
+  <a href="#s1"><span class="n">01</span>Crypt search</a>
+  <a href="#s2"><span class="n">02</span>Deck builder</a>
+  <a href="#s3"><span class="n">03</span>TWD archive</a>
+  <a href="#s4"><span class="n">04</span>Mobile / PWA</a>
+</nav>
+
+<!-- ============ tokens ============ -->
+<section id="tokens">
+  <h2>Design tokens</h2>
+  <p class="secdesc">The app commits to a dark ground — a plum-black biased toward the
+  accent, never neutral grey. Blood-crimson is spent only on primary actions, active
+  filters and data marks; gold is reserved for superior disciplines and card lore.
+  A light app theme ships too (same tokens, re-stepped), but dark is the definitive
+  reading.</p>
+  <div class="tokens">
+    <div class="sw"><div class="c" style="background:#120c0f"></div><div class="t"><b>Ground</b><span class="mono">#120C0F</span></div></div>
+    <div class="sw"><div class="c" style="background:#1a1215"></div><div class="t"><b>Surface</b><span class="mono">#1A1215</span></div></div>
+    <div class="sw"><div class="c" style="background:#241a1f"></div><div class="t"><b>Raised</b><span class="mono">#241A1F</span></div></div>
+    <div class="sw"><div class="c" style="background:#ece4e6"></div><div class="t"><b>Ink</b><span class="mono">#ECE4E6</span></div></div>
+    <div class="sw"><div class="c" style="background:#b32e40"></div><div class="t"><b>Blood</b><span class="mono">#B32E40</span></div></div>
+    <div class="sw"><div class="c" style="background:#d04b58"></div><div class="t"><b>Blood · data</b><span class="mono">#D04B58</span></div></div>
+    <div class="sw"><div class="c" style="background:#c9a15a"></div><div class="t"><b>Gold · superior</b><span class="mono">#C9A15A</span></div></div>
+    <div class="sw"><div class="c" style="background:#6fae84"></div><div class="t"><b>Legal / ok</b><span class="mono">#6FAE84</span></div></div>
+  </div>
+  <div class="typeboard">
+    <div><span class="role">Display · serif</span>
+      <span class="display" style="font-size:22px">The Eternal Struggle — Palatino &amp; kin</span></div>
+    <div><span class="role">UI · system sans</span>
+      <span>Filters, navigation, controls — the quiet workhorse. 13–15&nbsp;px.</span></div>
+    <div><span class="role">Data · mono</span>
+      <span class="mono">CAP 7.3 · POOL 15 · GRP 4–5 · tabular-nums everywhere digits align</span></div>
+  </div>
+</section>
+
+<!-- ============ screen 1 : crypt search ============ -->
+<section id="s1">
+  <h2><span class="num display">01</span>Crypt search</h2>
+  <p class="secdesc">All twenty-plus vdb filter families, reorganized into a scannable
+  rail: the ones you touch constantly (text, disciplines, capacity, clan, group) sit
+  open; title, traits, set, precon and artist collapse. Results are a dense, sortable
+  table — hover any row to preview the card and add it to the active deck.</p>
+  <div class="shot">
+    <div class="framewrap"><div class="browser app">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">vtes.example/crypt</span></div>
+      <div class="tnav">
+        <span class="brand"><span class="sigil">V</span>VTEsOnSteroids</span>
+        <span class="links">
+          <a class="on">Crypt</a><a>Library</a><a>Decks</a><a>Inventory</a><a>TWD</a><a>PDA</a>
+        </span>
+        <span class="kbar">Search any card… <kbd>⌘K</kbd></span>
+        <span class="avatar">JO</span>
+      </div>
+      <div class="s1">
+        <div class="filters">
+          <div class="fgroup">
+            <div class="search-in">🔍 <span style="color:var(--dim)">Name / text / regex</span></div>
+            <div class="seg"><span class="on">All</span><span>Name</span><span>Text</span><span>.*</span></div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">Disciplines <a>+ OR group</a></div>
+            <div class="disgrid">
+              <span class="dis sup">DOM</span><span class="dis sup">FOR</span>
+              <span class="dis inf">obf</span><span class="dis inf">pre</span><span class="dis inf">ani</span>
+              <span class="dis inf">aus</span><span class="dis inf">cel</span><span class="dis inf">pot</span>
+              <span class="dis inf">tha</span><span class="dis inf">nec</span>
+            </div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">Capacity</div>
+            <div class="selrow"><span><b>≥ 6</b> and <b>≤ 9</b></span><span>▾</span></div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">Group</div>
+            <div class="grouprow"><i>1</i><i>2</i><i>3</i><i class="on">4</i><i class="on">5</i><i>6</i><i>7</i></div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">Clan / Path</div>
+            <div class="selrow"><b>Ventrue</b><span>▾</span></div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">Sect</div>
+            <div class="selrow"><b>Camarilla</b><span>▾</span></div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">Title</div>
+            <div class="ck on"><i></i>Prince</div>
+            <div class="ck on"><i></i>Justicar</div>
+            <div class="ck"><i></i>Primogen</div>
+            <div class="ck"><i></i>Inner Circle</div>
+          </div>
+          <div class="fgroup">
+            <div class="fl">More</div>
+            <div class="selrow">Traits<span>▾</span></div>
+            <div class="selrow" style="margin-top:6px">Set · Precon · Artist<span>▾</span></div>
+          </div>
+        </div>
+        <div class="results">
+          <div class="rhead"><span class="count"><b>27</b> crypt cards</span>
+            <span class="chip on">Ventrue <span class="x">✕</span></span>
+            <span class="chip on">grp 4–5 <span class="x">✕</span></span>
+            <span class="sort">Sort: Capacity ▾</span></div>
+          <div class="row"><span class="cap num">9</span>
+            <span class="nm">Lodin (Olaf Holte)</span>
+            <span class="meta"><span class="dis sup">DOM</span><span class="dis sup">FOR</span><span class="dis sup">PRE</span><span class="dis inf">aus</span></span>
+            <span class="clan">Ventrue</span><span class="grp num">G4</span></div>
+          <div class="row"><span class="cap num">8</span>
+            <span class="nm">Owain Evans, The Wanderer</span>
+            <span class="meta"><span class="dis sup">AUS</span><span class="dis sup">DOM</span><span class="dis sup">FOR</span><span class="dis inf">cel</span></span>
+            <span class="clan">Ventrue</span><span class="grp num">G4</span></div>
+          <div class="row" style="background:var(--panel)"><span class="cap num">7</span>
+            <span class="nm">Emerson Bridges<small>ADV</small></span>
+            <span class="meta"><span class="dis sup">DOM</span><span class="dis sup">FOR</span><span class="dis inf">pre</span></span>
+            <span class="clan">Ventrue</span><span class="add">+</span></div>
+          <div class="row"><span class="cap num">7</span>
+            <span class="nm">Timothy Crowley</span>
+            <span class="meta"><span class="dis sup">DOM</span><span class="dis sup">FOR</span><span class="dis inf">aus</span></span>
+            <span class="clan">Ventrue</span><span class="grp num">G5</span></div>
+          <div class="row"><span class="cap num">6</span>
+            <span class="nm">Catherine du Bois</span>
+            <span class="meta"><span class="dis sup">DOM</span><span class="dis inf">for</span><span class="dis inf">pre</span></span>
+            <span class="clan">Ventrue</span><span class="grp num">G5</span></div>
+          <div class="row"><span class="cap num">6</span>
+            <span class="nm">Sir Walter Nash</span>
+            <span class="meta"><span class="dis sup">FOR</span><span class="dis inf">dom</span><span class="dis inf">pre</span></span>
+            <span class="clan">Ventrue</span><span class="grp num">G4</span></div>
+        </div>
+        <div class="preview">
+          <div class="cardface">
+            <div class="cf-top"><h4>Emerson Bridges</h4><span class="cf-cap num">7</span></div>
+            <div class="cf-line">
+              <span class="dis sup">DOM</span> <span class="dis sup">FOR</span>
+              <span class="dis inf">pre</span>
+              &nbsp;<span class="clan">Ventrue · Camarilla · Group 5</span>
+            </div>
+            <p><b>Prince of New York:</b> Emerson gets +1 bleed when bleeding a
+            Methuselah who controls a ready titled vampire. Card text shown from the
+            official VEKN list; scan available on hover in the real app.</p>
+            <p style="color:var(--dim);font-size:11.5px">Rulings (3) · Printings:
+            Jyhad, V5 Ventrue precon · Artist: Greg Simanson</p>
+            <div class="cf-foot"><span>card #200274</span><span>3 TWD appearances</span></div>
+          </div>
+          <span class="btn primary" style="justify-content:center">+ Add to “Ventrue Grinder”</span>
+          <div class="pv-sub"><span class="chip">Copy link</span>
+            <span class="chip">Rulings</span><span class="chip">History</span></div>
+        </div>
+      </div>
+    </div></div>
+    <aside class="notes">
+      <div class="nt">Notes</div>
+      <ul>
+        <li>Filter rail groups vdb's full set — nothing dropped, high-traffic filters open by default.</li>
+        <li>Discipline badges: <b style="color:var(--pg-accent)">gold</b> = superior, outline = inferior. Same grammar everywhere.</li>
+        <li>⌘K command palette replaces the “lightning” quick search.</li>
+        <li>Active filters echoed as removable chips above results.</li>
+        <li>Instant results — queries run on local SQLite, offline.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ screen 2 : deck builder ============ -->
+<section id="s2">
+  <h2><span class="num display">02</span>Deck builder</h2>
+  <p class="secdesc">Crypt and library side by side with the stats rail always in view —
+  legality, capacity curve, disciplines and card types update as you edit. Branches,
+  import/export in every vdb format, proxy PDFs and the draw simulator live in the
+  header; the drawn hand docks at the bottom.</p>
+  <div class="shot">
+    <div class="framewrap"><div class="browser app">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">vtes.example/decks/ventrue-grinder</span></div>
+      <div class="dhead">
+        <h3>Ventrue Grinder</h3>
+        <span class="badge-ok">✓ Legal · Standard</span>
+        <span class="branch">⑂ main · rev 12 ▾</span>
+        <span class="actions">
+          <span class="btn ghost">Diff</span><span class="btn ghost">Proxy PDF</span>
+          <span class="btn ghost">Import ▾</span><span class="btn ghost">Export ▾</span>
+          <span class="btn">▶ Draw hand</span><span class="btn primary">Share</span>
+        </span>
+      </div>
+      <div class="s2">
+        <div class="col">
+          <div class="colhead"><h5>Crypt</h5><span class="num">12 cards · avg 7.3 · G4–5</span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+            <span class="nm">Lodin (Olaf Holte)</span>
+            <span class="tail"><span class="cap num">9</span><span class="dis sup">DOM</span><span class="dis sup">FOR</span><span class="dis sup">PRE</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+            <span class="nm">Owain Evans, The Wanderer</span>
+            <span class="tail"><span class="cap num">8</span><span class="dis sup">AUS</span><span class="dis sup">DOM</span><span class="dis sup">FOR</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">3</b><i>+</i></span>
+            <span class="nm">Emerson Bridges</span>
+            <span class="tail"><span class="cap num">7</span><span class="dis sup">DOM</span><span class="dis sup">FOR</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">3</b><i>+</i></span>
+            <span class="nm">Timothy Crowley</span>
+            <span class="tail"><span class="cap num">7</span><span class="dis sup">DOM</span><span class="dis sup">FOR</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+            <span class="nm">Catherine du Bois</span>
+            <span class="tail"><span class="cap num">6</span><span class="dis sup">DOM</span></span></div>
+        </div>
+        <div class="col">
+          <div class="colhead"><h5>Library</h5><span class="num">68 cards</span></div>
+          <div class="typehead">Master · 16</div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">4</b><i>+</i></span>
+            <span class="nm">Blood Doll</span><span class="tail clan">trifle</span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+            <span class="nm">Pentex™ Subversion</span><span class="tail clan"></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+            <span class="nm">Vessel</span><span class="tail clan">trifle</span></div>
+          <div class="typehead">Action · 14</div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">8</b><i>+</i></span>
+            <span class="nm">Govern the Unaligned</span>
+            <span class="tail"><span class="dis sup">DOM</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">6</b><i>+</i></span>
+            <span class="nm">Dominate Kine</span>
+            <span class="tail"><span class="dis sup">DOM</span></span></div>
+          <div class="typehead">Action Modifier · 12</div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">6</b><i>+</i></span>
+            <span class="nm">Conditioning</span>
+            <span class="tail"><span class="dis sup">DOM</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">6</b><i>+</i></span>
+            <span class="nm">Freak Drive</span>
+            <span class="tail"><span class="dis sup">FOR</span></span></div>
+          <div class="typehead">Reaction · 14</div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">6</b><i>+</i></span>
+            <span class="nm">Deflection</span>
+            <span class="tail"><span class="dis sup">DOM</span></span></div>
+          <div class="crow"><span class="q"><i>−</i><b class="num">4</b><i>+</i></span>
+            <span class="nm">On the Qui Vive</span><span class="tail clan"></span></div>
+        </div>
+        <div class="stats">
+          <div class="tiles">
+            <div class="tile"><b>12</b><span>crypt</span></div>
+            <div class="tile"><b>7.3</b><span>avg capacity</span></div>
+            <div class="tile"><b>68</b><span>library</span></div>
+            <div class="tile okc"><b>✓ G4–5 legal</b><span>groups</span></div>
+          </div>
+          <div>
+            <div class="fl" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:7px">Library disciplines</div>
+            <div class="bars">
+              <div class="b"><span>DOM</span><span><span class="tr" style="width:86%"><span class="htip">Dominate · 26 cards · 38%</span></span></span><span class="val num">26</span></div>
+              <div class="b"><span>FOR</span><span><span class="tr" style="width:33%"></span></span><span class="val num">10</span></div>
+              <div class="b"><span>AUS</span><span><span class="tr" style="width:13%"></span></span><span class="val num">4</span></div>
+              <div class="b"><span>none</span><span><span class="tr" style="width:93%;background:var(--raised);border:1px solid var(--line)"></span></span><span class="val num">28</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="fl" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:7px">Card types</div>
+            <div class="bars">
+              <div class="b"><span>Master</span><span><span class="tr" style="width:53%"></span></span><span class="val num">16</span></div>
+              <div class="b"><span>Action</span><span><span class="tr" style="width:47%"></span></span><span class="val num">14</span></div>
+              <div class="b"><span>Mod</span><span><span class="tr" style="width:40%"></span></span><span class="val num">12</span></div>
+              <div class="b"><span>React</span><span><span class="tr" style="width:47%"></span></span><span class="val num">14</span></div>
+              <div class="b"><span>Combat</span><span><span class="tr" style="width:20%"></span></span><span class="val num">6</span></div>
+              <div class="b"><span>Other</span><span><span class="tr" style="width:20%"></span></span><span class="val num">6</span></div>
+            </div>
+          </div>
+          <span class="chip" style="justify-self:start">Inventory: 4 cards missing ▾</span>
+        </div>
+        <div class="drawbar">
+          <span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Opening<br>hand</span>
+          <span class="mini cr">Lodin</span><span class="mini cr">Emerson Bridges</span>
+          <span class="mini cr">Timothy Crowley</span><span class="mini cr">Catherine du Bois</span>
+          <span class="mini">Govern the Unaligned</span><span class="mini">Blood Doll</span>
+          <span class="mini">Deflection</span><span class="mini">Conditioning</span>
+          <span class="mini">Freak Drive</span><span class="mini">On the Qui Vive</span>
+          <span class="mini">Vessel</span>
+          <span class="btn ghost" style="margin-left:auto">↻ Redraw</span>
+        </div>
+      </div>
+    </div></div>
+    <aside class="notes">
+      <div class="nt">Notes</div>
+      <ul>
+        <li>Legality badge is live: standard / V5 / 2-Players / custom limited formats.</li>
+        <li>Branches (⑂) are first-class, as in vdb — with visual diff between revisions.</li>
+        <li>Import/Export: text, Lackey, JOL, TWD, XLSX, deck-in-URL.</li>
+        <li>Stats charts: single crimson hue, direct values — tooltips on hover (shown on DOM).</li>
+        <li>Draw simulator docks below: 4 crypt + 7 library, redraw with seeded RNG.</li>
+        <li>Inventory delta surfaces missing cards right in the builder.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ screen 3 : TWD ============ -->
+<section id="s3">
+  <h2><span class="num display">03</span>Tournament Winning Decks</h2>
+  <p class="secdesc">The TWD archive with vdb's complete filter arsenal — year, players,
+  contained cards, library size, capacity buckets, discipline and type percentages,
+  archetype tags, event and winner. Results read like tournament records, not table
+  rows; Cards History, Hall of Fame and TWD Check keep their own tabs.</p>
+  <div class="shot">
+    <div class="framewrap"><div class="browser app">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">vtes.example/twd</span></div>
+      <div class="tnav">
+        <span class="brand"><span class="sigil">V</span>VTEsOnSteroids</span>
+        <span class="links"><a>Crypt</a><a>Library</a><a>Decks</a><a>Inventory</a><a class="on">TWD</a><a>PDA</a></span>
+        <span class="kbar">Search any card… <kbd>⌘K</kbd></span>
+        <span class="avatar">JO</span>
+      </div>
+      <div class="s3">
+        <div class="fbar">
+          <span class="chip on">2023 – 2026 <span class="x">✕</span></span>
+          <span class="chip on">players ≥ 25 <span class="x">✕</span></span>
+          <span class="chip on">contains: Govern the Unaligned <span class="x">✕</span></span>
+          <span class="chip on">tag: Bleed <span class="x">✕</span></span>
+          <span class="chip">+ Filter ▾</span>
+          <span style="margin-left:auto" class="btn ghost">🎲 Random</span>
+          <span class="btn ghost">New</span>
+        </div>
+        <div class="twd">
+          <div>
+            <h4>Ventrue Lawfirm, Attorneys at Blood</h4>
+            <div class="ev">European Championship 2025 · Warsaw, Poland · 84 players</div>
+            <div class="lineup">Crypt: <b>Lodin ×2 · Owain Evans ×2 · Emerson Bridges ×3</b> · 12 cards · avg 7.3</div>
+            <div class="tags"><span class="chip">Bleed</span><span class="chip">Vote</span><span class="chip">Mono-clan</span></div>
+          </div>
+          <div class="right"><span class="num" style="color:var(--mut)">2025-11-08</span>
+            <span style="font-size:12.5px">winner <b>M. Kowalski</b></span>
+            <a class="open">Open deck →</a></div>
+        </div>
+        <div class="twd">
+          <div>
+            <h4>Grinding Forever</h4>
+            <div class="ev">NAC Week 3 2024 · Montréal, Canada · 47 players</div>
+            <div class="lineup">Crypt: <b>Timothy Crowley ×4 · Catherine du Bois ×3</b> · 13 cards · avg 6.4</div>
+            <div class="tags"><span class="chip">Bleed</span><span class="chip">Block</span></div>
+          </div>
+          <div class="right"><span class="num" style="color:var(--mut)">2024-06-22</span>
+            <span style="font-size:12.5px">winner <b>A. Tremblay</b></span>
+            <a class="open">Open deck →</a></div>
+        </div>
+        <div class="twd">
+          <div>
+            <h4>Second Tradition: Domain</h4>
+            <div class="ev">German NC 2023 · Bochum, Germany · 41 players</div>
+            <div class="lineup">Crypt: <b>Owain Evans ×3 · Lodin ×2</b> · 12 cards · avg 7.8</div>
+            <div class="tags"><span class="chip">Bleed</span><span class="chip">Combat</span></div>
+          </div>
+          <div class="right"><span class="num" style="color:var(--mut)">2023-10-01</span>
+            <span style="font-size:12.5px">winner <b>S. Berger</b></span>
+            <a class="open">Open deck →</a></div>
+        </div>
+        <div style="display:flex;gap:8px;color:var(--dim);font-size:12px">
+          <span class="chip">Cards History</span><span class="chip">Hall of Fame · Cards</span>
+          <span class="chip">Hall of Fame · Tournaments</span><span class="chip">TWD Check</span>
+          <span style="margin-left:auto">147 decks · Load more ▾</span>
+        </div>
+      </div>
+    </div></div>
+    <aside class="notes">
+      <div class="nt">Notes</div>
+      <ul>
+        <li>Every TWD filter from vdb, expressed as removable chips + a “+ Filter” builder.</li>
+        <li>Deck cards lead with the tournament story: event, field size, winner, archetype tags.</li>
+        <li>Sibling pages (Cards History, Halls of Fame, TWD Check) stay one tap away.</li>
+        <li>TDA and PDA reuse this exact layout with their own filters.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ screen 4 : mobile ============ -->
+<section id="s4">
+  <h2><span class="num display">04</span>Mobile / PWA</h2>
+  <div class="shot2">
+    <div class="phone app">
+      <div class="m-head">
+        <span class="brand"><span class="sigil">V</span></span>
+        <h4>Ventrue Grinder</h4>
+        <span class="badge-ok">✓</span><span class="avatar">JO</span>
+      </div>
+      <div class="m-body">
+        <div class="tiles">
+          <div class="tile"><b>12</b><span>crypt · 7.3 avg</span></div>
+          <div class="tile"><b>68</b><span>library</span></div>
+        </div>
+        <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+          <span class="nm">Lodin (Olaf Holte)</span>
+          <span class="tail"><span class="cap num">9</span></span></div>
+        <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+          <span class="nm">Owain Evans, The Wanderer</span>
+          <span class="tail"><span class="cap num">8</span></span></div>
+        <div class="crow"><span class="q"><i>−</i><b class="num">3</b><i>+</i></span>
+          <span class="nm">Emerson Bridges</span>
+          <span class="tail"><span class="cap num">7</span></span></div>
+        <div class="typehead">Master · 16</div>
+        <div class="crow"><span class="q"><i>−</i><b class="num">4</b><i>+</i></span>
+          <span class="nm">Blood Doll</span><span class="tail clan">trifle</span></div>
+        <div class="crow"><span class="q"><i>−</i><b class="num">2</b><i>+</i></span>
+          <span class="nm">Pentex™ Subversion</span><span class="tail clan"></span></div>
+      </div>
+      <div class="m-nav" style="margin-top:10px">
+        <div><i></i>Search</div><div class="on"><i></i>Decks</div>
+        <div><i></i>Inventory</div><div><i></i>TWD</div><div><i></i>More</div>
+      </div>
+    </div>
+    <aside class="notes">
+      <div class="nt">Notes</div>
+      <ul>
+        <li>Installable PWA; card database cached in OPFS — search and deck editing fully offline.</li>
+        <li>Bottom tab bar mirrors vdb's mobile priorities; deck editing keeps the same steppers and grammar as desktop.</li>
+        <li>Anonymous users get local decks; sign-in adds cross-device sync — nothing is gated that vdb offers free.</li>
+      </ul>
+      <div class="nt" style="margin-top:22px">Not pictured (same system)</div>
+      <ul>
+        <li>Library search — screen 01's shell with vdb's library filter set.</li>
+        <li>Inventory — screen 01's table + owned/used/missing columns.</li>
+        <li>Diff, Review, Seating, Precons, Playtest, Account — inherit tokens and atoms above.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<footer class="pgfoot">
+  Mockups use placeholder card data for layout only. Card names and texts are the
+  copyright of Paradox Interactive AB, referenced under the Dark Pack agreement.
+  Design R1 · VTEsOnSteroids · built from the vdb feature-parity survey, 2026-07-18.
+</footer>
+</div>
