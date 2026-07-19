@@ -4,8 +4,9 @@
 
 Transport: **Streamable HTTP** (current MCP spec revision) at `/mcp` — **live**, built
 with the official Rust SDK (`rmcp` 2.x, `server/src/mcp.rs`), verified with a real
-client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** transport
-(`server --mcp-stdio`) for local clients is not yet implemented.
+client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** transport is
+also live for local clients via `schrecknet-server --mcp-stdio`; both transports
+instantiate the identical `SchreckNetMcp` handler and expose the same tools/resources.
 
 ### Tools
 

@@ -10,6 +10,7 @@ mod mcp;
 use axum::{routing::get, Json, Router};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::StreamableHttpService;
+use rmcp::ServiceExt;
 use tower_http::services::{ServeDir, ServeFile};
 
 #[derive(Clone)]
@@ -27,6 +28,17 @@ async fn main() {
     let data_dir = env_or("SCHRECKNET_DATA_DIR", "dist");
     let bind = env_or("SCHRECKNET_BIND", "0.0.0.0:8000");
     let index = format!("{static_dir}/index.html");
+
+    if std::env::args().any(|arg| arg == "--mcp-stdio") {
+        mcp::SchreckNetMcp::new(data_dir)
+            .serve(rmcp::transport::stdio())
+            .await
+            .expect("start MCP stdio transport")
+            .waiting()
+            .await
+            .expect("run MCP stdio transport");
+        return;
+    }
 
     let state = AppState {
         data_dir: data_dir.clone(),

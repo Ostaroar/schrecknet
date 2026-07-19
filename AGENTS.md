@@ -92,6 +92,8 @@ wasm-pack build core --target web --out-dir ../frontend/src/wasm # actual bindin
 
 # server (serves frontend/dist + /healthz + /api/v1/meta + /data/* on :8000)
 cargo run -p schrecknet-server
+# local MCP clients over stdin/stdout (same tools/resources as HTTP /mcp)
+cargo run -p schrecknet-server -- --mcp-stdio
 # env: SCHRECKNET_BIND, SCHRECKNET_STATIC_DIR, SCHRECKNET_DATA_DIR (dir
 # containing cards.sqlite + cards.meta.json, served at /data/*), SCHRECKNET_APP_DB
 
