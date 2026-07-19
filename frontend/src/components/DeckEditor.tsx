@@ -10,6 +10,9 @@ import {
   exportDeckText,
   importDeckText,
   computeDeckStats,
+  listTags,
+  addTag,
+  removeTag,
   type DeckSummary,
   type DeckCardDetail,
   type DeckStats,
@@ -213,6 +216,62 @@ function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetai
   )
 }
 
+function TagChips({ deckId }: { deckId: number }) {
+  const [tags, setTags] = useState<string[]>([])
+  const [draft, setDraft] = useState('')
+
+  const refresh = () => listTags(deckId).then(setTags)
+
+  useEffect(() => {
+    refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deckId])
+
+  const submit = async () => {
+    if (!draft.trim()) return
+    await addTag(deckId, draft)
+    setDraft('')
+    refresh()
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {tags.map((t) => (
+        <span
+          key={t}
+          className="inline-flex items-center gap-1 rounded-full border border-line bg-raised px-2 py-0.5 text-[11px] text-ink-muted"
+        >
+          {t}
+          <button
+            onClick={async () => {
+              await removeTag(deckId, t)
+              refresh()
+            }}
+            aria-label={`Remove tag ${t}`}
+            className="text-ink-dim hover:text-blood-hi"
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        className="w-24 rounded-full border border-line-soft bg-transparent px-2 py-0.5 text-[11px] text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+        placeholder="Add tag…"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && submit()}
+      />
+      <button
+        onClick={submit}
+        disabled={!draft.trim()}
+        className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-dim hover:text-ink disabled:opacity-40"
+      >
+        Add
+      </button>
+    </div>
+  )
+}
+
 function CardRow({ card, onQty }: { card: DeckCardDetail; onQty: (qty: number) => void }) {
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 text-sm">
@@ -333,6 +392,8 @@ export default function DeckEditor({ id }: { id: number }) {
           Delete deck
         </button>
       </div>
+
+      <TagChips deckId={id} />
 
       {stats && (
         <div className="flex flex-wrap items-center gap-4 rounded-lg border border-line bg-surface px-4 py-2.5 text-xs">

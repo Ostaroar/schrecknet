@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS deck_cards(
   qty INTEGER NOT NULL CHECK(qty > 0),
   PRIMARY KEY (deck_id, card_id)
 );
+CREATE TABLE IF NOT EXISTS deck_tags(
+  deck_id INTEGER NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+  tag TEXT NOT NULL,
+  PRIMARY KEY (deck_id, tag)
+);
 `
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

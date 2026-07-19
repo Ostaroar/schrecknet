@@ -126,7 +126,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Format legality checks: custom limited formats within the V5 pool ✎
       (limited format editor: allowed sets/cards); 2-Players variant within V5 ✎
       (keep only if the V5 pool supports it) — V5 base-format legality is live
-- ☐ Deck tags (auto-derived archetype tags + user tags) ✎
+- ☑ Deck tags: user (free-text) tags — live (frontend/src/lib/deckStore.ts,
+      frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
+      archetype tags still not done ✎
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☑ Clone / copy deck — live, from both the deck list and the editor
 - ☑ Import: paste text, Lackey-style `"<qty>x <name>"` — live

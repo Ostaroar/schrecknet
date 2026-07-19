@@ -14,12 +14,45 @@ export interface DeckSummary {
   description: string | null
   created_at: string
   updated_at: string
+  tags: string[]
 }
 
 const SUMMARY_COLUMNS = 'id, name, description, created_at, updated_at'
 
 export async function listDecks(): Promise<DeckSummary[]> {
-  return userQuery<DeckSummary>(`SELECT ${SUMMARY_COLUMNS} FROM decks ORDER BY updated_at DESC`)
+  const decks = await userQuery<Omit<DeckSummary, 'tags'>>(
+    `SELECT ${SUMMARY_COLUMNS} FROM decks ORDER BY updated_at DESC`,
+  )
+  if (decks.length === 0) return []
+  const tagRows = await userQuery<{ deck_id: number; tag: string }>(
+    'SELECT deck_id, tag FROM deck_tags ORDER BY tag ASC',
+  )
+  const tagsByDeck = new Map<number, string[]>()
+  for (const row of tagRows) {
+    const list = tagsByDeck.get(row.deck_id)
+    if (list) list.push(row.tag)
+    else tagsByDeck.set(row.deck_id, [row.tag])
+  }
+  return decks.map((d) => ({ ...d, tags: tagsByDeck.get(d.id) ?? [] }))
+}
+
+/** Returns a deck's tags, alphabetically sorted. */
+export async function listTags(deckId: number): Promise<string[]> {
+  const rows = await userQuery<{ tag: string }>('SELECT tag FROM deck_tags WHERE deck_id = ?1 ORDER BY tag ASC', [
+    deckId,
+  ])
+  return rows.map((r) => r.tag)
+}
+
+/** Adds a tag to a deck; trims + lowercases first so "Aggro"/"aggro" don't duplicate. No-ops on empty input. */
+export async function addTag(deckId: number, tag: string): Promise<void> {
+  const normalized = tag.trim().toLowerCase()
+  if (!normalized) return
+  await userRun('INSERT OR IGNORE INTO deck_tags (deck_id, tag) VALUES (?1, ?2)', [deckId, normalized])
+}
+
+export async function removeTag(deckId: number, tag: string): Promise<void> {
+  await userRun('DELETE FROM deck_tags WHERE deck_id = ?1 AND tag = ?2', [deckId, tag.trim().toLowerCase()])
 }
 
 export async function getDeck(id: number): Promise<DeckSummary | null> {
@@ -42,6 +75,7 @@ export async function renameDeck(id: number, name: string): Promise<void> {
 
 export async function deleteDeck(id: number): Promise<void> {
   await userRun('DELETE FROM deck_cards WHERE deck_id = ?1', [id])
+  await userRun('DELETE FROM deck_tags WHERE deck_id = ?1', [id])
   await userRun('DELETE FROM decks WHERE id = ?1', [id])
 }
 

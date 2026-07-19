@@ -86,7 +86,10 @@ docs/feature-parity.md's scope note).
   redrawable. Plain shuffle-and-take, not core/ domain logic (a random draw
   has no legal/illegal outcome to validate) — Math.random is fine here, no
   need for seeded/crypto-grade RNG for a personal test-hand tool
-- ☐ Tags (auto-derived + user); branches/revisions
+- ☑ User tags — live (frontend/src/lib/deckStore.ts: listTags/addTag/removeTag,
+  frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
+  archetype tags and branches/revisions still not done (larger items, out of
+  scope for the user-tags pass)
 - ☑ Deck-in-URL sharing — live: `core/src/share.rs` (compiled to WASM, same as
   legality) encodes crypt+library (card_id, qty) pairs into a compact,
   URL-safe base64url token; `#/share/<token>` decodes and previews it, with a
