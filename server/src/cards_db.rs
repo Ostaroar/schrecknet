@@ -39,6 +39,18 @@ pub struct CryptSearchParams {
     /// If true, every discipline in `disciplines` must be at superior level.
     #[serde(default)]
     pub disciplines_superior: bool,
+    /// Exact set name match (e.g. "Fifth Edition"); a card matches if any of
+    /// its printings belong to this set.
+    #[serde(default)]
+    pub set: Option<String>,
+    /// Substring match against printing `precon` (e.g. "Anarch"); printings
+    /// with no precon (NULL) never match.
+    #[serde(default)]
+    pub precon: Option<String>,
+    /// Substring match against artist name; a card matches if any credited
+    /// artist matches.
+    #[serde(default)]
+    pub artist: Option<String>,
 }
 
 /// Scope of the `text` filter on crypt search.
@@ -119,6 +131,18 @@ pub struct LibrarySearchParams {
     /// Maximum pool cost (inclusive); cards with no pool cost never match.
     #[serde(default)]
     pub pool_cost_max: Option<i64>,
+    /// Exact set name match (e.g. "Fifth Edition"); a card matches if any of
+    /// its printings belong to this set.
+    #[serde(default)]
+    pub set: Option<String>,
+    /// Substring match against printing `precon` (e.g. "Anarch"); printings
+    /// with no precon (NULL) never match.
+    #[serde(default)]
+    pub precon: Option<String>,
+    /// Substring match against artist name; a card matches if any credited
+    /// artist matches.
+    #[serde(default)]
+    pub artist: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -155,7 +179,13 @@ pub fn search_crypt(
            AND (?5 IS NULL OR c.grp = ?5)
            AND (?6 IS NULL OR c.capacity >= ?6)
            AND (?7 IS NULL OR c.capacity <= ?7)
-           AND (?8 IS NULL OR c.title = ?8)",
+           AND (?8 IS NULL OR c.title = ?8)
+           AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+                WHERE p.card_id = c.id AND s.name = ?9))
+           AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p
+                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?10 || '%'))
+           AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
@@ -166,6 +196,9 @@ pub fn search_crypt(
         Box::new(params.capacity_min),
         Box::new(params.capacity_max),
         Box::new(params.title.clone()),
+        Box::new(params.set.clone()),
+        Box::new(params.precon.clone()),
+        Box::new(params.artist.clone()),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -226,7 +259,13 @@ pub fn search_library(
            AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
                 AND CAST(c.blood_cost AS INTEGER) <= ?4))
            AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
-                AND CAST(c.pool_cost AS INTEGER) <= ?5))",
+                AND CAST(c.pool_cost AS INTEGER) <= ?5))
+           AND (?6 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+                WHERE p.card_id = c.id AND s.name = ?6))
+           AND (?7 IS NULL OR EXISTS (SELECT 1 FROM printings p
+                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?7 || '%'))
+           AND (?8 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?8 || '%'))",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
@@ -234,6 +273,9 @@ pub fn search_library(
         Box::new(params.clan.clone()),
         Box::new(params.blood_cost_max),
         Box::new(params.pool_cost_max),
+        Box::new(params.set.clone()),
+        Box::new(params.precon.clone()),
+        Box::new(params.artist.clone()),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -302,13 +344,24 @@ mod tests {
                clan TEXT, capacity INT, grp INT, title TEXT,
                types TEXT, blood_cost TEXT, pool_cost TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
+             CREATE TABLE sets(id INT, name TEXT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
+             CREATE TABLE artists(id INT, name TEXT);
+             CREATE TABLE card_artists(card_id INT, artist_id INT);
              INSERT INTO cards VALUES
                (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL),
                (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL),
                (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2'),
                (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL),
                (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2');
-             INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);",
+             INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);
+             INSERT INTO sets VALUES (1,'Fifth Edition'),(2,'Anarch Revolt');
+             INSERT INTO printings VALUES
+               (1,1,NULL,'C',1),
+               (2,2,'Anarch Precon','U',1),
+               (3,1,NULL,'C',1);
+             INSERT INTO artists VALUES (1,'Vagelis Adam'),(2,'Mike Chaney');
+             INSERT INTO card_artists VALUES (1,1),(3,2);",
         )
         .unwrap();
     }
@@ -491,6 +544,60 @@ mod tests {
     }
 
     #[test]
+    fn crypt_set_filter_matches_exact_set_name() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Aaradhya (card 1) has a printing in Fifth Edition; Abaddon has none.
+        let params = CryptSearchParams {
+            set: Some("Fifth Edition".into()),
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+        // A set no crypt card was printed in matches nothing.
+        let params = CryptSearchParams {
+            set: Some("Unknown Set".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn crypt_precon_filter_substring_matches_and_skips_null() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Only Abaddon (card 2) has a precon printing; Aaradhya's is NULL.
+        let params = CryptSearchParams {
+            precon: Some("Anarch".into()),
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Abaddon");
+    }
+
+    #[test]
+    fn crypt_artist_filter_substring_matches() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Aaradhya (card 1) is credited to Vagelis Adam.
+        let params = CryptSearchParams {
+            artist: Some("Vagelis".into()),
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+        // No card matches an unknown artist.
+        let params = CryptSearchParams {
+            artist: Some("Nobody".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
     fn library_search_filters_to_library_only_and_sorts_by_name() {
         let conn = Connection::open_in_memory().unwrap();
         seed(&conn);
@@ -668,5 +775,56 @@ mod tests {
             serde_json::from_str(r#"{"disciplines":["dom"],"disciplines_superior":true}"#).unwrap();
         assert_eq!(params.disciplines, vec!["dom"]);
         assert!(params.disciplines_superior);
+    }
+
+    #[test]
+    fn library_set_filter_matches_exact_set_name() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Villein (card 3) has a printing in Fifth Edition; other library
+        // cards (4, 5) have none.
+        let params = LibrarySearchParams {
+            set: Some("Fifth Edition".into()),
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Villein");
+        let params = LibrarySearchParams {
+            set: Some("Anarch Revolt".into()),
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_precon_filter_substring_matches_and_skips_null() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Villein's printing has a NULL precon, so it never matches.
+        let params = LibrarySearchParams {
+            precon: Some("Anarch".into()),
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_artist_filter_substring_matches() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Villein (card 3) is credited to Mike Chaney.
+        let params = LibrarySearchParams {
+            artist: Some("Chaney".into()),
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Villein");
+        let params = LibrarySearchParams {
+            artist: Some("Nobody".into()),
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &params).unwrap().is_empty());
     }
 }

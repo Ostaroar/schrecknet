@@ -11,6 +11,9 @@ export interface LibraryFilters {
   disciplinesSuperior: boolean
   bloodCostMax: number | null
   poolCostMax: number | null
+  set: string | null
+  precon: string | null
+  artist: string | null
 }
 
 export const emptyLibraryFilters: LibraryFilters = {
@@ -21,6 +24,9 @@ export const emptyLibraryFilters: LibraryFilters = {
   disciplinesSuperior: false,
   bloodCostMax: null,
   poolCostMax: null,
+  set: null,
+  precon: null,
+  artist: null,
 }
 
 export interface LibraryCard {
@@ -60,13 +66,22 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
        AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
             AND CAST(c.blood_cost AS INTEGER) <= ?4))
        AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
-            AND CAST(c.pool_cost AS INTEGER) <= ?5))`
+            AND CAST(c.pool_cost AS INTEGER) <= ?5))
+       AND (?6 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+            WHERE p.card_id = c.id AND s.name = ?6))
+       AND (?7 IS NULL OR EXISTS (SELECT 1 FROM printings p
+            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?7 || '%'))
+       AND (?8 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?8 || '%'))`
   const params: (string | number | null)[] = [
     filters.text.trim(),
     typePattern,
     filters.clan,
     filters.bloodCostMax,
     filters.poolCostMax,
+    filters.set,
+    filters.precon,
+    filters.artist,
   ]
   for (const code of filters.disciplines) {
     sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
@@ -106,4 +121,21 @@ export async function listLibraryDisciplines(): Promise<string[]> {
      JOIN cards c ON c.id = cd.card_id WHERE c.kind = 'library' ORDER BY cd.discipline`,
   )
   return rows.map((r) => r.discipline)
+}
+
+export async function listSets(): Promise<string[]> {
+  const rows = await query<{ name: string }>(`SELECT DISTINCT name FROM sets ORDER BY name`)
+  return rows.map((r) => r.name)
+}
+
+export async function listPrecons(): Promise<string[]> {
+  const rows = await query<{ precon: string }>(
+    `SELECT DISTINCT precon FROM printings WHERE precon IS NOT NULL ORDER BY precon`,
+  )
+  return rows.map((r) => r.precon)
+}
+
+export async function listArtists(): Promise<string[]> {
+  const rows = await query<{ name: string }>(`SELECT DISTINCT name FROM artists ORDER BY name`)
+  return rows.map((r) => r.name)
 }

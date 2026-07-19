@@ -57,10 +57,14 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
       Maneuver, Additional Strike, Aggravated, Prevent, Press, Enter combat, Unlock,
       Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement, Banned
-- ☐ Set filter: Any / Or Newer / Or Older / Not Newer / Not Older / Only In /
-      First Print / Reprint
-- ☐ Precon filter (same modes)
-- ☐ Artist filter
+- ☑ Set filter MVP: single-select exact set-name match, any-printing semantics
+      (`set` param on all three surfaces); ☐ still missing: Or Newer / Or Older /
+      Not Newer / Not Older / Only In / First Print / Reprint modes
+- ☑ Precon filter MVP: substring match against printing precon, any-printing
+      semantics, NULL precon never matches (`precon` param on all three
+      surfaces); ☐ still missing: exact-match / multi-select modes
+- ☑ Artist filter — substring match against credited artist name, any-artist
+      semantics (`artist` param on all three surfaces)
 - ☐ Results: sortable list, card image preview on hover/tap, inline add-to-deck when a
       deck is active ("Show Deck" split view)
 
@@ -88,7 +92,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       Combat Ends, Multi-Type, Multi-Discipline, Enter Combat, Create Vampire,
       Blood to Uncontrolled, Bounce Bleed, Reduce Bleed, Wake/Unlock, Black Hand,
       Seraph, Infernal, Burn Option, Banned, No Requirement
-- ☐ Set / Precon / Artist filters (same as crypt)
+- ☑ Set / Precon / Artist filters (same as crypt) MVP: same semantics and
+      caveats as the crypt filters above (`set`/`precon`/`artist` params on
+      all three surfaces)
 
 ## Card Detail (`/cards/:id`)
 - ☑ Full card text — inline expand panel on search results AND a routed page

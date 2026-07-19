@@ -29,7 +29,11 @@ docs/feature-parity.md's scope note).
 - ☑ Crypt discipline filter (3-state toggle: any/superior, require-ALL via
   dynamic EXISTS clauses — bound params only) + capacity min/max range, on all
   three surfaces; REST accepts `disciplines=dom,for` CSV, MCP takes a JSON array
-- ☐ Remaining crypt filters (sect, title, votes, traits, set/precon/artist,
+- ☑ Set / precon / artist filters (crypt + library, all three surfaces):
+  exact set-name match, precon substring, artist substring — each via
+  bound-param EXISTS subqueries over printings/sets/artists; ☐ still missing
+  set filter's Or Newer/Or Older/Only In/First Print/Reprint modes
+- ☐ Remaining crypt filters (sect, title, votes, traits,
   per-discipline level mixing, OR-groups) + remaining library filters
   (discipline, costs, traits) + routed card detail page
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
