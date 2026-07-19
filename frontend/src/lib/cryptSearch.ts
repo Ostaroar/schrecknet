@@ -6,9 +6,14 @@
 
 import { query } from './db'
 
+/** Scope of the text filter: card name, card text, or either. */
+export type TextMode = 'any' | 'name' | 'text'
+
 export interface CryptFilters {
   text: string
+  textMode: TextMode
   clan: string | null
+  title: string | null
   group: number | null
   capacityMin: number | null
   capacityMax: number | null
@@ -18,7 +23,9 @@ export interface CryptFilters {
 
 export const emptyCryptFilters: CryptFilters = {
   text: '',
+  textMode: 'any',
   clan: null,
+  title: null,
   group: null,
   capacityMin: null,
   capacityMax: null,
@@ -69,17 +76,23 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
      WHERE c.kind = 'crypt'
-       AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
-       AND (?2 IS NULL OR c.clan LIKE '%' || ?2 || '%')
-       AND (?3 IS NULL OR c.grp = ?3)
-       AND (?4 IS NULL OR c.capacity >= ?4)
-       AND (?5 IS NULL OR c.capacity <= ?5)`
+       AND (?1 = ''
+            OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
+            OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+       AND (?4 IS NULL OR c.clan LIKE '%' || ?4 || '%')
+       AND (?5 IS NULL OR c.grp = ?5)
+       AND (?6 IS NULL OR c.capacity >= ?6)
+       AND (?7 IS NULL OR c.capacity <= ?7)
+       AND (?8 IS NULL OR c.title = ?8)`
   const params: (string | number | null)[] = [
     filters.text.trim(),
+    filters.textMode !== 'text' ? 1 : 0,
+    filters.textMode !== 'name' ? 1 : 0,
     filters.clan,
     filters.group,
     filters.capacityMin,
     filters.capacityMax,
+    filters.title,
   ]
   for (const code of filters.disciplines) {
     sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
@@ -97,6 +110,13 @@ export async function listClans(): Promise<string[]> {
     `SELECT DISTINCT clan FROM cards WHERE kind = 'crypt' AND clan != '' ORDER BY clan`,
   )
   return rows.map((r) => r.clan)
+}
+
+export async function listTitles(): Promise<string[]> {
+  const rows = await query<{ title: string }>(
+    `SELECT DISTINCT title FROM cards WHERE kind = 'crypt' AND title IS NOT NULL ORDER BY title`,
+  )
+  return rows.map((r) => r.title)
 }
 
 export async function listGroups(): Promise<number[]> {

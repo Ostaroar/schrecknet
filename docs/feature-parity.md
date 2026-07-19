@@ -26,7 +26,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 
 ## Crypt Card Search (`/crypt`)
 - ☑ Name / text search — MVP live (frontend/src/components/CryptSearch.tsx);
-      ☐ still missing "Only in Name" / "Only in Text" mode toggle and Regex mode
+      ☑ "Only in Name" / "Only in Text" mode toggle (All/Name/Text segmented
+      control; `text_mode` param on all three surfaces); ☐ Regex mode still missing
 - ☑ Discipline filter MVP: per-discipline three-state toggle (off → required
       any level → superior only), require-ALL semantics, verified on real data
       (superior mode correctly excludes inferior matches). ☐ still missing:
@@ -38,9 +39,11 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Clan / Path filter — MVP live, options derived from the V5 pool (14 clans)
 - ☐ Sect filter (Camarilla, Sabbat, Laibon, Independent, Anarch, Imbued)
 - ☐ Votes filter (numeric)
-- ☐ Title filter: Primogen, Prince, Justicar, Inner Circle, Baron, 1 vote, 2 votes,
-      Bishop, Archbishop, Priscus, Cardinal, Regent, Magaji, Non-titled
-      (data present: `cards.title`; V5 pool titles seen so far: Primogen, Prince,
+- ☑ Title filter MVP: single-select exact match, options derived from the V5
+      pool at query time (`title` param on all three surfaces); ☐ still missing:
+      vote-count buckets (1 vote / 2 votes) and Non-titled option
+      (vdb list: Primogen, Prince, Justicar, Inner Circle, Baron, 1 vote, 2 votes,
+      Bishop, Archbishop, Priscus, Cardinal, Regent, Magaji, Non-titled; V5 pool titles seen so far: Primogen, Prince,
       Justicar, Bishop, Archbishop, Priscus, Cardinal — Baron/Inner Circle/Regent/
       Magaji not yet in the V5 pool ✎ recheck as new sets ship)
 - ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
