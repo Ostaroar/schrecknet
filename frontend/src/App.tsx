@@ -4,6 +4,7 @@ import LibrarySearch from './components/LibrarySearch'
 import CardPage from './components/CardPage'
 import DeckList from './components/DeckList'
 import DeckEditor from './components/DeckEditor'
+import SharedDeckPreview from './components/SharedDeckPreview'
 import CommandPalette from './components/CommandPalette'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { useHashRoute, navigate } from './lib/route'
@@ -18,7 +19,7 @@ export default function App() {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
 
-  const wide = route.page === 'deck' || route.page === 'decks'
+  const wide = route.page === 'deck' || route.page === 'decks' || route.page === 'share'
 
   return (
     <div className={'mx-auto flex min-h-screen flex-col px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
@@ -35,7 +36,7 @@ export default function App() {
         </span>
       </header>
 
-      {route.page !== 'card' && route.page !== 'deck' && (
+      {route.page !== 'card' && route.page !== 'deck' && route.page !== 'share' && (
         <nav className="mb-4 flex gap-1">
           {TABS.map((t) => (
             <button
@@ -57,6 +58,8 @@ export default function App() {
           <CardPage id={route.id} />
         ) : route.page === 'deck' ? (
           <DeckEditor id={route.id} />
+        ) : route.page === 'share' ? (
+          <SharedDeckPreview token={route.token} />
         ) : route.page === 'decks' ? (
           <DeckList />
         ) : route.page === 'library' ? (

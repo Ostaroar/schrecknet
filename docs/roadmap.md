@@ -75,7 +75,14 @@ docs/feature-parity.md's scope note).
   has no legal/illegal outcome to validate) — Math.random is fine here, no
   need for seeded/crypto-grade RNG for a personal test-hand tool
 - ☐ Tags (auto-derived + user); branches/revisions
-- ☐ Import/export all formats; deck-in-URL sharing; diff
+- ☑ Deck-in-URL sharing — live: `core/src/share.rs` (compiled to WASM, same as
+  legality) encodes crypt+library (card_id, qty) pairs into a compact,
+  URL-safe base64url token; `#/share/<token>` decodes and previews it, with a
+  "Save as new deck" import that never touches the source deck. No server,
+  no account — matches vdb's deck-in-URL. Verified round-trip live in the
+  browser, including hand-computing a token in Python and confirming the
+  compiled Rust core decoded it correctly.
+- ☐ Import/export all formats (Lackey, JOL, XLSX); diff
 - ☐ Proxy PDF generation; precon browser; table seating tool
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync

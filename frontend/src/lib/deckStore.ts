@@ -5,7 +5,8 @@
 
 import { query as cardsQuery } from './db'
 import { query as userQuery, run as userRun } from './userDb'
-import { validateDeck } from './core'
+import { validateDeck, encodeDeckShare, decodeDeckShare } from './core'
+import { routeTo } from './route'
 
 export interface DeckSummary {
   id: number
@@ -121,6 +122,53 @@ export async function getDeckCardDetails(deckId: number): Promise<DeckCardDetail
       group: c.grp,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Builds a shareable URL encoding this deck's full contents (no account/server needed). */
+export async function buildShareUrl(deckId: number): Promise<string> {
+  const cards = await getDeckCardDetails(deckId)
+  const crypt: [number, number][] = cards.filter((c) => c.kind === 'crypt').map((c) => [c.id, c.qty])
+  const library: [number, number][] = cards.filter((c) => c.kind === 'library').map((c) => [c.id, c.qty])
+  const token = await encodeDeckShare(crypt, library)
+  return `${window.location.origin}${window.location.pathname}${routeTo({ page: 'share', token })}`
+}
+
+/** Decodes a share token into (card_id, qty, kind) rows joined against cards.sqlite, for a preview. */
+export async function previewSharedDeck(token: string): Promise<DeckCardDetail[]> {
+  const { crypt, library } = await decodeDeckShare(token)
+  const all = [...crypt, ...library]
+  if (all.length === 0) return []
+  const qtyById = new Map(all.map(([id, qty]) => [id, qty]))
+  const placeholders = all.map((_, i) => `?${i + 1}`).join(',')
+  const cards = await cardsQuery<{
+    id: number
+    kind: string
+    name: string
+    clan: string
+    capacity: number | null
+    grp: number | null
+  }>(`SELECT id, kind, name, clan, capacity, grp FROM cards WHERE id IN (${placeholders})`, all.map(([id]) => id))
+  return cards
+    .map((c) => ({
+      id: c.id,
+      qty: qtyById.get(c.id) ?? 0,
+      kind: c.kind as 'crypt' | 'library',
+      name: c.name,
+      clan: c.clan || null,
+      capacity: c.capacity,
+      group: c.grp,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Saves a shared deck's contents as a new local deck. Unknown card ids are silently skipped. */
+export async function importSharedDeck(token: string, name: string): Promise<number> {
+  const { crypt, library } = await decodeDeckShare(token)
+  const newId = await createDeck(name)
+  for (const [cardId, qty] of [...crypt, ...library]) {
+    await setCardQty(newId, cardId, qty)
+  }
+  return newId
 }
 
 export interface DeckStats {

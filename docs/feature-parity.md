@@ -127,7 +127,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       redrawable, respects each card's quantity in the deck
 - ☐ Deck diff: compare two decks/revisions (`/diff`)
 - ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a deck
-- ☐ Share deck via public URL (deck-in-URL encoding for anonymous users) ✎
+- ☑ Share deck via URL (deck-in-URL encoding for anonymous users) — live:
+      `core/src/share.rs`, `#/share/<token>` preview + import page
 - ☐ Missing cards vs. inventory ("what do I need to buy")
 - ☐ Precon decks browser (all official preconstructed decks)
 - ☐ Table Seating randomizer tool

@@ -6,6 +6,7 @@ import {
   renameDeck,
   deleteDeck,
   cloneDeck,
+  buildShareUrl,
   computeDeckStats,
   type DeckSummary,
   type DeckCardDetail,
@@ -163,6 +164,7 @@ export default function DeckEditor({ id }: { id: number }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const [error, setError] = useState('')
   const [nameDraft, setNameDraft] = useState('')
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle')
 
   const refresh = async () => {
     try {
@@ -225,6 +227,21 @@ export default function DeckEditor({ id }: { id: number }) {
           onChange={(e) => setNameDraft(e.target.value)}
           onBlur={() => nameDraft.trim() && nameDraft !== deck.name && renameDeck(id, nameDraft.trim()).then(refresh)}
         />
+        <button
+          onClick={async () => {
+            try {
+              const url = await buildShareUrl(id)
+              await navigator.clipboard.writeText(url)
+              setShareStatus('copied')
+              setTimeout(() => setShareStatus('idle'), 2000)
+            } catch {
+              setShareStatus('error')
+            }
+          }}
+          className="text-xs text-ink-dim hover:text-ink-muted"
+        >
+          {shareStatus === 'copied' ? 'Link copied!' : shareStatus === 'error' ? "Couldn't copy" : 'Share'}
+        </button>
         <button
           onClick={async () => navigate({ page: 'deck', id: await cloneDeck(id) })}
           className="text-xs text-ink-dim hover:text-ink-muted"

@@ -6,6 +6,7 @@
 //! the plain-Rust modules.
 
 pub mod legality;
+pub mod share;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm;
