@@ -120,8 +120,13 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Deck tags (auto-derived archetype tags + user tags) ✎
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☑ Clone / copy deck — live, from both the deck list and the editor
-- ☐ Import: paste text, Lackey `.txt`, JOL, Amaranth link ✎, file upload
-- ☐ Export: text, Lackey, JOL, XLSX ✎, clipboard, file download
+- ☑ Import: paste text, Lackey-style `"<qty>x <name>"` — live
+      (core/src/dtext.rs parses; frontend resolves names against
+      cards.sqlite, reports unmatched names rather than dropping them
+      silently); ☐ still missing: JOL format specifics, Amaranth link, file
+      upload (paste-only for now)
+- ☑ Export: plain text (Lackey-style) with section headers, file download —
+      live; ☐ still missing: JOL-specific format, XLSX, clipboard copy
 - ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎
 - ☑ Draw simulator / test hand — live: crypt draw 4 / library draw 7,
       redrawable, respects each card's quantity in the deck

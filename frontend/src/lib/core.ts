@@ -8,6 +8,8 @@ import init, {
   validate_deck as validateDeckWasm,
   encode_deck_share as encodeDeckShareWasm,
   decode_deck_share as decodeDeckShareWasm,
+  parse_deck_text as parseDeckTextWasm,
+  format_deck_text as formatDeckTextWasm,
 } from '../wasm/schrecknet_core.js'
 
 let ready: Promise<void> | null = null
@@ -54,4 +56,31 @@ export async function decodeDeckShare(token: string): Promise<{ crypt: CardQty[]
   const plain = decodeDeckShareWasm(token)
   const [cryptPart, libraryPart] = plain.split('|')
   return { crypt: parseSection(cryptPart), library: parseSection(libraryPart) }
+}
+
+export interface NamedQty {
+  name: string
+  qty: number
+}
+
+/** Parses a plain-text deck list ("<qty>x <name>" per line) into (name, qty) pairs, in file order. */
+export async function parseDeckText(text: string): Promise<NamedQty[]> {
+  await ensureReady()
+  const raw = parseDeckTextWasm(text)
+  if (!raw) return []
+  return raw.split('\n').map((line) => {
+    const [qty, ...rest] = line.split('\t')
+    return { name: rest.join('\t'), qty: Number(qty) }
+  })
+}
+
+/** Formats resolved crypt/library (name, qty) pairs as a plain-text deck list. */
+export async function formatDeckText(crypt: NamedQty[], library: NamedQty[]): Promise<string> {
+  await ensureReady()
+  return formatDeckTextWasm(
+    crypt.map((c) => c.name),
+    new Uint16Array(crypt.map((c) => c.qty)),
+    library.map((c) => c.name),
+    new Uint16Array(library.map((c) => c.qty)),
+  )
 }

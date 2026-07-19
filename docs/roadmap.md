@@ -82,7 +82,16 @@ docs/feature-parity.md's scope note).
   no account — matches vdb's deck-in-URL. Verified round-trip live in the
   browser, including hand-computing a token in Python and confirming the
   compiled Rust core decoded it correctly.
-- ☐ Import/export all formats (Lackey, JOL, XLSX); diff
+- ☑ Text import/export — live: `core/src/dtext.rs` (compiled to WASM) parses
+  and formats plain-text/Lackey-style deck lists (`"<qty>x <name>"` per
+  line, headers/comments ignored); name -> card_id resolution is a frontend
+  concern (needs `cards.sqlite`), case-insensitive + ASCII-folded, with
+  unresolved names reported rather than silently dropped. Export downloads a
+  `.txt` file. Verified live: imported a pasted list with a comment, a
+  header line, and one deliberately-invalid card name — got back
+  "Added 2 cards. Couldn't match: Not A Real Card.", and the exported text
+  round-tripped exactly. ☐ still missing: JOL-specific format, XLSX
+- ☐ Diff
 - ☐ Proxy PDF generation; precon browser; table seating tool
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync

@@ -5,7 +5,7 @@
 
 import { query as cardsQuery } from './db'
 import { query as userQuery, run as userRun } from './userDb'
-import { validateDeck, encodeDeckShare, decodeDeckShare } from './core'
+import { validateDeck, encodeDeckShare, decodeDeckShare, parseDeckText, formatDeckText } from './core'
 import { routeTo } from './route'
 
 export interface DeckSummary {
@@ -184,4 +184,56 @@ export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckSta
   const groups = [...new Set(cryptCards.map((c) => c.group ?? 0))]
   const violations = await validateDeck(groups, cryptCount, libraryCount)
   return { cryptCount, libraryCount, violations }
+}
+
+/** Formats a deck as a plain-text (Lackey/JOL-style) card list for export. */
+export async function exportDeckText(deckId: number): Promise<string> {
+  const cards = await getDeckCardDetails(deckId)
+  const crypt = cards.filter((c) => c.kind === 'crypt').map((c) => ({ name: c.name, qty: c.qty }))
+  const library = cards.filter((c) => c.kind === 'library').map((c) => ({ name: c.name, qty: c.qty }))
+  return formatDeckText(crypt, library)
+}
+
+interface ResolvedByName {
+  id: number
+  name: string
+}
+
+async function resolveByName(name: string): Promise<ResolvedByName | null> {
+  const rows = await cardsQuery<ResolvedByName>(
+    `SELECT id, name FROM cards WHERE name = ?1 COLLATE NOCASE OR name_ascii = ?1 COLLATE NOCASE LIMIT 1`,
+    [name],
+  )
+  return rows[0] ?? null
+}
+
+export interface ImportResult {
+  added: number
+  unresolved: string[]
+}
+
+/**
+ * Parses a plain-text deck list, resolves each name against cards.sqlite
+ * (case-insensitive, ASCII-folded), and merges matched cards into the given
+ * deck (adding to any existing quantity). Names that don't resolve to a
+ * known V5-pool card are reported, not silently dropped.
+ */
+export async function importDeckText(deckId: number, text: string): Promise<ImportResult> {
+  const lines = await parseDeckText(text)
+  const existing = await getDeckCardDetails(deckId)
+  const qtyById = new Map(existing.map((c) => [c.id, c.qty]))
+  const unresolved: string[] = []
+  let added = 0
+  for (const line of lines) {
+    const match = await resolveByName(line.name)
+    if (!match) {
+      unresolved.push(line.name)
+      continue
+    }
+    const newQty = (qtyById.get(match.id) ?? 0) + line.qty
+    await setCardQty(deckId, match.id, newQty)
+    qtyById.set(match.id, newQty)
+    added++
+  }
+  return { added, unresolved }
 }

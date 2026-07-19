@@ -40,3 +40,41 @@ pub fn encode_deck_share(
 pub fn decode_deck_share(token: &str) -> Result<String, JsError> {
     crate::share::decode_to_plain(token).map_err(|e| JsError::new(&e))
 }
+
+/// Parses a plain-text deck list (Lackey/JOL-style: `"<qty>x <name>"` per
+/// line) into `"qty\tname"` lines — name-to-card resolution happens in the
+/// frontend, which has `cards.sqlite`.
+#[wasm_bindgen]
+pub fn parse_deck_text(text: &str) -> String {
+    crate::dtext::parse(text)
+        .iter()
+        .map(|c| format!("{}\t{}", c.qty, c.name.replace(['\t', '\n'], " ")))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Formats resolved crypt/library (name, qty) pairs as a plain-text deck
+/// list. `crypt_names`/`crypt_qtys` and `library_names`/`library_qtys` must
+/// be parallel arrays.
+#[wasm_bindgen]
+pub fn format_deck_text(
+    crypt_names: Vec<String>,
+    crypt_qtys: Vec<u16>,
+    library_names: Vec<String>,
+    library_qtys: Vec<u16>,
+) -> Result<String, JsError> {
+    if crypt_names.len() != crypt_qtys.len() || library_names.len() != library_qtys.len() {
+        return Err(JsError::new("mismatched name/qty array lengths"));
+    }
+    let to_named = |names: Vec<String>, qtys: Vec<u16>| -> Vec<crate::dtext::NamedQty> {
+        names
+            .into_iter()
+            .zip(qtys)
+            .map(|(name, qty)| crate::dtext::NamedQty { name, qty })
+            .collect()
+    };
+    Ok(crate::dtext::format(
+        &to_named(crypt_names, crypt_qtys),
+        &to_named(library_names, library_qtys),
+    ))
+}

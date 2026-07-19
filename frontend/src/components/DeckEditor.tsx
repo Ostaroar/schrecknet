@@ -7,10 +7,13 @@ import {
   deleteDeck,
   cloneDeck,
   buildShareUrl,
+  exportDeckText,
+  importDeckText,
   computeDeckStats,
   type DeckSummary,
   type DeckCardDetail,
   type DeckStats,
+  type ImportResult,
 } from '../lib/deckStore'
 import { drawHand, CRYPT_HAND_SIZE, LIBRARY_HAND_SIZE } from '../lib/drawHand'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
@@ -34,6 +37,76 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
         +
       </button>
     </span>
+  )
+}
+
+function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [result, setResult] = useState<ImportResult | null>(null)
+  const [importing, setImporting] = useState(false)
+
+  const doExport = async () => {
+    const content = await exportDeckText(deckId)
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `deck-${deckId}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const doImport = async () => {
+    setImporting(true)
+    const res = await importDeckText(deckId, text)
+    setResult(res)
+    setImporting(false)
+    setText('')
+    onImported()
+  }
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">Text import / export</h2>
+        <button
+          onClick={doExport}
+          className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
+        >
+          Export .txt
+        </button>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
+        >
+          {open ? 'Hide import' : 'Import text…'}
+        </button>
+      </div>
+      {open && (
+        <div className="grid gap-2">
+          <textarea
+            className="h-32 w-full rounded-lg border border-line bg-ground p-2 font-mono text-xs text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+            placeholder={'Paste a deck list, e.g.\n4x Deflection\n1x Aaradhya, The Callous Tyrant'}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button
+            onClick={doImport}
+            disabled={!text.trim() || importing}
+            className="justify-self-start rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50"
+          >
+            {importing ? 'Importing…' : 'Import into this deck'}
+          </button>
+          {result && (
+            <p className="text-xs text-ink-dim">
+              Added {result.added} card{result.added === 1 ? '' : 's'}.
+              {result.unresolved.length > 0 && <> Couldn't match: {result.unresolved.join(', ')}.</>}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -280,6 +353,7 @@ export default function DeckEditor({ id }: { id: number }) {
       )}
 
       <TestHandPanel cryptCards={cryptCards} libraryCards={libraryCards} />
+      <ImportExportPanel deckId={id} onImported={refresh} />
 
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="grid gap-2">
