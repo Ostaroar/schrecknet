@@ -32,8 +32,12 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
 - ☐ Card images; rulings source links
-- ☐ PWA install + true offline (swap sql.js → official SQLite WASM + OPFS per
-  docs/adr/0004's follow-up)
+- ☑ Official SQLite WASM + OPFS (opfs-sahpool VFS, worker-hosted) replacing
+  sql.js — DB persists across reloads, downloads once per version bump (one
+  cards.sqlite fetch vs. a meta.json probe per load, verified via network
+  log); searches work offline after first visit. Unblocks Phase 2 local decks
+- ☐ PWA install manifest + service worker for the app shell (the DB is
+  offline-capable now; the HTML/JS/wasm assets still need the network)
 - ☐ i18n UI using the `translations` table already populated by the pipeline
 - ☑ MCP `search_crypt` + `search_library` tools live (rmcp, Streamable HTTP at
   `/mcp`), verified with a real client handshake (initialize → tools/list →

@@ -1,24 +1,55 @@
-// Browser card-database access. Interim sql.js engine — see
-// docs/adr/0004-sqljs-for-phase1-browser-search.md for why, and the planned
-// swap to the official SQLite WASM build + OPFS. Every call site below goes
-// through `query()`, which is the seam that swap happens behind.
+// Browser card-database access. The official SQLite WASM build runs in a
+// dedicated worker (dbWorker.ts) with the opfs-sahpool VFS: the database
+// persists in OPFS, so after the first visit searches work offline and
+// reloads skip the ~900KB download (re-fetched only when the server's
+// schema_version/data_version changes). This replaces the interim sql.js
+// engine — docs/adr/0004-sqljs-for-phase1-browser-search.md, follow-up
+// section. Every call site goes through query(), which is the seam that
+// made this swap a drop-in.
 
-import initSqlJs, { type Database } from 'sql.js'
-
-let dbPromise: Promise<Database> | null = null
-
-async function loadDb(): Promise<Database> {
-  const SQL = await initSqlJs({ locateFile: (file) => `/${file}` })
-  const res = await fetch('/data/cards.sqlite')
-  if (!res.ok) throw new Error(`failed to fetch cards.sqlite: ${res.status}`)
-  const buf = new Uint8Array(await res.arrayBuffer())
-  return new SQL.Database(buf)
+interface Pending {
+  resolve: (value: never) => void
+  reject: (err: Error) => void
 }
 
-/** Fetches + loads cards.sqlite on first call; reuses the same instance after. */
-export function getDb(): Promise<Database> {
-  if (!dbPromise) dbPromise = loadDb()
-  return dbPromise
+let worker: Worker | null = null
+let nextId = 1
+const pending = new Map<number, Pending>()
+let openPromise: Promise<void> | null = null
+
+function send<T>(msg: Record<string, unknown>): Promise<T> {
+  const id = nextId++
+  return new Promise<T>((resolve, reject) => {
+    pending.set(id, { resolve: resolve as (value: never) => void, reject })
+    worker!.postMessage({ ...msg, id })
+  })
+}
+
+function ensureOpen(): Promise<void> {
+  if (!openPromise) {
+    worker = new Worker(new URL('./dbWorker.ts', import.meta.url), { type: 'module' })
+    worker.onmessage = (event) => {
+      const { id, ok, rows, meta, error } = event.data
+      const p = pending.get(id)
+      if (!p) return
+      pending.delete(id)
+      if (ok) p.resolve((rows ?? meta) as never)
+      else p.reject(new Error(error))
+    }
+    openPromise = send<Record<string, unknown>>({ kind: 'open' }).then((meta) => {
+      console.info('[schrecknet] card db ready:', meta)
+    })
+  }
+  return openPromise
+}
+
+/** Runs a parameterized SELECT in the worker and returns rows as objects. */
+export async function query<T = Record<string, unknown>>(
+  sql: string,
+  params: (string | number | null)[] = [],
+): Promise<T[]> {
+  await ensureOpen()
+  return send<T[]>({ kind: 'query', sql, params })
 }
 
 export interface CardMeta {
@@ -34,18 +65,4 @@ export async function getCardsMeta(): Promise<CardMeta> {
   const res = await fetch('/data/cards.meta.json')
   if (!res.ok) throw new Error(`failed to fetch cards.meta.json: ${res.status}`)
   return res.json()
-}
-
-/** Runs a parameterized SELECT and returns rows as plain objects. */
-export async function query<T = Record<string, unknown>>(
-  sql: string,
-  params: (string | number | null)[] = [],
-): Promise<T[]> {
-  const db = await getDb()
-  const stmt = db.prepare(sql)
-  stmt.bind(params)
-  const rows: T[] = []
-  while (stmt.step()) rows.push(stmt.getAsObject() as T)
-  stmt.free()
-  return rows
 }
