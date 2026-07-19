@@ -2,6 +2,7 @@
 // exactly (same filters, same result shape) so the browser and server agree.
 
 import { query } from './db'
+import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 
 export type TextMode = 'any' | 'name' | 'text'
 export type CostMode = 'at_most' | 'exact' | 'at_least'
@@ -19,6 +20,8 @@ export interface LibraryFilters {
   poolCost: number | null
   poolCostMode: CostMode
   set: string | null
+  setAge: SetAgeMode
+  setPrint: SetPrintMode
   precon: string | null
   artist: string | null
 }
@@ -36,6 +39,8 @@ export const emptyLibraryFilters: LibraryFilters = {
   poolCost: null,
   poolCostMode: 'at_most',
   set: null,
+  setAge: defaultSetAge,
+  setPrint: defaultSetPrint,
   precon: null,
   artist: null,
 }
@@ -87,10 +92,35 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
              (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
              (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
        AND ((?10 IS NULL AND ?11 IS NULL) OR EXISTS (
-            SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+            SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
             WHERE p.card_id = c.id
-              AND (?10 IS NULL OR s.name = ?10)
-              AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')))
+              AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')
+              AND (?10 IS NULL
+                OR (?14 = 'exact' AND s.name = ?10)
+                OR (?14 = 'or_newer' AND s.release_date >=
+                    (SELECT release_date FROM sets WHERE name = ?10))
+                OR (?14 = 'or_older' AND s.release_date <=
+                    (SELECT release_date FROM sets WHERE name = ?10))
+                OR (?14 = 'not_newer' AND NOT EXISTS (
+                    SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
+                    WHERE pn.card_id = c.id AND sn.release_date >
+                        (SELECT release_date FROM sets WHERE name = ?10)))
+                OR (?14 = 'not_older' AND NOT EXISTS (
+                    SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
+                    WHERE po.card_id = c.id AND so.release_date <
+                        (SELECT release_date FROM sets WHERE name = ?10))))
+              AND (?10 IS NULL OR ?15 = 'any'
+                OR (?15 = 'only' AND 1 = (
+                    SELECT COUNT(DISTINCT px.set_id) FROM printings px
+                    WHERE px.card_id = c.id))
+                OR (?15 = 'first' AND
+                    (SELECT release_date FROM sets WHERE name = ?10) = (
+                        SELECT MIN(sf.release_date) FROM printings pf
+                        JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
+                OR (?15 = 'reprint' AND
+                    (SELECT release_date FROM sets WHERE name = ?10) > (
+                        SELECT MIN(sr.release_date) FROM printings pr
+                        JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
        AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
             WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))`
   const params: (string | number | null)[] = [
@@ -107,6 +137,8 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
     filters.precon,
     filters.artist,
     filters.textRegex ? 1 : 0,
+    filters.setAge,
+    filters.setPrint,
   ]
   for (const code of filters.disciplines) {
     sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
@@ -149,7 +181,9 @@ export async function listLibraryDisciplines(): Promise<string[]> {
 }
 
 export async function listSets(): Promise<string[]> {
-  const rows = await query<{ name: string }>(`SELECT DISTINCT name FROM sets ORDER BY name`)
+  const rows = await query<{ name: string }>(
+    `SELECT DISTINCT name FROM sets ORDER BY release_date, name`,
+  )
   return rows.map((r) => r.name)
 }
 

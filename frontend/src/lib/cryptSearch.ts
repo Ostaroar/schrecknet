@@ -1,10 +1,11 @@
 // Crypt search query builder — mirrors server/src/cards_db.rs::search_crypt
 // exactly (same filters, same dynamically-built EXISTS clauses per required
 // discipline) so the browser and server agree. Remaining vdb filter families
-// (sect, title, votes, traits, set/precon/artist — docs/feature-parity.md)
+// (sect, votes, traits, mixed discipline levels — docs/feature-parity.md)
 // land incrementally behind this same query() seam.
 
 import { query } from './db'
+import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
@@ -21,6 +22,8 @@ export interface CryptFilters {
   disciplines: string[]
   disciplinesSuperior: boolean
   set: string | null
+  setAge: SetAgeMode
+  setPrint: SetPrintMode
   precon: string | null
   artist: string | null
 }
@@ -37,6 +40,8 @@ export const emptyCryptFilters: CryptFilters = {
   disciplines: [],
   disciplinesSuperior: false,
   set: null,
+  setAge: defaultSetAge,
+  setPrint: defaultSetPrint,
   precon: null,
   artist: null,
 }
@@ -95,10 +100,35 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
        AND (?7 IS NULL OR c.capacity <= ?7)
        AND (?8 IS NULL OR c.title = ?8)
        AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
-            SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+            SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
             WHERE p.card_id = c.id
-              AND (?9 IS NULL OR s.name = ?9)
-              AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')))
+              AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')
+              AND (?9 IS NULL
+                OR (?13 = 'exact' AND s.name = ?9)
+                OR (?13 = 'or_newer' AND s.release_date >=
+                    (SELECT release_date FROM sets WHERE name = ?9))
+                OR (?13 = 'or_older' AND s.release_date <=
+                    (SELECT release_date FROM sets WHERE name = ?9))
+                OR (?13 = 'not_newer' AND NOT EXISTS (
+                    SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
+                    WHERE pn.card_id = c.id AND sn.release_date >
+                        (SELECT release_date FROM sets WHERE name = ?9)))
+                OR (?13 = 'not_older' AND NOT EXISTS (
+                    SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
+                    WHERE po.card_id = c.id AND so.release_date <
+                        (SELECT release_date FROM sets WHERE name = ?9))))
+              AND (?9 IS NULL OR ?14 = 'any'
+                OR (?14 = 'only' AND 1 = (
+                    SELECT COUNT(DISTINCT px.set_id) FROM printings px
+                    WHERE px.card_id = c.id))
+                OR (?14 = 'first' AND
+                    (SELECT release_date FROM sets WHERE name = ?9) = (
+                        SELECT MIN(sf.release_date) FROM printings pf
+                        JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
+                OR (?14 = 'reprint' AND
+                    (SELECT release_date FROM sets WHERE name = ?9) > (
+                        SELECT MIN(sr.release_date) FROM printings pr
+                        JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
        AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
             WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))`
   const params: (string | number | null)[] = [
@@ -114,6 +144,8 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
     filters.precon,
     filters.artist,
     filters.textRegex ? 1 : 0,
+    filters.setAge,
+    filters.setPrint,
   ]
   for (const code of filters.disciplines) {
     sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
@@ -156,7 +188,9 @@ export async function listCryptDisciplines(): Promise<string[]> {
 }
 
 export async function listSets(): Promise<string[]> {
-  const rows = await query<{ name: string }>(`SELECT DISTINCT name FROM sets ORDER BY name`)
+  const rows = await query<{ name: string }>(
+    `SELECT DISTINCT name FROM sets ORDER BY release_date, name`,
+  )
   return rows.map((r) => r.name)
 }
 

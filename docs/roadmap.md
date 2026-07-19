@@ -30,9 +30,10 @@ docs/feature-parity.md's scope note).
   dynamic EXISTS clauses — bound params only) + capacity min/max range, on all
   three surfaces; REST accepts `disciplines=dom,for` CSV, MCP takes a JSON array
 - ☑ Set / precon / artist filters (crypt + library, all three surfaces):
-  exact set-name match, precon substring, artist substring — each via
-  bound-param EXISTS subqueries over printings/sets/artists; ☐ still missing
-  set filter's Or Newer/Or Older/Only In/First Print/Reprint modes
+  full vdb-compatible release-age modes (exact/newer/older/not-newer/
+  not-older) and printing modes (any/only/first/reprint), evaluated against
+  SchreckNet's V5-only print history; precon and artist filters remain bound-
+  parameter lookups over printings/sets/artists
 - ☑ Regex search mode (`text_regex`, all three surfaces) — first justified new
   dependency (the `regex` crate, server-side only; browser reuses native
   `RegExp`), documented in docs/adr/0005-regex-crate-for-search.md

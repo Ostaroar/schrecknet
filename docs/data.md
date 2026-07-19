@@ -60,6 +60,11 @@ CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards);
 ```
 
+Set age/printing filters compare `sets.release_date` values only across rows
+that survive the V5-pool ingest. Consequently, "first print" means first V5
+printing in SchreckNet, never an older classic-era printing that is outside the
+site's scope.
+
 Trait flags (`card_traits`) are precomputed by the pipeline with the same regex/rules
 vdb uses (e.g. "+1 bleed", "bounce bleed", "enter combat") so client filters are pure
 indexed lookups — port these rules from vdb's search code and golden-test them against

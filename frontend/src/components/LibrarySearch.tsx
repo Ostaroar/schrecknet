@@ -12,6 +12,13 @@ import {
   type CostMode,
 } from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
+import SetFilterControls from './SetFilterControls'
+import {
+  defaultSetAge,
+  defaultSetPrint,
+  type SetAgeMode,
+  type SetPrintMode,
+} from '../lib/setFilter'
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
@@ -38,6 +45,8 @@ export default function LibrarySearch() {
   const [poolCost, setPoolCost] = useState<number | null>(null)
   const [poolCostMode, setPoolCostMode] = useState<CostMode>('at_most')
   const [set, setSet] = useState<string | null>(null)
+  const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
+  const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
   const [precon, setPrecon] = useState<string | null>(null)
   const [artist, setArtist] = useState<string | null>(null)
   const [types, setTypes] = useState<string[]>([])
@@ -82,6 +91,8 @@ export default function LibrarySearch() {
       poolCost,
       poolCostMode,
       set,
+      setAge,
+      setPrint,
       precon,
       artist,
       disciplines: active.map(([code]) => code),
@@ -100,6 +111,8 @@ export default function LibrarySearch() {
     poolCost,
     poolCostMode,
     set,
+    setAge,
+    setPrint,
     precon,
     artist,
     discModes,
@@ -248,19 +261,16 @@ export default function LibrarySearch() {
             onChange={(e) => setPoolCost(e.target.value ? Number(e.target.value) : null)}
           />
         </div>
-        <select
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
-          value={set ?? ''}
-          onChange={(e) => setSet(e.target.value || null)}
+        <SetFilterControls
+          value={set}
+          age={setAge}
+          printing={setPrint}
+          sets={sets}
           disabled={status === 'loading'}
-        >
-          <option value="">Any set</option>
-          {sets.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onValueChange={setSet}
+          onAgeChange={setSetAge}
+          onPrintingChange={setSetPrint}
+        />
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={precon ?? ''}

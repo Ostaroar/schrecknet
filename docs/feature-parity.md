@@ -68,9 +68,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
       Maneuver, Additional Strike, Aggravated, Prevent, Press, Enter combat, Unlock,
       Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement, Banned
-- ☑ Set filter MVP: single-select exact set-name match, any-printing semantics
-      (`set` param on all three surfaces); ☐ still missing: Or Newer / Or Older /
-      Not Newer / Not Older / Only In / First Print / Reprint modes
+- ☑ Set filter: single selected set plus independent release-age modes
+      (In Set / Or Newer / Or Older / Not Newer / Not Older) and printing
+      modes (Any / Only In / First Print / Reprint), on browser, REST, and
+      MCP (`set`, `set_age`, `set_print`). Semantics verified against vdb's
+      current `SearchFormSet` + `cardFilters`; chronology intentionally uses
+      only the V5 print history stored by SchreckNet
 - ☑ Precon filter MVP: substring match against printing precon, any-printing
       semantics, NULL precon never matches (`precon` param on all three
       surfaces); ☐ still missing: exact-match / multi-select modes
@@ -104,13 +107,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       Combat Ends, Multi-Type, Multi-Discipline, Enter Combat, Create Vampire,
       Blood to Uncontrolled, Bounce Bleed, Reduce Bleed, Wake/Unlock, Black Hand,
       Seraph, Infernal, Burn Option, Banned, No Requirement
-- ☑ Set / Precon / Artist filters (same as crypt) MVP: same semantics and
-      caveats as the crypt filters above (`set`/`precon`/`artist` params on
-      all three surfaces)
+- ☑ Set / Precon / Artist filters (same as crypt): full set age/printing
+      modes plus precon and artist matching on all three surfaces
 
 ## Card Detail (`/cards/:id`)
 - ☑ Full card text — inline expand panel on search results AND a routed page
-      (frontend/src/components/CardPage.tsx) with full translations shown
+      (frontend/src/components/CardPage.tsx) with selectable translations
 - ☑ Card image — MVP: single primary KRCG scan (`image_url`, hotlinked per Dark
       Pack rule) on the card page; ☐ legacy/alternate printings with set-specific
       scans still pending ✎

@@ -48,10 +48,18 @@ pub struct CryptSearchParams {
     /// If true, every discipline in `disciplines` must be at superior level.
     #[serde(default)]
     pub disciplines_superior: bool,
-    /// Exact set name match (e.g. "Fifth Edition"); a card matches if any of
-    /// its printings belong to this set.
+    /// Selected set name (e.g. "Fifth Edition"); `set_age` and `set_print`
+    /// control how the card's V5 print history is compared with it.
     #[serde(default)]
     pub set: Option<String>,
+    /// Release-date relation to the selected set. `exact` requires a printing
+    /// in that set; the other modes compare against the card's V5 print history.
+    #[serde(default)]
+    pub set_age: SetAgeMode,
+    /// Printing relation to the selected set: any, only V5 set, first V5
+    /// printing, or a later V5 reprint.
+    #[serde(default)]
+    pub set_print: SetPrintMode,
     /// Substring match against printing `precon` (e.g. "Anarch"); printings
     /// with no precon (NULL) never match.
     #[serde(default)]
@@ -94,6 +102,61 @@ impl CostMode {
             Self::AtMost => "at_most",
             Self::Exact => "exact",
             Self::AtLeast => "at_least",
+        }
+    }
+}
+
+/// Release-date relation used by set filters, matching vdb's age qualifiers.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SetAgeMode {
+    /// Printed in the selected set (default).
+    #[default]
+    Exact,
+    /// Printed in the selected set or a newer V5 set.
+    OrNewer,
+    /// Printed in the selected set or an older V5 set.
+    OrOlder,
+    /// Has no V5 printing newer than the selected set.
+    NotNewer,
+    /// Has no V5 printing older than the selected set.
+    NotOlder,
+}
+
+impl SetAgeMode {
+    fn as_sql_value(self) -> &'static str {
+        match self {
+            Self::Exact => "exact",
+            Self::OrNewer => "or_newer",
+            Self::OrOlder => "or_older",
+            Self::NotNewer => "not_newer",
+            Self::NotOlder => "not_older",
+        }
+    }
+}
+
+/// Printing-history qualifier used alongside a selected set.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SetPrintMode {
+    /// Any matching V5 printing (default).
+    #[default]
+    Any,
+    /// The card appears in only one V5 set.
+    Only,
+    /// The selected set is the card's earliest V5 printing.
+    First,
+    /// The selected set is later than the card's earliest V5 printing.
+    Reprint,
+}
+
+impl SetPrintMode {
+    fn as_sql_value(self) -> &'static str {
+        match self {
+            Self::Any => "any",
+            Self::Only => "only",
+            Self::First => "first",
+            Self::Reprint => "reprint",
         }
     }
 }
@@ -185,10 +248,16 @@ pub struct LibrarySearchParams {
     /// Comparison applied to `pool_cost` (at_most, exact, or at_least).
     #[serde(default)]
     pub pool_cost_mode: CostMode,
-    /// Exact set name match (e.g. "Fifth Edition"); a card matches if any of
-    /// its printings belong to this set.
+    /// Selected set name (e.g. "Fifth Edition"); `set_age` and `set_print`
+    /// control how the card's V5 print history is compared with it.
     #[serde(default)]
     pub set: Option<String>,
+    /// Release-date relation to the selected set; see CryptSearchParams.
+    #[serde(default)]
+    pub set_age: SetAgeMode,
+    /// Printing-history relation to the selected set; see CryptSearchParams.
+    #[serde(default)]
+    pub set_print: SetPrintMode,
     /// Substring match against printing `precon` (e.g. "Anarch"); printings
     /// with no precon (NULL) never match.
     #[serde(default)]
@@ -272,10 +341,35 @@ pub fn search_crypt(
            AND (?7 IS NULL OR c.capacity <= ?7)
            AND (?8 IS NULL OR c.title = ?8)
            AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
-                SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+                SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
                 WHERE p.card_id = c.id
-                  AND (?9 IS NULL OR s.name = ?9)
-                  AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')))
+                  AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')
+                  AND (?9 IS NULL
+                    OR (?13 = 'exact' AND s.name = ?9)
+                    OR (?13 = 'or_newer' AND s.release_date >=
+                        (SELECT release_date FROM sets WHERE name = ?9))
+                    OR (?13 = 'or_older' AND s.release_date <=
+                        (SELECT release_date FROM sets WHERE name = ?9))
+                    OR (?13 = 'not_newer' AND NOT EXISTS (
+                        SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
+                        WHERE pn.card_id = c.id AND sn.release_date >
+                            (SELECT release_date FROM sets WHERE name = ?9)))
+                    OR (?13 = 'not_older' AND NOT EXISTS (
+                        SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
+                        WHERE po.card_id = c.id AND so.release_date <
+                            (SELECT release_date FROM sets WHERE name = ?9))))
+                  AND (?9 IS NULL OR ?14 = 'any'
+                    OR (?14 = 'only' AND 1 = (
+                        SELECT COUNT(DISTINCT px.set_id) FROM printings px
+                        WHERE px.card_id = c.id))
+                    OR (?14 = 'first' AND
+                        (SELECT release_date FROM sets WHERE name = ?9) = (
+                            SELECT MIN(sf.release_date) FROM printings pf
+                            JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
+                    OR (?14 = 'reprint' AND
+                        (SELECT release_date FROM sets WHERE name = ?9) > (
+                            SELECT MIN(sr.release_date) FROM printings pr
+                            JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
            AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
                 WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))",
     );
@@ -292,6 +386,8 @@ pub fn search_crypt(
         Box::new(params.precon.clone()),
         Box::new(params.artist.clone()),
         Box::new(params.text_regex as i64),
+        Box::new(params.set_age.as_sql_value()),
+        Box::new(params.set_print.as_sql_value()),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -374,10 +470,35 @@ pub fn search_library(
                  (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
                  (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
            AND ((?10 IS NULL AND ?11 IS NULL) OR EXISTS (
-                SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+                SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
                 WHERE p.card_id = c.id
-                  AND (?10 IS NULL OR s.name = ?10)
-                  AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')))
+                  AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')
+                  AND (?10 IS NULL
+                    OR (?14 = 'exact' AND s.name = ?10)
+                    OR (?14 = 'or_newer' AND s.release_date >=
+                        (SELECT release_date FROM sets WHERE name = ?10))
+                    OR (?14 = 'or_older' AND s.release_date <=
+                        (SELECT release_date FROM sets WHERE name = ?10))
+                    OR (?14 = 'not_newer' AND NOT EXISTS (
+                        SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
+                        WHERE pn.card_id = c.id AND sn.release_date >
+                            (SELECT release_date FROM sets WHERE name = ?10)))
+                    OR (?14 = 'not_older' AND NOT EXISTS (
+                        SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
+                        WHERE po.card_id = c.id AND so.release_date <
+                            (SELECT release_date FROM sets WHERE name = ?10))))
+                  AND (?10 IS NULL OR ?15 = 'any'
+                    OR (?15 = 'only' AND 1 = (
+                        SELECT COUNT(DISTINCT px.set_id) FROM printings px
+                        WHERE px.card_id = c.id))
+                    OR (?15 = 'first' AND
+                        (SELECT release_date FROM sets WHERE name = ?10) = (
+                            SELECT MIN(sf.release_date) FROM printings pf
+                            JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
+                    OR (?15 = 'reprint' AND
+                        (SELECT release_date FROM sets WHERE name = ?10) > (
+                            SELECT MIN(sr.release_date) FROM printings pr
+                            JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
            AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
                 WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))",
     );
@@ -395,6 +516,8 @@ pub fn search_library(
         Box::new(params.precon.clone()),
         Box::new(params.artist.clone()),
         Box::new(params.text_regex as i64),
+        Box::new(params.set_age.as_sql_value()),
+        Box::new(params.set_print.as_sql_value()),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -503,7 +626,7 @@ mod tests {
                clan TEXT, capacity INT, grp INT, title TEXT,
                types TEXT, blood_cost TEXT, pool_cost TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
-             CREATE TABLE sets(id INT, name TEXT);
+             CREATE TABLE sets(id INT, name TEXT, release_date TEXT);
              CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
              CREATE TABLE artists(id INT, name TEXT);
              CREATE TABLE card_artists(card_id INT, artist_id INT);
@@ -514,7 +637,9 @@ mod tests {
                (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL),
                (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2');
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);
-             INSERT INTO sets VALUES (1,'Fifth Edition'),(2,'Anarch Revolt');
+             INSERT INTO sets VALUES
+               (1,'Fifth Edition','2020-11-30'),
+               (2,'Anarch Revolt','2021-12-01');
              INSERT INTO printings VALUES
                (1,1,NULL,'C',1),
                (2,2,'Anarch Precon','U',1),
@@ -841,6 +966,117 @@ mod tests {
             .unwrap()
             .iter()
             .any(|c| c.name == "Mixed Printings"));
+    }
+
+    #[test]
+    fn set_age_and_print_modes_match_vdb_release_date_semantics() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Card 1: Fifth Edition -> New Blood (a V5 reprint).
+        // Card 2: Anarch Revolt only. These compact fixtures exercise the
+        // age/print definitions from vdb's cardFilters.js within our V5-only
+        // print history.
+        conn.execute_batch(
+            "INSERT INTO sets VALUES (3,'New Blood','2022-04-17');
+             INSERT INTO printings VALUES (1,3,NULL,'C',0);",
+        )
+        .unwrap();
+
+        let names = |params: CryptSearchParams| {
+            search_crypt(&conn, &params)
+                .unwrap()
+                .into_iter()
+                .map(|card| card.name)
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            names(CryptSearchParams {
+                set: Some("New Blood".into()),
+                set_age: SetAgeMode::OrNewer,
+                ..Default::default()
+            }),
+            vec!["Aaradhya"]
+        );
+        assert_eq!(
+            names(CryptSearchParams {
+                set: Some("Anarch Revolt".into()),
+                set_age: SetAgeMode::NotNewer,
+                ..Default::default()
+            }),
+            vec!["Abaddon"]
+        );
+        assert_eq!(
+            names(CryptSearchParams {
+                set: Some("Anarch Revolt".into()),
+                set_age: SetAgeMode::NotOlder,
+                ..Default::default()
+            }),
+            vec!["Abaddon"]
+        );
+        assert_eq!(
+            names(CryptSearchParams {
+                set: Some("Anarch Revolt".into()),
+                set_print: SetPrintMode::Only,
+                ..Default::default()
+            }),
+            vec!["Abaddon"]
+        );
+        assert_eq!(
+            names(CryptSearchParams {
+                set: Some("Fifth Edition".into()),
+                set_print: SetPrintMode::First,
+                ..Default::default()
+            }),
+            vec!["Aaradhya"]
+        );
+        assert_eq!(
+            names(CryptSearchParams {
+                set: Some("New Blood".into()),
+                set_print: SetPrintMode::Reprint,
+                ..Default::default()
+            }),
+            vec!["Aaradhya"]
+        );
+        assert!(names(CryptSearchParams {
+            set: Some("Fifth Edition".into()),
+            set_print: SetPrintMode::Reprint,
+            ..Default::default()
+        })
+        .is_empty());
+    }
+
+    #[test]
+    fn set_modes_deserialize_for_rest_and_mcp() {
+        let rest: CryptSearchParams =
+            serde_urlencoded::from_str("set_age=or_newer&set_print=reprint").unwrap();
+        assert_eq!(rest.set_age, SetAgeMode::OrNewer);
+        assert_eq!(rest.set_print, SetPrintMode::Reprint);
+
+        let mcp: LibrarySearchParams =
+            serde_json::from_str(r#"{"set_age":"not_older","set_print":"first"}"#).unwrap();
+        assert_eq!(mcp.set_age, SetAgeMode::NotOlder);
+        assert_eq!(mcp.set_print, SetPrintMode::First);
+    }
+
+    #[test]
+    fn library_set_print_mode_uses_the_same_v5_history_rules() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        conn.execute_batch(
+            "INSERT INTO sets VALUES (3,'New Blood','2022-04-17');
+             INSERT INTO printings VALUES (3,3,NULL,'C',0);",
+        )
+        .unwrap();
+
+        let params = LibrarySearchParams {
+            set: Some("New Blood".into()),
+            set_print: SetPrintMode::Reprint,
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Villein");
     }
 
     #[test]
@@ -1230,7 +1466,7 @@ mod tests {
         conn.execute_batch(
             "INSERT INTO cards VALUES
                (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL);
-             INSERT INTO sets VALUES (3,'Camarilla Edition');
+             INSERT INTO sets VALUES (3,'Camarilla Edition','2003-08-18');
              INSERT INTO printings VALUES
                (6,2,'Anarch Precon','U',1),
                (5,3,'Tremere','C',1);",

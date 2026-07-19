@@ -12,6 +12,13 @@ import {
   type TextMode,
 } from '../lib/cryptSearch'
 import CardDetailPanel from './CardDetailPanel'
+import SetFilterControls from './SetFilterControls'
+import {
+  defaultSetAge,
+  defaultSetPrint,
+  type SetAgeMode,
+  type SetPrintMode,
+} from '../lib/setFilter'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
   return (
@@ -39,6 +46,8 @@ export default function CryptSearch() {
   const [capacityMin, setCapacityMin] = useState<number | null>(null)
   const [capacityMax, setCapacityMax] = useState<number | null>(null)
   const [set, setSet] = useState<string | null>(null)
+  const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
+  const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
   const [precon, setPrecon] = useState<string | null>(null)
   const [artist, setArtist] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
@@ -87,6 +96,8 @@ export default function CryptSearch() {
       capacityMin,
       capacityMax,
       set,
+      setAge,
+      setPrint,
       precon,
       artist,
       disciplines: active.map(([code]) => code),
@@ -94,7 +105,22 @@ export default function CryptSearch() {
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, textMode, textRegex, clan, title, group, capacityMin, capacityMax, set, precon, artist, discModes])
+  }, [
+    text,
+    textMode,
+    textRegex,
+    clan,
+    title,
+    group,
+    capacityMin,
+    capacityMax,
+    set,
+    setAge,
+    setPrint,
+    precon,
+    artist,
+    discModes,
+  ])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -236,19 +262,16 @@ export default function CryptSearch() {
             onChange={(e) => setCapacityMax(e.target.value ? Number(e.target.value) : null)}
           />
         </div>
-        <select
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
-          value={set ?? ''}
-          onChange={(e) => setSet(e.target.value || null)}
+        <SetFilterControls
+          value={set}
+          age={setAge}
+          printing={setPrint}
+          sets={sets}
           disabled={status === 'loading'}
-        >
-          <option value="">Any set</option>
-          {sets.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onValueChange={setSet}
+          onAgeChange={setSetAge}
+          onPrintingChange={setSetPrint}
+        />
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={precon ?? ''}
