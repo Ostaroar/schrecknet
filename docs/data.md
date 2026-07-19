@@ -2,7 +2,8 @@
 
 ## Sources (all community/official, same as vdb)
 
-- **VEKN official card lists** — canonical CSV bundle; `vteslibmeta.csv` supplies
+- **VEKN official card lists** — canonical CSV bundle; `vtescrypt.csv` supplies
+  crypt sect/title/vote/advancement/banned metadata and `vteslibmeta.csv` supplies
   normalized library requirements used by VDB's sect/title filters
 - **KRCG static files** (`static.krcg.org`) — normalized card JSON, rulings database,
   card name index, set/precon metadata
@@ -19,8 +20,9 @@ A Rust tool that:
     also shrinks `cards.sqlite`. Filter option lists (clans, sects, titles,
     disciplines, groups, sets, precons, artists) are emitted from the surviving
     pool, never hardcoded.
-2. Joins official VEKN requirement metadata by stable card id, reproduces VDB's
-   title-implied sect tokens in shared Rust, and normalizes into the schema below
+2. Joins official VEKN metadata by stable card id, reproduces VDB's crypt
+   sect/title-vote normalization and library title-implied sect tokens in shared
+   Rust, and normalizes into the schema below
 3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group, …)
 4. Downloads the exact ONNX files locked by `models/semantic.json`, verifies every
    size + SHA-256, constructs deterministic English card documents, and generates
@@ -96,6 +98,12 @@ KRCG's JSON for 24 hours. `core/src/requirements.rs` lowercases, deduplicates, a
 classifies only the rows that survive the V5 pool filter, then adds VDB-compatible
 title→sect implications. This keeps filter options pool-derived while avoiding
 false positives from ordinary card text; see ADR 0007.
+
+Crypt sect, canonical title, vote value, advancement, and banned fields come from
+the same archive's `vtescrypt.csv`. `core/src/crypt_metadata.rs` reproduces VDB's
+official-text-prefix sect rule (including `Advanced, <sect>` and Imbued) and its
+title-to-vote table. The build fails unless all 218 current V5 crypt cards join,
+so search never silently falls back to guessed clan→sect mappings.
 
 The model is not fetched at query time and its binary is not committed. The lock
 records one immutable Hugging Face revision plus checksums; the data build caches it

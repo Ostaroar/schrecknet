@@ -3,34 +3,34 @@
 //!
 //! Known gaps, left NULL rather than guessed (tracked in
 //! docs/feature-parity.md, marked ✎ for verification):
-//! - `sect`: KRCG's export doesn't carry clan→sect mapping directly and we'd
-//!   rather ship NULL than a wrong Camarilla/Sabbat/Independent guess.
-//! - `votes`, `banned`, `requirement_clan`, `requirement_title`,
-//!   `requirement_sect`, `burn_option`: not reliably present in this data
-//!   source at Phase 1; revisit against VEKN's rulebook data.
+//! - `requirement_clan`, `requirement_title`, `requirement_sect`, and
+//!   `burn_option`: legacy scalar columns superseded by normalized tables or
+//!   not yet joined from the official VEKN archive.
 
 use rusqlite::{params, Connection};
 use schrecknet_core::capacity::parse_capacity_requirement;
+use schrecknet_core::crypt_metadata::CryptMetadata;
 use schrecknet_core::requirements::normalize_library_requirements;
 use serde_json::Value;
 
 use crate::v5pool::{is_in_v5_pool, V5_SET_NAMES};
-use crate::vekn::LibraryRequirements;
+use crate::vekn::{LibraryRequirements, VeknMetadata};
 
 pub fn run(
     conn: &Connection,
     all_cards: &[Value],
-    library_requirements: &LibraryRequirements,
+    vekn: &VeknMetadata,
 ) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let pool: Vec<&Value> = all_cards.iter().filter(|c| is_in_v5_pool(c)).collect();
 
     let mut stats = IngestStats::default();
     for card in &pool {
         let kind = if is_crypt(card) { "crypt" } else { "library" };
-        insert_card(conn, card, kind)?;
+        let id = card.get("id").and_then(Value::as_i64).unwrap_or_default();
+        insert_card(conn, card, kind, vekn.crypt.get(&id))?;
         insert_disciplines(conn, card)?;
         insert_capacity_requirement(conn, card, kind)?;
-        insert_requirements(conn, card, kind, library_requirements)?;
+        insert_requirements(conn, card, kind, &vekn.library_requirements)?;
         insert_printings(conn, card)?;
         insert_artists(conn, card)?;
         insert_rulings(conn, card)?;
@@ -77,7 +77,12 @@ fn ascii_fold(s: &str) -> String {
         .collect()
 }
 
-fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<()> {
+fn insert_card(
+    conn: &Connection,
+    card: &Value,
+    kind: &str,
+    crypt_metadata: Option<&CryptMetadata>,
+) -> rusqlite::Result<()> {
     let id = card.get("id").and_then(|v| v.as_i64()).unwrap_or_default();
     let name = str_field(card, "printed_name")
         .or_else(|| str_field(card, "name"))
@@ -93,9 +98,9 @@ fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<
           votes, adv, banned, types, blood_cost, pool_cost, burn_option,
           requirement_clan, requirement_title, requirement_sect,
           image_url)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, ?8, ?9, ?10,
-                 NULL, 0, NULL, ?11, ?12, ?13, NULL,
-                 NULL, NULL, NULL, ?14)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11,
+                 ?12, ?13, ?14, ?15, ?16, ?17, NULL,
+                 NULL, NULL, NULL, ?18)",
         params![
             id,
             kind,
@@ -104,11 +109,17 @@ fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<
             str_field(card, "name"),
             str_field(card, "card_text"),
             card.get("clans").map(join_str_array),
+            crypt_metadata.and_then(|metadata| metadata.sect.as_deref()),
             card.get("capacity").and_then(|v| v.as_i64()),
             card.get("group")
                 .and_then(|v| v.as_str())
                 .and_then(|s| s.parse::<i64>().ok()),
-            str_field(card, "title"),
+            crypt_metadata
+                .and_then(|metadata| metadata.title.as_deref())
+                .or_else(|| str_field(card, "title")),
+            crypt_metadata.map(|metadata| metadata.votes),
+            crypt_metadata.map(|metadata| i64::from(metadata.advanced)),
+            crypt_metadata.and_then(|metadata| metadata.banned.as_deref()),
             types_json,
             str_field(card, "blood_cost"),
             str_field(card, "pool_cost"),
@@ -335,6 +346,57 @@ mod tests {
     #[test]
     fn ascii_fold_strips_accents() {
         assert_eq!(ascii_fold("Théo Bell"), "Theo Bell");
+    }
+
+    #[test]
+    fn official_crypt_metadata_populates_filter_columns() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE cards(
+               id INT, kind TEXT, name TEXT, name_ascii TEXT, aka TEXT, card_text TEXT,
+               clan TEXT, sect TEXT, capacity INT, grp INT, title TEXT, votes INT,
+               adv INT, banned TEXT, types TEXT, blood_cost TEXT, pool_cost TEXT,
+               burn_option INT, requirement_clan TEXT, requirement_title TEXT,
+               requirement_sect TEXT, image_url TEXT);",
+        )
+        .unwrap();
+        let card = json!({
+            "id": 201733,
+            "name": "Aaradhya, The Callous Tyrant",
+            "card_text": "Sabbat cardinal: text",
+            "clans": ["Ventrue"],
+            "capacity": 10,
+            "group": "6",
+            "types": ["Vampire"]
+        });
+        let metadata = CryptMetadata {
+            sect: Some("Sabbat".into()),
+            title: Some("Cardinal".into()),
+            votes: 3,
+            advanced: true,
+            banned: Some("Banned".into()),
+        };
+        insert_card(&conn, &card, "crypt", Some(&metadata)).unwrap();
+
+        let stored: (String, String, i64, i64, String) = conn
+            .query_row(
+                "SELECT sect, title, votes, adv, banned FROM cards WHERE id=201733",
+                [],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            stored,
+            ("Sabbat".into(), "Cardinal".into(), 3, 1, "Banned".into())
+        );
     }
 
     #[test]

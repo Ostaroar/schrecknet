@@ -56,15 +56,14 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Group filter: multi-select with OR semantics, options derived from the V5
       pool (currently groups 5–7); legacy single-group API remains compatible
 - ☑ Clan / Path filter — MVP live, options derived from the V5 pool (14 clans)
-- ☐ Sect filter (Camarilla, Sabbat, Laibon, Independent, Anarch, Imbued)
-- ☐ Votes filter (numeric)
-- ☑ Title filter MVP: single-select exact match, options derived from the V5
-      pool at query time (`title` param on all three surfaces); ☐ still missing:
-      vote-count buckets (1 vote / 2 votes) and Non-titled option
-      (vdb list: Primogen, Prince, Justicar, Inner Circle, Baron, 1 vote, 2 votes,
-      Bishop, Archbishop, Priscus, Cardinal, Regent, Magaji, Non-titled; V5 pool titles seen so far: Primogen, Prince,
-      Justicar, Bishop, Archbishop, Priscus, Cardinal — Baron/Inner Circle/Regent/
-      Magaji not yet in the V5 pool ✎ recheck as new sets ship)
+- ☑ Sect filter — official VEKN metadata, pool-derived options, and VDB-compatible
+      All/Any/Not multi-selection on browser, REST, MCP, and semantic filtering ✎
+- ☑ Votes filter — VDB-compatible None / 1+ / 2+ / 3+ / 4+ thresholds derived
+      from official titles in shared Rust, on all search surfaces ✎
+- ☑ Title filter — exact pool-derived title plus synthetic Non-titled option on
+      all three surfaces. The generic 1-vote/2-vote titles remain supported by
+      normalization/listing if they enter V5; current V5 titles are Archbishop,
+      Baron, Bishop, Cardinal, Justicar, Primogen, Prince, and Priscus ✎
 - ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
       Maneuver, Additional Strike, Aggravated, Prevent, Press, Enter combat, Unlock,
       Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement, Banned
@@ -209,7 +208,7 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with
       update script (original updates via `misc/` scripts) — `schrecknet-data build`
       fetches KRCG's `vtes.json`, filters to the V5 pool (`data/src/v5pool.rs`),
-      joins VEKN's official normalized library requirements, and populates
+      joins VEKN's official crypt metadata and normalized library requirements, and populates
       cards/disciplines/requirements/printings/artists/rulings/translations/FTS.
       ✎ still missing: full canonical-text cross-check against VEKN, incremental/
       diff updates

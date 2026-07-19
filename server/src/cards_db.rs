@@ -29,8 +29,20 @@ pub struct CryptSearchParams {
     #[serde(default)]
     pub clan: Option<String>,
     /// Exact title match (e.g. "Prince"); options come from the V5 pool.
+    /// The special value `non-titled` matches cards with no title.
     #[serde(default)]
     pub title: Option<String>,
+    /// Crypt sects to match (e.g. `["Camarilla", "Sabbat"]`). REST accepts
+    /// CSV; MCP accepts an array. Combination is controlled by `sect_logic`.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub sects: Vec<String>,
+    /// How selected sects combine: all, any, or none (Not).
+    #[serde(default)]
+    pub sect_logic: RequirementLogic,
+    /// VDB-compatible vote filter. `0` means non-titled/no votes; `1` through
+    /// `4` mean at least that many votes.
+    #[serde(default)]
+    pub votes: Option<i64>,
     /// Crypt group (V5 pool is limited to groups 5-7).
     #[serde(default)]
     pub group: Option<i64>,
@@ -111,7 +123,7 @@ pub enum DisciplineLogic {
     Only,
 }
 
-/// All/Any/Not composition used by VDB's library sect/title requirements.
+/// All/Any/Not composition used by VDB's sect/title selectors.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum RequirementLogic {
@@ -357,6 +369,8 @@ pub struct CryptCard {
     pub capacity: i64,
     pub group: i64,
     pub title: Option<String>,
+    pub sect: Option<String>,
+    pub votes: i64,
     pub disciplines: Vec<Discipline>,
 }
 
@@ -713,6 +727,45 @@ fn push_group_filter(
     sql.push(')');
 }
 
+fn push_crypt_sect_filter(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    sects: &[String],
+    logic: RequirementLogic,
+) {
+    if sects.is_empty() {
+        return;
+    }
+
+    if logic == RequirementLogic::All {
+        for sect in sects {
+            sql.push_str(&format!(
+                " AND lower(coalesce(c.sect, '')) = lower(?{})",
+                bound.len() + 1
+            ));
+            bound.push(Box::new(sect.clone()));
+        }
+        return;
+    }
+
+    sql.push_str(" AND ");
+    if logic == RequirementLogic::None {
+        sql.push_str("NOT ");
+    }
+    sql.push('(');
+    for (index, sect) in sects.iter().enumerate() {
+        if index > 0 {
+            sql.push_str(" OR ");
+        }
+        sql.push_str(&format!(
+            "lower(coalesce(c.sect, '')) = lower(?{})",
+            bound.len() + 1
+        ));
+        bound.push(Box::new(sect.clone()));
+    }
+    sql.push(')');
+}
+
 pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
@@ -746,7 +799,7 @@ fn search_crypt_inner(
         None
     };
     let mut sql = String::from(
-        "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
+        "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
                 GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
@@ -760,7 +813,9 @@ fn search_crypt_inner(
            AND (?5 IS NULL OR c.grp = ?5)
            AND (?6 IS NULL OR c.capacity >= ?6)
            AND (?7 IS NULL OR c.capacity <= ?7)
-           AND (?8 IS NULL OR c.title = ?8)
+           AND (?8 IS NULL
+                OR (lower(?8) = 'non-titled' AND c.title IS NULL)
+                OR lower(c.title) = lower(?8))
            AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
                 SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
                 WHERE p.card_id = c.id
@@ -792,7 +847,10 @@ fn search_crypt_inner(
                             SELECT MIN(sr.release_date) FROM printings pr
                             JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
            AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))",
+                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))
+           AND (?15 IS NULL
+                OR (?15 = 0 AND c.votes = 0)
+                OR (?15 > 0 AND c.votes >= ?15))",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
@@ -809,8 +867,10 @@ fn search_crypt_inner(
         Box::new(params.text_regex as i64),
         Box::new(params.set_age.as_sql_value()),
         Box::new(params.set_print.as_sql_value()),
+        Box::new(params.votes),
     ];
     push_group_filter(&mut sql, &mut bound, &params.groups);
+    push_crypt_sect_filter(&mut sql, &mut bound, &params.sects, params.sect_logic);
     for requirement in effective_discipline_requirements(
         &params.discipline_requirements,
         &params.disciplines,
@@ -830,7 +890,7 @@ fn search_crypt_inner(
     let rows = stmt.query_map(
         rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
-            let disc: Option<String> = row.get(6)?;
+            let disc: Option<String> = row.get(8)?;
             Ok(CryptCard {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -838,6 +898,8 @@ fn search_crypt_inner(
                 capacity: row.get(3)?,
                 group: row.get(4)?,
                 title: row.get(5)?,
+                sect: row.get(6)?,
+                votes: row.get(7)?,
                 disciplines: parse_disciplines(disc),
             })
         },
@@ -1079,7 +1141,7 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE cards(id INT, kind TEXT, name TEXT, name_ascii TEXT, card_text TEXT,
                clan TEXT, capacity INT, grp INT, title TEXT,
-               types TEXT, blood_cost TEXT, pool_cost TEXT);
+               types TEXT, blood_cost TEXT, pool_cost TEXT, sect TEXT, votes INT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              CREATE TABLE card_capacity_requirements(
                card_id INT PRIMARY KEY, min_capacity INT, max_capacity INT);
@@ -1091,11 +1153,11 @@ mod tests {
              CREATE TABLE artists(id INT, name TEXT);
              CREATE TABLE card_artists(card_id INT, artist_id INT);
              INSERT INTO cards VALUES
-               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL),
-               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL),
-               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2'),
-               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL),
-               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2');
+               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL,'Sabbat',3),
+               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL,'Independent',0),
+               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL),
+               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL,NULL,NULL),
+               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL);
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);
              INSERT INTO sets VALUES
                (1,'Fifth Edition','2020-11-30'),
@@ -1366,6 +1428,84 @@ mod tests {
     }
 
     #[test]
+    fn crypt_non_titled_and_vote_thresholds_match_vdb() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+
+        let non_titled = CryptSearchParams {
+            title: Some("non-titled".into()),
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &non_titled).unwrap()[0].name, "Abaddon");
+
+        let three_plus = CryptSearchParams {
+            votes: Some(3),
+            ..Default::default()
+        };
+        assert_eq!(
+            search_crypt(&conn, &three_plus).unwrap()[0].name,
+            "Aaradhya"
+        );
+
+        let no_votes = CryptSearchParams {
+            votes: Some(0),
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &no_votes).unwrap()[0].name, "Abaddon");
+
+        let four_plus = CryptSearchParams {
+            votes: Some(4),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &four_plus).unwrap().is_empty());
+    }
+
+    #[test]
+    fn crypt_sects_support_all_any_and_not_logic() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+
+        let any = CryptSearchParams {
+            sects: vec!["sabbat".into(), "camarilla".into()],
+            sect_logic: RequirementLogic::Any,
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &any).unwrap()[0].name, "Aaradhya");
+
+        let none = CryptSearchParams {
+            sects: vec!["Sabbat".into()],
+            sect_logic: RequirementLogic::None,
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &none).unwrap()[0].name, "Abaddon");
+
+        let impossible_all = CryptSearchParams {
+            sects: vec!["Sabbat".into(), "Independent".into()],
+            sect_logic: RequirementLogic::All,
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &impossible_all).unwrap().is_empty());
+    }
+
+    #[test]
+    fn crypt_metadata_filters_deserialize_for_rest_and_mcp() {
+        let rest: CryptSearchParams =
+            serde_urlencoded::from_str("sects=Sabbat,Anarch&sect_logic=any&votes=2").unwrap();
+        assert_eq!(rest.sects, vec!["sabbat", "anarch"]);
+        assert_eq!(rest.sect_logic, RequirementLogic::Any);
+        assert_eq!(rest.votes, Some(2));
+
+        let mcp: CryptSearchParams = serde_json::from_str(
+            r#"{"sects":["Camarilla"],"sect_logic":"none","title":"non-titled","votes":0}"#,
+        )
+        .unwrap();
+        assert_eq!(mcp.sects, vec!["Camarilla"]);
+        assert_eq!(mcp.sect_logic, RequirementLogic::None);
+        assert_eq!(mcp.title.as_deref(), Some("non-titled"));
+        assert_eq!(mcp.votes, Some(0));
+    }
+
+    #[test]
     fn text_mode_name_matches_name_only() {
         let conn = Connection::open_in_memory().unwrap();
         seed(&conn);
@@ -1511,7 +1651,7 @@ mod tests {
         // match here).
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL);
+               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL,'Anarch',0);
              INSERT INTO printings VALUES (6,1,NULL,'C',1), (6,2,'Anarch Precon','U',0);",
         )
         .unwrap();
@@ -1816,10 +1956,10 @@ mod tests {
     fn seed_library_filter_extras(conn: &Connection) {
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL),
-               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL),
-               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL),
-               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL);
+               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL),
+               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL,NULL,NULL),
+               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL,NULL,NULL),
+               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL,NULL,NULL);
              INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0),(8,'for',0);",
         )
         .unwrap();
@@ -2309,7 +2449,7 @@ mod tests {
         // Add a second card to the same precon, and one in a different set.
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL);
+               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL,'Anarch',0);
              INSERT INTO sets VALUES (3,'Camarilla Edition','2003-08-18');
              INSERT INTO printings VALUES
                (6,2,'Anarch Precon','U',1),
@@ -2352,13 +2492,13 @@ mod tests {
         for index in 0..205 {
             conn.execute(
                 "INSERT INTO cards VALUES
-                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL)",
+                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL, 'Camarilla', 0)",
                 rusqlite::params![10_000 + index, format!("Crypt {index:03}")],
             )
             .unwrap();
             conn.execute(
                 "INSERT INTO cards VALUES
-                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL)",
+                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL, NULL, NULL)",
                 rusqlite::params![20_000 + index, format!("Library {index:03}")],
             )
             .unwrap();

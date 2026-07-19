@@ -4,6 +4,7 @@ import {
   listClans,
   listGroups,
   listCryptDisciplines,
+  listCryptSects,
   listTitles,
   listSets,
   listPrecons,
@@ -27,6 +28,7 @@ import {
   type SemanticResult,
 } from '../lib/semanticSearch'
 import type { DisciplineRequirement } from '../lib/disciplineFilter'
+import type { RequirementLogic } from '../lib/requirementFilter'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
   return (
@@ -54,6 +56,9 @@ export default function CryptSearch() {
   const [semanticRetry, setSemanticRetry] = useState(0)
   const [clan, setClan] = useState<string | null>(null)
   const [title, setTitle] = useState<string | null>(null)
+  const [selectedSects, setSelectedSects] = useState<string[]>([])
+  const [sectLogic, setSectLogic] = useState<RequirementLogic>('all')
+  const [votes, setVotes] = useState<number | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<number[]>([])
   const [capacityMin, setCapacityMin] = useState<number | null>(null)
   const [capacityMax, setCapacityMax] = useState<number | null>(null)
@@ -66,6 +71,7 @@ export default function CryptSearch() {
   const [orDisciplineGroups, setOrDisciplineGroups] = useState<OrDisciplineGroup[]>([])
   const [clans, setClans] = useState<string[]>([])
   const [titles, setTitles] = useState<string[]>([])
+  const [sects, setSects] = useState<string[]>([])
   const [groups, setGroups] = useState<number[]>([])
   const [sets, setSets] = useState<string[]>([])
   const [precons, setPrecons] = useState<string[]>([])
@@ -80,11 +86,20 @@ export default function CryptSearch() {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([listClans(), listGroups(), listCryptDisciplines(), listTitles(), listSets(), listPrecons()])
-      .then(([c, g, d, t, s, p]) => {
+    Promise.all([
+      listClans(),
+      listGroups(),
+      listCryptDisciplines(),
+      listTitles(),
+      listCryptSects(),
+      listSets(),
+      listPrecons(),
+    ])
+      .then(([c, g, d, t, sc, s, p]) => {
         setClans(c)
         setGroups(g)
         setTitles(t)
+        setSects(sc)
         setAllDisciplines(d)
         setSets(s)
         setPrecons(p)
@@ -105,6 +120,9 @@ export default function CryptSearch() {
       textRegex,
       clan,
       title,
+      sects: selectedSects,
+      sectLogic,
+      votes,
       group: null,
       groups: selectedGroups,
       capacityMin,
@@ -128,6 +146,9 @@ export default function CryptSearch() {
     textRegex,
     clan,
     title,
+    selectedSects,
+    sectLogic,
+    votes,
     selectedGroups,
     capacityMin,
     capacityMax,
@@ -218,6 +239,14 @@ export default function CryptSearch() {
       selected.includes(group)
         ? selected.filter((value) => value !== group)
         : [...selected, group].sort((a, b) => a - b),
+    )
+  }
+
+  const toggleSect = (sect: string) => {
+    setSelectedSects((selected) =>
+      selected.includes(sect)
+        ? selected.filter((value) => value !== sect)
+        : [...selected, sect].sort(),
     )
   }
 
@@ -330,11 +359,26 @@ export default function CryptSearch() {
           disabled={status === 'loading'}
         >
           <option value="">Any title</option>
+          <option value="non-titled">Non-titled</option>
           {titles.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
           ))}
+        </select>
+        <select
+          aria-label="Votes"
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+          value={votes ?? ''}
+          onChange={(e) => setVotes(e.target.value === '' ? null : Number(e.target.value))}
+          disabled={status === 'loading'}
+        >
+          <option value="">Any votes</option>
+          <option value="0">No votes</option>
+          <option value="1">1+ votes</option>
+          <option value="2">2+ votes</option>
+          <option value="3">3+ votes</option>
+          <option value="4">4+ votes</option>
         </select>
         <div
           className="flex items-center overflow-hidden rounded-lg border border-line bg-surface"
@@ -411,6 +455,55 @@ export default function CryptSearch() {
           onChange={(e) => setArtist(e.target.value || null)}
           disabled={status === 'loading'}
         />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-xs text-ink-dim">Sect</span>
+        {sects.map((sect) => (
+          <button
+            key={sect}
+            type="button"
+            aria-label={`Crypt sect ${sect}`}
+            aria-pressed={selectedSects.includes(sect)}
+            onClick={() => toggleSect(sect)}
+            disabled={status === 'loading'}
+            className={
+              'rounded-full border px-2.5 py-1 text-xs ' +
+              (selectedSects.includes(sect)
+                ? 'border-blood bg-blood text-white'
+                : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+            }
+          >
+            {sect}
+          </button>
+        ))}
+        {selectedSects.length > 0 && (
+          <div className="ml-1 flex overflow-hidden rounded-lg border border-line">
+            {(
+              [
+                ['all', 'All'],
+                ['any', 'Any'],
+                ['none', 'Not'],
+              ] as [RequirementLogic, string][]
+            ).map(([logic, label]) => (
+              <button
+                key={logic}
+                type="button"
+                aria-label={`Crypt sect logic ${label}`}
+                aria-pressed={sectLogic === logic}
+                onClick={() => setSectLogic(logic)}
+                className={
+                  'px-2.5 py-1 text-xs ' +
+                  (sectLogic === logic
+                    ? 'bg-blood text-white'
+                    : 'bg-surface text-ink-dim hover:text-ink-muted')
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -542,6 +635,7 @@ export default function CryptSearch() {
                     ))}
                   </span>
                   <span className="text-right text-xs uppercase tracking-wide text-ink-muted">
+                    {c.sect ? `${c.sect} · ` : ''}
                     {c.clan} · G{c.grp}
                   </span>
                 </button>

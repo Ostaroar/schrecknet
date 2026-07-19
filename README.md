@@ -44,7 +44,8 @@ checklist) — applied to the V5 pool.
 
 - Built on the shoulders of [smeea/vdb](https://github.com/smeea/vdb) (MIT) and the
   [KRCG](https://static.krcg.org) project's card data and rulings, with normalized
-  requirement metadata from [VEKN's official card lists](https://www.vekn.net/card-lists).
+  crypt and library requirement metadata from
+  [VEKN's official card lists](https://www.vekn.net/card-lists).
 - Code licensed under [MIT](LICENSE).
 - Portions of the materials are the copyrights and trademarks of Paradox Interactive AB,
   and are used with permission under the **Dark Pack** agreement. All rights reserved.

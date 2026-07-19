@@ -1,7 +1,7 @@
 // Crypt search query builder — mirrors server/src/cards_db.rs::search_crypt
 // exactly (same filters, same dynamically-built EXISTS clauses per required
 // discipline) so the browser and server agree. Remaining vdb filter families
-// (sect, votes, traits — docs/feature-parity.md) land incrementally behind
+// (traits — docs/feature-parity.md) land incrementally behind
 // this same query() seam.
 
 import { query } from './db'
@@ -10,6 +10,7 @@ import {
   type DisciplineRequirement,
 } from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
+import type { RequirementLogic } from './requirementFilter'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
@@ -20,6 +21,9 @@ export interface CryptFilters {
   textRegex: boolean
   clan: string | null
   title: string | null
+  sects: string[]
+  sectLogic: RequirementLogic
+  votes: number | null
   group: number | null
   groups: number[]
   capacityMin: number | null
@@ -41,6 +45,9 @@ export const emptyCryptFilters: CryptFilters = {
   textRegex: false,
   clan: null,
   title: null,
+  sects: [],
+  sectLogic: 'all',
+  votes: null,
   group: null,
   groups: [],
   capacityMin: null,
@@ -68,6 +75,8 @@ export interface CryptCard {
   capacity: number
   grp: number
   title: string | null
+  sect: string | null
+  votes: number
   disciplines: Discipline[]
 }
 
@@ -78,7 +87,26 @@ interface CryptRow {
   capacity: number
   grp: number
   title: string | null
+  sect: string | null
+  votes: number
   disc: string | null
+}
+
+function appendCryptSectFilter(
+  sql: string,
+  params: Array<string | number | null>,
+  sects: string[],
+  logic: RequirementLogic,
+): string {
+  if (sects.length === 0) return sql
+  const expressions = sects.map((sect) => {
+    params.push(sect)
+    return `lower(coalesce(c.sect, '')) = lower(?${params.length})`
+  })
+  if (logic === 'all') {
+    return sql + expressions.map((expression) => ` AND ${expression}`).join('')
+  }
+  return `${sql} AND ${logic === 'none' ? 'NOT ' : ''}(${expressions.join(' OR ')})`
 }
 
 function parseDisciplines(disc: string | null): Discipline[] {
@@ -104,7 +132,7 @@ export async function filterCrypt(filters: CryptFilters): Promise<CryptCard[]> {
 
 async function searchCryptInner(filters: CryptFilters, limited: boolean): Promise<CryptCard[]> {
   const singleGroup = filters.groups.length === 0 ? filters.group : null
-  let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
+  let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
@@ -118,7 +146,9 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
        AND (?5 IS NULL OR c.grp = ?5)
        AND (?6 IS NULL OR c.capacity >= ?6)
        AND (?7 IS NULL OR c.capacity <= ?7)
-       AND (?8 IS NULL OR c.title = ?8)
+       AND (?8 IS NULL
+            OR (lower(?8) = 'non-titled' AND c.title IS NULL)
+            OR lower(c.title) = lower(?8))
        AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
             SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
             WHERE p.card_id = c.id
@@ -150,7 +180,10 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
                         SELECT MIN(sr.release_date) FROM printings pr
                         JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
        AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))`
+            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))
+       AND (?15 IS NULL
+            OR (?15 = 0 AND c.votes = 0)
+            OR (?15 > 0 AND c.votes >= ?15))`
   const params: (string | number | null)[] = [
     filters.text.trim(),
     filters.textMode !== 'text' ? 1 : 0,
@@ -166,6 +199,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     filters.textRegex ? 1 : 0,
     filters.setAge,
     filters.setPrint,
+    filters.votes,
   ]
   if (filters.groups.length > 0) {
     const placeholders: string[] = []
@@ -175,6 +209,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     }
     sql += ` AND c.grp IN (${placeholders.join(',')})`
   }
+  sql = appendCryptSectFilter(sql, params, filters.sects, filters.sectLogic)
   sql = appendDisciplineFilters(
     sql,
     params,
@@ -202,6 +237,14 @@ export async function listTitles(): Promise<string[]> {
     `SELECT DISTINCT title FROM cards WHERE kind = 'crypt' AND title IS NOT NULL ORDER BY title`,
   )
   return rows.map((r) => r.title)
+}
+
+export async function listCryptSects(): Promise<string[]> {
+  const rows = await query<{ sect: string }>(
+    `SELECT DISTINCT sect FROM cards
+     WHERE kind = 'crypt' AND sect IS NOT NULL AND sect != '' ORDER BY sect`,
+  )
+  return rows.map((r) => r.sect)
 }
 
 export async function listGroups(): Promise<number[]> {

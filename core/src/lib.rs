@@ -6,6 +6,7 @@
 //! the plain-Rust modules.
 
 pub mod capacity;
+pub mod crypt_metadata;
 pub mod diff;
 pub mod dtext;
 pub mod legality;

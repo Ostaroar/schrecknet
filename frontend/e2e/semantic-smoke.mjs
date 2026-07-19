@@ -183,6 +183,24 @@ try {
   }
   await waitForExactIds(searchFixture.crypt.expected_ids)
 
+  // VDB derives sect from the official crypt text prefix and vote strength
+  // from title rank. This real-pool composition protects the VEKN join and
+  // browser/server parity without relying on client-side text heuristics.
+  const cryptMetadataFixture = searchFixture.crypt_metadata
+  const cryptMetadataRest = await exactRestSearch('crypt', cryptMetadataFixture.rest_query)
+  assert.deepEqual(
+    cryptMetadataRest.map((card) => card.id),
+    cryptMetadataFixture.expected_ids,
+    'crypt sect/votes REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  await page
+    .getByLabel(`Crypt sect ${cryptMetadataFixture.sect}`, { exact: true })
+    .click()
+  await page.getByLabel('Votes', { exact: true }).selectOption(String(cryptMetadataFixture.votes))
+  await waitForExactIds(cryptMetadataFixture.expected_ids)
+
   await page.getByRole('button', { name: 'library search', exact: true }).click()
   await page.waitForFunction(() => location.hash === '#/library')
   await page.getByPlaceholder('Name / text').waitFor()

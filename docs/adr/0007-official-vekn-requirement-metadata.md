@@ -1,4 +1,4 @@
-# ADR 0007 — official VEKN requirement metadata
+# ADR 0007 — official VEKN card metadata
 
 **Status:** accepted and implemented · 2026-07-19
 
@@ -13,6 +13,11 @@ VEKN publishes an official ZIP of current UTF-8 CSV card lists. Its
 `vteslibmeta.csv` contains stable card ids and normalized comma-separated
 requirements. VDB consumes this file, then adds implied sect tokens for specific
 title requirements before applying All/Any/Not filters.
+
+The same archive's `vtescrypt.csv` is also VDB's authoritative source for crypt
+text, titles, advancement, and banned status. VDB derives sect from the canonical
+text prefix and vote strength from the title instead of maintaining a clan→sect
+guess table.
 
 Reading the official archive and CSV safely requires format-aware code. Hand-written
 ZIP or CSV parsing would add critical parser risk for no product benefit, while
@@ -30,6 +35,9 @@ shelling out to `unzip` would make local, CI, and Docker builds environment-depe
 - Shared Rust in `core/src/requirements.rs` lowercases, trims, deduplicates, and
   classifies tokens, reproduces VDB's title-to-sect implication table, and emits
   the synthetic `titled_specific` token used by VDB's “Titled (specific)” filter.
+- Join `vtescrypt.csv` by the same stable id. Shared Rust reproduces VDB's ordinary,
+  advanced, and Imbued sect extraction plus title-to-vote mapping; the build fails
+  unless every surviving V5 crypt card has official metadata.
 - Store normalized rows in `card_requirements`; filter options are queried from the
   surviving V5 rows, never from a hardcoded full-universe UI list.
 - Keep the existing card-text capacity parser. The official requirement metadata is
@@ -54,7 +62,7 @@ shelling out to `unzip` would make local, CI, and Docker builds environment-depe
   decoding; frontend/server dependency profiles are unchanged.
 - A VEKN outage affects a cache-cold data rebuild, just as a KRCG outage already
   does. A warm cache remains usable for local development.
-- Requirement source provenance is recorded in `cards.meta.json` and documented in
+- VEKN source provenance and crypt coverage are recorded in `cards.meta.json` and documented in
   `docs/data.md`.
 
 ## References
@@ -62,3 +70,4 @@ shelling out to `unzip` would make local, CI, and Docker builds environment-depe
 - [VEKN official card lists](https://www.vekn.net/card-lists)
 - [VDB requirement filtering](https://github.com/smeea/vdb/blob/master/frontend/src/utils/cardFilters.js)
 - [VDB requirement normalization](https://github.com/smeea/vdb/blob/master/misc/cards-update/generate_library.py)
+- [VDB crypt normalization](https://github.com/smeea/vdb/blob/master/misc/cards-update/generate_crypt.py)

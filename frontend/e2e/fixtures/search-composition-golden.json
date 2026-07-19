@@ -13,6 +13,12 @@
     ],
     "expected_ids": [201735, 201782, 201751]
   },
+  "crypt_metadata": {
+    "rest_query": "sects=sabbat&votes=3",
+    "sect": "Sabbat",
+    "votes": 3,
+    "expected_ids": [201733, 201741, 201735, 201760]
+  },
   "library": {
     "rest_query": "disciplines=pot%2Cpre&discipline_logic=only",
     "disciplines": ["pot", "pre"],

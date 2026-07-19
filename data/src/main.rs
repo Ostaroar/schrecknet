@@ -1,7 +1,7 @@
 //! SchreckNet data pipeline.
 //!
-//! `build` fetches KRCG's card export plus VEKN's official requirement
-//! metadata, filters to the V5 pool (see `v5pool.rs` — the single source of
+//! `build` fetches KRCG's card export plus VEKN's official card metadata,
+//! filters to the V5 pool (see `v5pool.rs` — the single source of
 //! truth for "is this card V5-legal"), and emits `cards.sqlite` (schema per
 //! docs/data.md) + `cards.meta.json`.
 
@@ -86,16 +86,17 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(std::env::var("SCHRECKNET_DATA_CACHE").unwrap_or_else(|_| ".cache".into()));
     let all_cards = krcg::fetch_cards(&cache_dir)?;
     eprintln!("krcg: {} total cards fetched", all_cards.len());
-    let library_requirements = vekn::fetch_library_requirements(&cache_dir)?;
+    let vekn_metadata = vekn::fetch_metadata(&cache_dir)?;
     eprintln!(
-        "vekn: {} library requirement rows fetched",
-        library_requirements.len()
+        "vekn: {} library requirement rows and {} crypt metadata rows fetched",
+        vekn_metadata.library_requirements.len(),
+        vekn_metadata.crypt.len()
     );
 
     let conn = rusqlite::Connection::open(&db_path)?;
     conn.execute_batch(SCHEMA)?;
 
-    let stats = ingest::run(&conn, &all_cards, &library_requirements)?;
+    let stats = ingest::run(&conn, &all_cards, &vekn_metadata)?;
     let (requirement_cards, requirement_tokens): (i64, i64) = conn.query_row(
         "SELECT COUNT(DISTINCT card_id), COUNT(*) FROM card_requirements",
         [],
@@ -105,6 +106,19 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         return Err(std::io::Error::other(
             "VEKN metadata produced no requirements for the V5 library pool",
         )
+        .into());
+    }
+    let crypt_metadata_cards: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM cards
+         WHERE kind='crypt' AND sect IS NOT NULL AND votes IS NOT NULL",
+        [],
+        |row| row.get(0),
+    )?;
+    if crypt_metadata_cards != i64::from(stats.crypt) {
+        return Err(std::io::Error::other(format!(
+            "VEKN metadata covered {crypt_metadata_cards} of {} V5 crypt cards",
+            stats.crypt
+        ))
         .into());
     }
     let languages = available_languages(&conn)?;
@@ -119,7 +133,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '6'), ('data_version', '6'), ('scope', 'v5'),
+         ('schema_version', '6'), ('data_version', '7'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -139,10 +153,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // tables; v4: added card_embeddings for local semantic search; v5:
         // normalized derived library capacity requirements into their own table;
         // v6: added normalized official VEKN requirement tokens).
-        // data_version changes whenever emitted content changes (v6 adds the
-        // V5 library sect/title requirement rows and implied title sects).
+        // data_version changes whenever emitted content changes (v7 fills
+        // crypt sect/title/vote/advancement/banned columns from official VEKN
+        // metadata; v6 added library sect/title requirement rows).
         "schema_version": 6,
-        "data_version": 6,
+        "data_version": 7,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
@@ -165,6 +180,10 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         },
         "source": "https://static.krcg.org/data/vtes.json",
         "requirement_source": vekn::SOURCE_URL,
+        "vekn_source": vekn::SOURCE_URL,
+        "crypt_metadata": {
+            "cards": crypt_metadata_cards,
+        },
         "requirements": {
             "cards": requirement_cards,
             "tokens": requirement_tokens,
