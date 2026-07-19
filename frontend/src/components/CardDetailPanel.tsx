@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { getCard, type CardDetail } from '../lib/cardDetail'
+import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
+import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
 import { routeTo } from '../lib/route'
 
 export default function CardDetailPanel({ id }: { id: number }) {
   const [card, setCard] = useState<CardDetail | null>(null)
   const [error, setError] = useState('')
+  const { language } = useCardLanguage()
 
   useEffect(() => {
     setCard(null)
@@ -16,10 +18,18 @@ export default function CardDetailPanel({ id }: { id: number }) {
 
   if (error) return <p className="px-4 py-3 text-sm text-blood-hi">Couldn't load card: {error}</p>
   if (!card) return <p className="px-4 py-3 text-sm text-ink-dim">Loading…</p>
+  const localized = localizeCardText(card, language)
 
   return (
     <div className="grid gap-3 border-t border-line-soft bg-ground px-4 py-4 text-sm">
-      {card.card_text && <p className="leading-relaxed text-ink-muted">{card.card_text}</p>}
+      {localized.card_text && <p className="leading-relaxed text-ink-muted">{localized.card_text}</p>}
+      {language !== 'en' && (
+        <p className="text-xs text-ink-dim">
+          {localized.isFallback
+            ? `No ${languageLabel(language)} translation for this card; showing English.`
+            : `Card text: ${languageLabel(localized.language)}`}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-dim">
         {card.printings.length > 0 && (
@@ -53,7 +63,7 @@ export default function CardDetailPanel({ id }: { id: number }) {
 
       {card.translations.length > 0 && (
         <span className="text-xs text-ink-dim">
-          Translated: {card.translations.map((t) => t.lang.toUpperCase()).join(', ')}
+          Available: {['en', ...card.translations.map((translation) => translation.lang)].map(languageLabel).join(', ')}
         </span>
       )}
 

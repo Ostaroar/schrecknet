@@ -20,7 +20,8 @@ A small Rust (or Python, TBD in implementation) tool that:
     pool, never hardcoded.
 2. Normalizes into the SQLite schema below
 3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group, …)
-4. Emits `cards.sqlite` + `cards.meta.json` (version, date, counts, content hash)
+4. Emits `cards.sqlite` + `cards.meta.json` (version, counts, source products,
+   and the card-text languages actually present in the filtered V5 pool)
 
 Runs in CI weekly (`card-data.yml`) and on demand; when the output hash changes it
 opens a PR bumping the data version. The app fetches `cards.sqlite` by content-hash

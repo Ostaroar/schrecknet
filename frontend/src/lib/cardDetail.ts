@@ -53,6 +53,33 @@ export interface CardDetail {
   translations: Translation[]
 }
 
+export interface LocalizedCardText {
+  language: string
+  name: string
+  card_text: string | null
+  isFallback: boolean
+}
+
+/** Selects translated card copy while keeping canonical English as fallback. */
+export function localizeCardText(card: CardDetail, requestedLanguage: string): LocalizedCardText {
+  const requested = requestedLanguage.toLowerCase()
+  if (requested === 'en') {
+    return { language: 'en', name: card.name, card_text: card.card_text, isFallback: false }
+  }
+
+  const translation = card.translations.find((candidate) => candidate.lang.toLowerCase() === requested)
+  if (!translation) {
+    return { language: 'en', name: card.name, card_text: card.card_text, isFallback: true }
+  }
+
+  return {
+    language: translation.lang.toLowerCase(),
+    name: translation.name || card.name,
+    card_text: translation.card_text || card.card_text,
+    isFallback: false,
+  }
+}
+
 export async function getCard(id: number): Promise<CardDetail | null> {
   const [base] = await query<{
     kind: string

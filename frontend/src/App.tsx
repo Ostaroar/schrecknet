@@ -11,6 +11,7 @@ import PreconBrowser from './components/PreconBrowser'
 import CommandPalette from './components/CommandPalette'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
+import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { useHashRoute, navigate } from './lib/route'
 
 const TABS = ['crypt', 'library', 'decks', 'precons', 'help', 'about'] as const
@@ -18,10 +19,16 @@ const TABS = ['crypt', 'library', 'decks', 'precons', 'help', 'about'] as const
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
   const route = useHashRoute()
+  const { language, setLanguage } = useCardLanguage()
+  const availableLanguages = meta?.languages?.length ? meta.languages : ['en']
 
   useEffect(() => {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
+
+  useEffect(() => {
+    if (meta && !availableLanguages.includes(language)) setLanguage('en')
+  }, [availableLanguages, language, meta, setLanguage])
 
   const wide =
     route.page === 'deck' ||
@@ -41,9 +48,28 @@ export default function App() {
         <kbd className="hidden rounded-md border border-line px-2 py-0.5 font-mono text-[10px] text-ink-dim sm:block">
           ⌘K
         </kbd>
-        <span className="ml-auto rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted">
+        <div className="ml-auto flex items-center gap-2">
+          {availableLanguages.length > 1 && (
+            <label className="flex items-center gap-1.5 text-xs text-ink-dim">
+              <span className="hidden sm:inline">Card text</span>
+              <select
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+                aria-label="Card text language"
+                className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-blood-hi"
+              >
+                {availableLanguages.map((option) => (
+                  <option key={option} value={option}>
+                    {languageLabel(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <span className="hidden rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted sm:inline">
           {meta ? `${meta.crypt} crypt · ${meta.library} library` : 'V5 only'}
-        </span>
+          </span>
+        </div>
       </header>
 
       {route.page !== 'card' &&

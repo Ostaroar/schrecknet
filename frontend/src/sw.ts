@@ -9,11 +9,12 @@
 // OPFS-backed dbWorker.ts; caching it here too would be redundant and could
 // race with that mechanism.
 //
-// Strategy: stale-while-revalidate for same-origin GET requests outside
-// /api and /data. Vite's output filenames are content-hashed, so we don't
-// (and can't) know them at SW-write time — nothing is precached on
-// 'install'; the cache fills in as the app is used, which is enough for the
-// "second visit works offline" requirement.
+// Strategy: network-first for document navigations, stale-while-revalidate
+// for content-hashed static assets. A successful navigation is also stored
+// under the stable /index.html key for offline SPA fallback. Vite's output
+// filenames are content-hashed, so we don't (and can't) know them at SW-write
+// time — nothing is precached on 'install'; the cache fills in as the app is
+// used, which is enough for the "second visit works offline" requirement.
 
 /// <reference lib="webworker" />
 export {}
@@ -54,6 +55,18 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE_NAME)
+
+      if (request.mode === 'navigate') {
+        try {
+          const response = await fetch(request)
+          if (response.ok) await cache.put('/index.html', response.clone())
+          return response
+        } catch {
+          const shell = await cache.match('/index.html')
+          return shell ?? new Response('Offline', { status: 503, statusText: 'Offline' })
+        }
+      }
+
       const cached = await cache.match(request)
 
       const network = fetch(request)
@@ -73,13 +86,6 @@ self.addEventListener('fetch', (event) => {
 
       const fresh = await network
       if (fresh) return fresh
-
-      // Offline + no cache entry: for navigations, fall back to the cached
-      // app shell root so SPA routing still renders.
-      if (request.mode === 'navigate') {
-        const shell = await cache.match('/index.html')
-        if (shell) return shell
-      }
 
       return new Response('Offline', { status: 503, statusText: 'Offline' })
     })(),

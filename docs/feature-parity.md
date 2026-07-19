@@ -27,7 +27,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       About/Decks/Crypt/Library live; Account and Inventory follow their features
 - ☑ Quick card search by name — ⌘K/Ctrl+K command palette, prefix-ranked,
       across both kinds, keyboard-driven (↑↓/Enter/Esc), jumps to the card page
-- ☐ Language switcher for card texts (EN/ES/FR/PT-BR) ✎
+- ☑ Language switcher for card texts — persisted global choice, applied to
+      full card pages and inline details with per-card English fallback; options
+      are derived from the V5 data at build time (currently EN/ES/FR, with
+      PT-BR appearing automatically when the source provides it) ✎
 - ☐ Responsive mobile layout
 - ☑ Installable PWA (manifest + offline app shell via hand-written service
       worker; offline card search itself is handled separately by the
@@ -115,7 +118,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text and authoritative source links live
 - ☑ Artist credit(s) — live
-- ☑ Card text translations — full translated name + text on the card page
+- ☑ Card text translations — selected translated name + text on the card
+      page and inline search details; canonical English remains the fallback
 - ☑ Shareable deep link per card — `#/cards/{id}` hash routes (tiny hand-rolled
       router in frontend/src/lib/route.ts; no router dep, per AGENTS.md rule 7)
 

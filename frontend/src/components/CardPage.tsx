@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getCard, type CardDetail } from '../lib/cardDetail'
+import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
+import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
 import { navigate } from '../lib/route'
 
@@ -20,6 +21,7 @@ export default function CardPage({ id }: { id: number }) {
   const [card, setCard] = useState<CardDetail | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const [error, setError] = useState('')
+  const { language } = useCardLanguage()
 
   useEffect(() => {
     setStatus('loading')
@@ -47,6 +49,8 @@ export default function CardPage({ id }: { id: number }) {
       </div>
     )
 
+  const localized = localizeCardText(card, language)
+
   return (
     <article className="grid max-w-2xl gap-5">
       <button
@@ -58,13 +62,16 @@ export default function CardPage({ id }: { id: number }) {
 
       <header className="grid gap-2">
         <div className="flex items-baseline gap-3">
-          <h1 className="font-display text-3xl">{card.name}</h1>
+          <h1 className="font-display text-3xl">{localized.name}</h1>
           {card.capacity !== null && (
             <span className="grid size-8 place-items-center rounded-full bg-blood/20 font-mono text-base font-semibold text-blood-hi">
               {card.capacity}
             </span>
           )}
         </div>
+        {localized.name !== card.name && (
+          <p className="text-xs text-ink-dim">English name: {card.name}</p>
+        )}
         <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-ink-muted">
           {card.kind === 'crypt' ? (
             <>
@@ -94,15 +101,20 @@ export default function CardPage({ id }: { id: number }) {
         {card.image_url && (
           <img
             src={card.image_url}
-            alt={card.name}
+            alt={localized.name}
             loading="lazy"
             className="w-full max-w-[280px] rounded-xl border border-line"
           />
         )}
-        {card.card_text && (
-          <p className="min-w-[16rem] flex-1 rounded-xl border border-line bg-surface p-5 leading-relaxed text-ink">
-            {card.card_text}
-          </p>
+        {localized.card_text && (
+          <div className="min-w-[16rem] flex-1 rounded-xl border border-line bg-surface p-5">
+            <p className="leading-relaxed text-ink">{localized.card_text}</p>
+            {localized.isFallback && (
+              <p className="mt-3 text-xs text-ink-dim">
+                No {languageLabel(language)} translation is available for this card; showing English.
+              </p>
+            )}
+          </div>
         )}
       </div>
 
@@ -139,15 +151,13 @@ export default function CardPage({ id }: { id: number }) {
       )}
 
       {card.translations.length > 0 && (
-        <section className="grid gap-2 text-sm">
-          <h2 className="text-xs uppercase tracking-wide text-ink-dim">Translations</h2>
-          {card.translations.map((t) => (
-            <div key={t.lang} className="rounded-lg border border-line-soft bg-surface p-3">
-              <p className="text-xs font-semibold uppercase text-gold">{t.lang}</p>
-              {t.name && <p className="text-ink">{t.name}</p>}
-              {t.card_text && <p className="mt-1 text-xs leading-relaxed text-ink-muted">{t.card_text}</p>}
-            </div>
-          ))}
+        <section className="flex flex-wrap items-center gap-2 text-xs text-ink-dim">
+          <span>Available card text:</span>
+          <span className="text-ink-muted">
+            {['en', ...card.translations.map((translation) => translation.lang)]
+              .map(languageLabel)
+              .join(', ')}
+          </span>
         </section>
       )}
     </article>

@@ -59,6 +59,7 @@ export interface CardMeta {
   cards: number
   crypt: number
   library: number
+  languages?: string[]
 }
 
 export async function getCardsMeta(): Promise<CardMeta> {

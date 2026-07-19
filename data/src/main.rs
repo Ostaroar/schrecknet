@@ -71,6 +71,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     conn.execute_batch(SCHEMA)?;
 
     let stats = ingest::run(&conn, &all_cards)?;
+    let languages = available_languages(&conn)?;
 
     conn.execute(
         "INSERT INTO cards_fts(rowid, name, aka, card_text) SELECT id, name, aka, card_text FROM cards",
@@ -100,6 +101,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         "cards": total,
         "crypt": stats.crypt,
         "library": stats.library,
+        "languages": languages,
         "source": "https://static.krcg.org/data/vtes.json",
         "v5_sets": v5pool::V5_SET_NAMES,
     });
@@ -115,4 +117,39 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         stats.library
     );
     Ok(())
+}
+
+fn available_languages(conn: &rusqlite::Connection) -> rusqlite::Result<Vec<String>> {
+    let mut languages = vec!["en".to_owned()];
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT lower(trim(lang))
+         FROM translations
+         WHERE trim(lang) <> '' AND lower(trim(lang)) <> 'en'
+         ORDER BY lower(trim(lang))",
+    )?;
+    let translated = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    languages.extend(translated.collect::<Result<Vec<_>, _>>()?);
+    Ok(languages)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::available_languages;
+    use rusqlite::Connection;
+
+    #[test]
+    fn language_metadata_is_pool_derived_and_always_includes_english() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
+             INSERT INTO translations VALUES
+               (1, 'fr', 'Un', 'texte'),
+               (2, 'ES', 'Dos', 'texto'),
+               (3, 'fr', 'Trois', 'texte'),
+               (4, '  ', NULL, NULL);",
+        )
+        .unwrap();
+
+        assert_eq!(available_languages(&conn).unwrap(), vec!["en", "es", "fr"]);
+    }
 }
