@@ -13,6 +13,7 @@ import init, {
   compare_decks as compareDecksWasm,
   capacity_stats as capacityStatsWasm,
   category_distribution as categoryDistributionWasm,
+  rank_semantic_cards as rankSemanticCardsWasm,
 } from '../wasm/schrecknet_core.js'
 
 let ready: Promise<void> | null = null
@@ -151,5 +152,35 @@ export async function computeDistribution(entries: WeightedEntry[]): Promise<Dis
   return raw.split('\n').map((line) => {
     const [label, count] = line.split('\t')
     return { label, count: Number(count) }
+  })
+}
+
+export interface SemanticRank {
+  cardId: number
+  score: number
+}
+
+/** Ranks raw little-endian SQLite embedding BLOBs in the shared Rust core. */
+export async function rankSemanticCards(
+  query: Float32Array,
+  embeddingBytes: Uint8Array,
+  cardIds: number[],
+  names: string[],
+  limit: number,
+  minScore = -1,
+): Promise<SemanticRank[]> {
+  await ensureReady()
+  const raw = rankSemanticCardsWasm(
+    query,
+    embeddingBytes,
+    new Uint32Array(cardIds),
+    names,
+    limit,
+    minScore,
+  )
+  if (!raw) return []
+  return raw.split('\n').map((line) => {
+    const [cardId, score] = line.split('\t')
+    return { cardId: Number(cardId), score: Number(score) }
   })
 }

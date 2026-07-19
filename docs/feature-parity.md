@@ -190,9 +190,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Offline semantic card search — additive local concept retrieval, never a
       tournament-data recommendation engine: pinned English ONNX model, vectors in
       `cards.sqlite`, shared Rust cosine ranking, lazy browser download with offline
-      reuse, and identical browser/MCP/REST capability. MCP + REST are live; browser
-      worker/UI and offline validation remain. See ADR 0006; exact and regex search
-      remain available without loading the model
+      reuse, and identical browser/MCP/REST capability. Browser worker/UI, MCP, REST,
+      and a true offline-reload query are live; ☐ checked-in VTES relevance/parity
+      gates remain. See ADR 0006; exact and regex search remain available without
+      loading the model
 
 ## Non-functional parity
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with

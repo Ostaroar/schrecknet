@@ -84,6 +84,15 @@ function parseDisciplines(disc: string | null): Discipline[] {
 }
 
 export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
+  return searchCryptInner(filters, true)
+}
+
+/** Applies every structured crypt filter without the 200-row UI cap. */
+export async function filterCrypt(filters: CryptFilters): Promise<CryptCard[]> {
+  return searchCryptInner(filters, false)
+}
+
+async function searchCryptInner(filters: CryptFilters, limited: boolean): Promise<CryptCard[]> {
   let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
      FROM cards c
@@ -152,7 +161,8 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
        WHERE cdx.card_id = c.id AND cdx.discipline = ?${params.length + 1} AND cdx.superior >= ?${params.length + 2})`
     params.push(code.toLowerCase(), filters.disciplinesSuperior ? 1 : 0)
   }
-  sql += ` GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC LIMIT 200`
+  sql += ` GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC`
+  if (limited) sql += ` LIMIT 200`
 
   const rows = await query<CryptRow>(sql, params)
   return rows.map((r) => ({ ...r, disciplines: parseDisciplines(r.disc) }))

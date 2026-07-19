@@ -1,6 +1,6 @@
 # ADR 0006 — offline semantic card search
 
-**Status:** accepted, implementation in progress · 2026-07-19
+**Status:** accepted, quality gate in progress · 2026-07-19
 
 ## Context
 
@@ -121,9 +121,13 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
    embedder feeds a filter-first service used identically by the `semantic_search`
    MCP tool and `POST /api/v1/cards/semantic`; bounded schemas, error mappings, and
    real REST + Streamable HTTP MCP calls were verified against the generated corpus.
-4. **Offline browser:** add the worker, local-only model/runtime loading, lazy PWA
-   caching, semantic mode on both search pages, progress/error states, and a true
-   network-offline smoke test after installation.
+4. **Offline browser — complete:** a dedicated worker runs local-only
+   Transformers.js/ONNX Runtime Web inference, while shared Rust/WASM decodes the
+   SQLite BLOB matrix and ranks it. Crypt + Library expose explicit semantic mode,
+   preserve every structured filter, show first-use/progress/error/removal states,
+   and leave exact/regex search untouched. The built app was loaded once, its server
+   was stopped, the page was reloaded, and a fresh semantic query returned results
+   from the PWA/OPFS/model caches with no browser warnings or errors.
 5. **Quality gate:** record VTES-domain golden queries, compare browser/server ranking,
    measure first-load size and warm-query latency, and document the English-only limit.
 
@@ -154,8 +158,11 @@ until browser, MCP, REST, Docker, and offline tests all pass.
 - The shared native core takes `sha2` to enforce the manifest's supply-chain
   checksums for both builder and server; model acquisition continues to use the data
   builder's existing `ureq`.
-- The first semantic search use downloads roughly 24 MB plus runtime WASM; subsequent
-  use is offline from versioned local caches. Exact/regex search behavior is unchanged.
+- The first semantic search use downloads roughly 24 MB of model assets plus a
+  roughly 22 MB ONNX Runtime Web WASM asset (about 46 MB uncompressed in total);
+  subsequent use is offline from local caches. The app-shell service worker retains
+  the separately owned model cache across upgrades. Exact/regex search behavior is
+  unchanged.
 - `cards.sqlite` grows by roughly 1 MB plus table overhead.
 - Semantic relevance is model-dependent and English-only in version 1, so checked-in
   domain benchmarks become part of the compatibility contract.

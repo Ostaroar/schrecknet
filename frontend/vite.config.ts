@@ -9,6 +9,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:8000',
       '/data': 'http://localhost:8000',
+      '/models': 'http://localhost:8000',
     },
   },
   build: {

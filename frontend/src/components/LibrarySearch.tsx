@@ -12,6 +12,7 @@ import {
   type CostMode,
 } from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
+import SemanticModeControl from './SemanticModeControl'
 import SetFilterControls from './SetFilterControls'
 import {
   defaultSetAge,
@@ -19,6 +20,12 @@ import {
   type SetAgeMode,
   type SetPrintMode,
 } from '../lib/setFilter'
+import {
+  removeSemanticModel,
+  searchSemanticLibrary,
+  type SemanticProgress,
+  type SemanticResult,
+} from '../lib/semanticSearch'
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
@@ -37,6 +44,9 @@ export default function LibrarySearch() {
   const [text, setText] = useState('')
   const [textMode, setTextMode] = useState<TextMode>('any')
   const [textRegex, setTextRegex] = useState(false)
+  const [semanticMode, setSemanticMode] = useState(false)
+  const [semanticProgress, setSemanticProgress] = useState<SemanticProgress>({ phase: 'idle' })
+  const [semanticRetry, setSemanticRetry] = useState(0)
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
@@ -54,7 +64,7 @@ export default function LibrarySearch() {
   const [sets, setSets] = useState<string[]>([])
   const [precons, setPrecons] = useState<string[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
-  const [results, setResults] = useState<LibraryCard[]>([])
+  const [results, setResults] = useState<Array<LibraryCard | SemanticResult<LibraryCard>>>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   // See CryptSearch: a live invalid regex is a soft, recoverable state.
@@ -128,12 +138,45 @@ export default function LibrarySearch() {
 
   useEffect(() => {
     if (status !== 'ready') return
+    let cancelled = false
+
+    if (semanticMode) {
+      if (!text.trim()) {
+        setResults([])
+        setSearchError('')
+        setSemanticProgress({ phase: 'idle' })
+        return
+      }
+      const timer = window.setTimeout(() => {
+        searchSemanticLibrary(text, filters, (progress) => {
+          if (!cancelled) setSemanticProgress(progress)
+        })
+          .then((rows) => {
+            if (cancelled) return
+            setResults(rows)
+            setSearchError('')
+          })
+          .catch((e: Error) => {
+            if (cancelled) return
+            setResults([])
+            setSearchError(e.message)
+            setSemanticProgress({ phase: 'error', error: e.message })
+          })
+      }, 300)
+      return () => {
+        cancelled = true
+        window.clearTimeout(timer)
+      }
+    }
+
     searchLibrary(filters)
       .then((rows) => {
+        if (cancelled) return
         setResults(rows)
         setSearchError('')
       })
       .catch((e: Error) => {
+        if (cancelled) return
         if (filters.textRegex) {
           setResults([])
           setSearchError('Invalid regex pattern — keep typing, or check the syntax.')
@@ -142,7 +185,19 @@ export default function LibrarySearch() {
           setStatus('error')
         }
       })
-  }, [filters, status])
+    return () => {
+      cancelled = true
+    }
+  }, [filters, semanticMode, semanticRetry, status, text])
+
+  const removeModel = () => {
+    removeSemanticModel()
+      .then(() => {
+        setResults([])
+        setSemanticProgress({ phase: 'idle' })
+      })
+      .catch((e: Error) => setSemanticProgress({ phase: 'error', error: e.message }))
+  }
 
   if (status === 'error') {
     return (
@@ -157,7 +212,7 @@ export default function LibrarySearch() {
       <div className="flex flex-wrap gap-3">
         <input
           className="min-w-48 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder="Name / text"
+          placeholder={semanticMode ? 'Describe a card concept (English)' : 'Name / text'}
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={status === 'loading'}
@@ -173,9 +228,10 @@ export default function LibrarySearch() {
             <button
               key={mode}
               onClick={() => setTextMode(mode)}
+              disabled={semanticMode}
               title={`Search in ${mode === 'any' ? 'name or text' : mode === 'name' ? 'card name only' : 'card text only'}`}
               className={
-                'px-2.5 py-2 text-xs ' +
+                'px-2.5 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40 ' +
                 (textMode === mode ? 'bg-blood text-white' : 'bg-surface text-ink-dim hover:text-ink-muted')
               }
             >
@@ -185,14 +241,29 @@ export default function LibrarySearch() {
         </div>
         <button
           onClick={() => setTextRegex((r) => !r)}
+          disabled={semanticMode}
           title="Treat the search text as a regex pattern (standard syntax: . * + ? {m,n} [...] (...) | ^ $), case-insensitive"
           className={
-            'rounded-lg border px-2.5 py-2 text-xs ' +
+            'rounded-lg border px-2.5 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40 ' +
             (textRegex ? 'border-blood bg-blood text-white' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
           }
         >
           .*Regex
         </button>
+        <SemanticModeControl
+          enabled={semanticMode}
+          progress={semanticProgress}
+          onToggle={() => {
+            setSemanticMode((enabled) => !enabled)
+            setSemanticProgress({ phase: 'idle' })
+            setSearchError('')
+          }}
+          onRetry={() => {
+            setSemanticProgress({ phase: 'loading' })
+            setSemanticRetry((value) => value + 1)
+          }}
+          onRemove={removeModel}
+        />
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={cardType ?? ''}
@@ -329,7 +400,7 @@ export default function LibrarySearch() {
       ) : (
         <>
           <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
-            {searchError || `${results.length} library cards`}
+            {searchError || `${results.length}${semanticMode ? ' semantic' : ''} library cards`}
           </p>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {results.map((c) => (
@@ -338,7 +409,14 @@ export default function LibrarySearch() {
                   onClick={() => setExpanded(expanded === c.id ? null : c.id)}
                   className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
                 >
-                  <span className="truncate">{c.name}</span>
+                  <span className="min-w-0 truncate">
+                    {c.name}
+                    {semanticMode && 'semanticScore' in c && (
+                      <span className="ml-2 font-mono text-[10px] text-gold">
+                        similarity {c.semanticScore.toFixed(3)}
+                      </span>
+                    )}
+                  </span>
                   <span className="flex gap-1">
                     {c.disciplines.map((d) => (
                       <span
@@ -359,7 +437,11 @@ export default function LibrarySearch() {
               </div>
             ))}
             {results.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-ink-dim">No cards match those filters.</p>
+              <p className="px-4 py-6 text-center text-sm text-ink-dim">
+                {semanticMode && !text.trim()
+                  ? 'Describe a concept to search the V5 library.'
+                  : 'No cards match those filters.'}
+              </p>
             )}
           </div>
         </>

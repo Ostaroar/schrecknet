@@ -4,10 +4,12 @@
 //
 // Scope: caches the built app shell (JS/CSS/wasm/HTML/manifest/icons) so a
 // repeat visit loads and renders with no network. It deliberately does NOT
-// touch /api/* or /data/* — those are dynamic/live endpoints, and
+// touch /api/*, /data/*, or /models/* — the first two are dynamic/live, and
 // /data/cards.sqlite specifically already has its own offline story via the
 // OPFS-backed dbWorker.ts; caching it here too would be redundant and could
-// race with that mechanism.
+// race with that mechanism. Transformers.js owns a separate lazy model cache
+// for /models/*, avoiding a second ~24 MB copy in this shell cache. Its local,
+// content-hashed ONNX Runtime assets are normal static assets here.
 //
 // Strategy: network-first for document navigations, stale-while-revalidate
 // for content-hashed static assets. A successful navigation is also stored
@@ -22,9 +24,13 @@ export {}
 declare const self: ServiceWorkerGlobalScope
 
 const CACHE_NAME = 'schrecknet-shell-v1'
+// Owned by Transformers.js (see semanticSearch.ts). Keep it across shell SW
+// upgrades; otherwise installing a new app build would silently force users
+// to download the optional ~24 MB model again.
+const SEMANTIC_MODEL_CACHE = 'transformers-cache'
 
 const isExcludedPath = (pathname: string): boolean =>
-  pathname.startsWith('/api') || pathname.startsWith('/data')
+  pathname.startsWith('/api') || pathname.startsWith('/data') || pathname.startsWith('/models')
 
 self.addEventListener('install', () => {
   // No filename-based precaching possible (hashed build output). Activate
@@ -37,7 +43,9 @@ self.addEventListener('activate', (event) => {
     (async () => {
       const names = await caches.keys()
       await Promise.all(
-        names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
+        names
+          .filter((name) => name !== CACHE_NAME && name !== SEMANTIC_MODEL_CACHE)
+          .map((name) => caches.delete(name)),
       )
       await self.clients.claim()
     })(),

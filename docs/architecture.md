@@ -49,8 +49,9 @@ from that pool.
    instance; the data build stores normalized card vectors in `cards.sqlite`, and
    shared Rust performs deterministic exact cosine ranking. Model assets load only
    when semantic mode is requested, so exact/regex search keeps its current startup
-   and offline profile. Native MCP + REST are live; the offline browser adapter is the
-   remaining runtime slice. See docs/adr/0006-offline-semantic-card-search.md.
+   and offline profile. Browser, MCP, and REST adapters are live; the remaining work
+   is the checked-in VTES relevance/parity quality gate. See
+   docs/adr/0006-offline-semantic-card-search.md.
 
 ## Repository layout
 
@@ -117,7 +118,7 @@ The server is only needed for accounts, cross-device sync, and the machine APIs.
 - **Card search**: filter UI state → query builder (TS) → SQL against local SQLite →
   results. The same query builder runs server-side for the MCP `search_cards` tool
   (generated from one shared filter-schema definition in `core/`).
-- **Semantic card search (planned)**: structured filters select candidates → the
+- **Semantic card search**: structured filters select candidates → the
   local platform adapter embeds the query with the pinned ONNX model → shared
   native/WASM Rust ranks normalized vectors loaded from `cards.sqlite`. Browser and
   server return the same ids/order within the documented numeric tolerance.

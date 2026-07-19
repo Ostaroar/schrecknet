@@ -148,7 +148,7 @@ pub fn category_distribution(labels: Vec<String>, qtys: Vec<u16>) -> Result<Stri
 #[wasm_bindgen]
 pub fn rank_semantic_cards(
     query: Vec<f32>,
-    embeddings: Vec<f32>,
+    embedding_bytes: Vec<u8>,
     card_ids: Vec<u32>,
     names: Vec<String>,
     limit: usize,
@@ -166,11 +166,8 @@ pub fn rank_semantic_cards(
         .len()
         .checked_mul(query.len())
         .ok_or_else(|| JsError::new("semantic embedding array length overflow"))?;
-    if embeddings.len() != expected_values {
-        return Err(JsError::new(
-            "candidate embeddings are not a complete row-major matrix",
-        ));
-    }
+    let embeddings = crate::semantic::decode_f32_le(&embedding_bytes, expected_values)
+        .map_err(|error| JsError::new(&error.to_string()))?;
 
     let candidates = card_ids
         .iter()

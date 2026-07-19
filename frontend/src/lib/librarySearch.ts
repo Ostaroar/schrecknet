@@ -66,6 +66,15 @@ interface LibraryRow {
 }
 
 export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCard[]> {
+  return searchLibraryInner(filters, true)
+}
+
+/** Applies every structured library filter without the 200-row UI cap. */
+export async function filterLibrary(filters: LibraryFilters): Promise<LibraryCard[]> {
+  return searchLibraryInner(filters, false)
+}
+
+async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Promise<LibraryCard[]> {
   const typePattern = filters.cardType ? `%"${filters.cardType}"%` : null
   // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. NULL
   // costs and the variable cost "X" (CAST('X') is 0) never match a numeric
@@ -145,7 +154,8 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
        WHERE cdx.card_id = c.id AND cdx.discipline = ?${params.length + 1} AND cdx.superior >= ?${params.length + 2})`
     params.push(code.toLowerCase(), filters.disciplinesSuperior ? 1 : 0)
   }
-  sql += ` GROUP BY c.id ORDER BY c.name ASC LIMIT 200`
+  sql += ` GROUP BY c.id ORDER BY c.name ASC`
+  if (limited) sql += ` LIMIT 200`
 
   const rows = await query<LibraryRow>(sql, params)
   return rows.map((r) => ({

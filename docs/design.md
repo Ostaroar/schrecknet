@@ -42,6 +42,10 @@ ships as re-stepped tokens; dark is the definitive reading.
   Identical in search rows, deck lists, card previews, filters.
 - **Capacity**: number in a blood-tinted circle.
 - **Active filters**: echoed as removable chips above results.
+- **Semantic mode**: an explicit gold `◇ Semantic` toggle beside the text modes;
+  never silently reinterpret exact-search input. First use states the local download
+  size and English-only scope, progress/error/removal live in one full-width status
+  strip, and result rows label cosine values as `similarity` rather than probability.
 - **Charts**: single crimson hue, direct value labels, no legends; tooltips on hover.
   Semantic green/amber only for status, never as series colors.
 - **⌘K palette**: global quick card search (replaces vdb's lightning search).
