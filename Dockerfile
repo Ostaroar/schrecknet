@@ -9,6 +9,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY core core
 COPY server server
 COPY data data
+COPY migrations migrations
 RUN cargo build --release -p schrecknet-server -p schrecknet-data
 RUN ./target/release/schrecknet-data build --out /out
 RUN wasm-pack build core --release --target web --out-dir /out/wasm
@@ -19,6 +20,7 @@ WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend .
+COPY migrations /src/migrations
 COPY --from=rust-build /out/wasm src/wasm
 RUN npm run build
 
