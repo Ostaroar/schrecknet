@@ -9,6 +9,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY core core
 COPY server server
 COPY data data
+COPY models models
 COPY migrations migrations
 RUN cargo build --release -p schrecknet-server -p schrecknet-data
 RUN ./target/release/schrecknet-data build --out /out
@@ -22,6 +23,7 @@ RUN npm ci
 COPY frontend .
 COPY migrations /src/migrations
 COPY --from=rust-build /out/wasm src/wasm
+COPY --from=rust-build /out/models public/models
 RUN npm run build
 
 # --- final image ---
@@ -29,6 +31,7 @@ FROM gcr.io/distroless/cc-debian12
 WORKDIR /app
 COPY --from=rust-build /src/target/release/schrecknet-server /app/server
 COPY --from=rust-build /out/cards.sqlite /app/data/cards.sqlite
+COPY --from=rust-build /out/cards.meta.json /app/data/cards.meta.json
 COPY --from=web-build /src/frontend/dist /app/static
 ENV SCHRECKNET_STATIC_DIR=/app/static \
     SCHRECKNET_DATA_DIR=/app/data \

@@ -41,6 +41,9 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
   and English rules text. Structured filters remain filters rather than prose added
   to the query. Spanish/French semantic queries are a later, explicitly benchmarked
   multilingual-model migration; translated card display remains available now.
+- The selected INT8 graph uses dynamic activation quantization. Corpus cards and
+  user queries therefore run one text per inference; mixing batch-dependent output
+  ranges would make precomputed and query vectors subtly incompatible.
 
 ### Storage and ranking
 
@@ -108,9 +111,11 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
    decoding, vector validation, exact cosine/top-k ranking, thresholds, and
    deterministic ties. Native unit tests, strict Clippy, the WASM target, wasm-pack,
    and the consuming frontend build pass.
-2. **Embedded corpus:** add the pinned model manifest and fetch/checksum step, generate
-   deterministic card documents and vectors, extend SQLite/meta versions, and test all
-   662 V5 cards have valid normalized embeddings.
+2. **Embedded corpus — complete:** `models/semantic.json` pins revision
+   `751bff37182d3f1213fa05d7196b954e230abad9` and all six file checksums;
+   `schrecknet-data` emits schema/data v4 with deterministic document-v1 vectors and
+   browser-local assets. A real build verifies all 662 cards have one 384-dimensional,
+   1,536-byte normalized embedding; SQLite integrity passes.
 3. **Machine APIs:** add the lazy native embedder, shared service, `semantic_search`
    MCP tool, REST mirror, schema tests, and real-data smoke tests.
 4. **Offline browser:** add the worker, local-only model/runtime loading, lazy PWA
@@ -143,6 +148,8 @@ until browser, MCP, REST, Docker, and offline tests all pass.
 
 - Two justified runtime dependencies are approved for implementation:
   `@huggingface/transformers` in the frontend worker and `fastembed` in native Rust.
+- The data builder also takes a direct `sha2` dependency to enforce the manifest's
+  supply-chain checksums; model acquisition continues to use its existing `ureq`.
 - The first semantic search use downloads roughly 24 MB plus runtime WASM; subsequent
   use is offline from versioned local caches. Exact/regex search behavior is unchanged.
 - `cards.sqlite` grows by roughly 1 MB plus table overhead.

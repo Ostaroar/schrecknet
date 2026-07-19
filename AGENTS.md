@@ -99,7 +99,10 @@ cargo run -p schrecknet-server -- --mcp-stdio
 
 # data pipeline -> dist/cards.sqlite + cards.meta.json
 # fetches https://static.krcg.org/data/vtes.json (needs network); cached 24h
-# under .cache/ (gitignored) via SCHRECKNET_DATA_CACHE
+# under .cache/ (gitignored) via SCHRECKNET_DATA_CACHE. Also fetches and
+# checksum-verifies the ~23 MB semantic ONNX model pinned by
+# models/semantic.json, caches it under .cache/semantic/, embeds all V5 cards,
+# and emits browser-ready assets under dist/models/semantic/.
 cargo run -p schrecknet-data -- build --out dist
 
 # frontend — run wasm-pack (above) once, and the server first (`cargo run -p

@@ -87,6 +87,21 @@ impl fmt::Display for RankError {
 
 impl std::error::Error for RankError {}
 
+/// Encodes a validated vector for the little-endian float32 SQLite contract.
+pub fn encode_f32_le(values: &[f32]) -> Result<Vec<u8>, RankError> {
+    if values.is_empty() {
+        return Err(RankError::EmptyVector);
+    }
+    let mut bytes = Vec::with_capacity(std::mem::size_of_val(values));
+    for (index, value) in values.iter().enumerate() {
+        if !value.is_finite() {
+            return Err(RankError::NonFiniteBlob { index });
+        }
+        bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    Ok(bytes)
+}
+
 /// Decodes the little-endian float32 representation stored in `cards.sqlite`.
 pub fn decode_f32_le(bytes: &[u8], dimensions: usize) -> Result<Vec<f32>, RankError> {
     if dimensions == 0 {
@@ -298,6 +313,7 @@ mod tests {
     fn decodes_little_endian_f32_blobs() {
         let bytes = [1.25_f32.to_le_bytes(), (-0.5_f32).to_le_bytes()].concat();
         assert_eq!(decode_f32_le(&bytes, 2).unwrap(), vec![1.25, -0.5]);
+        assert_eq!(encode_f32_le(&[1.25, -0.5]).unwrap(), bytes);
         assert_eq!(
             decode_f32_le(&bytes[..4], 2),
             Err(RankError::ByteLength {

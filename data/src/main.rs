@@ -6,6 +6,7 @@
 
 mod ingest;
 mod krcg;
+mod semantic;
 mod v5pool;
 
 use std::path::PathBuf;
@@ -33,6 +34,13 @@ CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
+CREATE TABLE card_embeddings(
+  card_id INT NOT NULL REFERENCES cards(id),
+  model_id TEXT NOT NULL,
+  dimensions INT NOT NULL,
+  embedding BLOB NOT NULL,
+  PRIMARY KEY(card_id, model_id)
+) WITHOUT ROWID;
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards, content_rowid=id);
 ";
 
@@ -72,6 +80,8 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
 
     let stats = ingest::run(&conn, &all_cards)?;
     let languages = available_languages(&conn)?;
+    let semantic_model = semantic::prepare_model(&cache_dir, &out_dir)?;
+    let embedding_count = semantic::embed_cards(&conn, &semantic_model)?;
 
     conn.execute(
         "INSERT INTO cards_fts(rowid, name, aka, card_text) SELECT id, name, aka, card_text FROM cards",
@@ -81,27 +91,48 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '3'), ('data_version', '3'), ('scope', 'v5'),
-         ('crypt_count', ?1), ('library_count', ?2)",
-        rusqlite::params![stats.crypt.to_string(), stats.library.to_string()],
+         ('schema_version', '4'), ('data_version', '4'), ('scope', 'v5'),
+         ('crypt_count', ?1), ('library_count', ?2),
+         ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
+         ('semantic_document_version', ?5)",
+        rusqlite::params![
+            stats.crypt.to_string(),
+            stats.library.to_string(),
+            semantic_model.manifest.model_id,
+            semantic_model.manifest.dimensions.to_string(),
+            semantic_model.manifest.document_version.to_string()
+        ],
     )?;
     conn.execute_batch("VACUUM")?;
 
     let meta = serde_json::json!({
         // schema_version bumps when the table/column layout changes (v2:
         // image_url added to cards; v3: dropped the never-populated twd_*
-        // tables — tournament features are out of scope, see AGENTS.md);
-        // data_version when the same schema gets new content (v3: printings/
-        // sets no longer carry a card's non-V5 print history — see
-        // ingest.rs::insert_printings — so OPFS caches on data_version 2
-        // must re-download to drop the stale classic-era rows).
-        "schema_version": 3,
-        "data_version": 3,
+        // tables; v4: added card_embeddings for local semantic search).
+        // data_version changes whenever the emitted content changes (v4 adds
+        // the deterministic document-v1 all-MiniLM embedding corpus).
+        "schema_version": 4,
+        "data_version": 4,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
         "library": stats.library,
         "languages": languages,
+        "semantic": {
+            "model_id": semantic_model.manifest.model_id,
+            "base_model": semantic_model.manifest.base_model,
+            "source_repository": semantic_model.manifest.source_repository,
+            "revision": semantic_model.manifest.revision,
+            "license": semantic_model.manifest.license,
+            "dimensions": semantic_model.manifest.dimensions,
+            "max_length": semantic_model.manifest.max_length,
+            "pooling": semantic_model.manifest.pooling,
+            "normalized": semantic_model.manifest.normalized,
+            "inference_batch_size": semantic_model.manifest.inference_batch_size,
+            "document_version": semantic_model.manifest.document_version,
+            "embeddings": embedding_count,
+            "path": format!("/models/semantic/{}/", semantic_model.manifest.model_id),
+        },
         "source": "https://static.krcg.org/data/vtes.json",
         "v5_sets": v5pool::V5_SET_NAMES,
     });

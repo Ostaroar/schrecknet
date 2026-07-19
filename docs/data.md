@@ -20,8 +20,14 @@ A small Rust (or Python, TBD in implementation) tool that:
     pool, never hardcoded.
 2. Normalizes into the SQLite schema below
 3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group, …)
-4. Emits `cards.sqlite` + `cards.meta.json` (version, counts, source products,
-   and the card-text languages actually present in the filtered V5 pool)
+4. Downloads the exact ONNX files locked by `models/semantic.json`, verifies every
+   size + SHA-256, constructs deterministic English card documents, and generates
+   one normalized 384-dimensional embedding per V5 card. The INT8 model runs one
+   document per inference so its dynamic activation quantization matches query-time
+   inference (ADR 0006)
+5. Emits `cards.sqlite` + `cards.meta.json` (version, counts, source products,
+   card-text languages, and semantic model metadata) plus browser-ready verified
+   model assets under `models/semantic/`
 
 Runs in CI weekly (`card-data.yml`) and on demand; when the output hash changes it
 opens a PR bumping the data version. The app fetches `cards.sqlite` by content-hash
@@ -57,8 +63,21 @@ CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);   -- KRCG rulings
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
+CREATE TABLE card_embeddings(
+  card_id INT NOT NULL REFERENCES cards(id),
+  model_id TEXT NOT NULL,
+  dimensions INT NOT NULL,
+  embedding BLOB NOT NULL,         -- normalized little-endian float32 values
+  PRIMARY KEY(card_id, model_id)
+) WITHOUT ROWID;                   -- schema v4; ~1 MB for the 662-card V5 pool
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards);
 ```
+
+The model is not fetched at query time and its binary is not committed. The lock
+records one immutable Hugging Face revision plus checksums; the data build caches it
+under `$SCHRECKNET_DATA_CACHE/semantic/` (default `.cache/semantic/`) and rejects
+changed bytes. `SCHRECKNET_SEMANTIC_MANIFEST` may point a development build at a
+different manifest, but production changes require an ADR/model-quality review.
 
 Set age/printing filters compare `sets.release_date` values only across rows
 that survive the V5-pool ingest. Consequently, "first print" means first V5

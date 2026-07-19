@@ -70,6 +70,7 @@ from that pool.
 ├── server/                 # Rust axum binary (REST + MCP + static hosting)
 ├── frontend/               # React 19 + TS + Vite + Tailwind 4 PWA
 ├── data/                   # card-data pipeline (KRCG/VEKN → cards.sqlite)
+├── models/                 # pinned semantic-model manifest; no binary weights
 ├── Dockerfile
 └── .github/workflows/      # docker.yml, ci.yml, card-data.yml
 ```
