@@ -106,6 +106,19 @@ pub struct LibrarySearchParams {
     /// cards have no clan requirement.
     #[serde(default)]
     pub clan: Option<String>,
+    /// Lowercase discipline codes (e.g. ["dom","for"]); a card must require ALL
+    /// of them, at either level. REST accepts a comma-separated string.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub disciplines: Vec<String>,
+    /// If true, every discipline in `disciplines` must be at superior level.
+    #[serde(default)]
+    pub disciplines_superior: bool,
+    /// Maximum blood cost (inclusive); cards with no blood cost never match.
+    #[serde(default)]
+    pub blood_cost_max: Option<i64>,
+    /// Maximum pool cost (inclusive); cards with no pool cost never match.
+    #[serde(default)]
+    pub pool_cost_max: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -195,7 +208,11 @@ pub fn search_library(
     params: &LibrarySearchParams,
 ) -> rusqlite::Result<Vec<LibraryCard>> {
     let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
-    let mut stmt = conn.prepare(
+    // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison, and a
+    // NULL cost never matches a cost filter. Per-discipline EXISTS clauses are
+    // built dynamically like search_crypt — every value is bound, never
+    // interpolated.
+    let mut sql = String::from(
         "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
                 GROUP_CONCAT(cd.discipline) AS disc
          FROM cards c
@@ -204,13 +221,35 @@ pub fn search_library(
            AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
            AND (?2 IS NULL OR c.types LIKE ?2)
            AND (?3 IS NULL OR c.clan LIKE '%' || ?3 || '%')
-         GROUP BY c.id
-         ORDER BY c.name ASC
-         LIMIT 200",
-    )?;
+           AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND CAST(c.blood_cost AS INTEGER) <= ?4))
+           AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND CAST(c.pool_cost AS INTEGER) <= ?5))",
+    );
+    let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
+        Box::new(params.text.trim().to_owned()),
+        Box::new(type_pattern),
+        Box::new(params.clan.clone()),
+        Box::new(params.blood_cost_max),
+        Box::new(params.pool_cost_max),
+    ];
+    for code in &params.disciplines {
+        sql.push_str(&format!(
+            " AND EXISTS (SELECT 1 FROM card_disciplines cdx
+                WHERE cdx.card_id = c.id AND cdx.discipline = ?{n} AND cdx.superior >= ?{m})",
+            n = bound.len() + 1,
+            m = bound.len() + 2,
+        ));
+        bound.push(Box::new(code.to_lowercase()));
+        bound.push(Box::new(params.disciplines_superior as i64));
+    }
+    sql.push_str(
+        " GROUP BY c.id
+          ORDER BY c.name ASC
+          LIMIT 200",
+    );
 
+    let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
-        rusqlite::params![params.text.trim(), type_pattern, params.clan],
+        rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
             let types_json: String = row.get(2)?;
             let disc: Option<String> = row.get(6)?;
@@ -496,5 +535,109 @@ mod tests {
         assert_eq!(villein.clan, None);
         assert_eq!(villein.types, vec!["Master"]);
         assert_eq!(villein.pool_cost, Some("2".to_string()));
+    }
+
+    /// Extra library rows for the discipline/cost filter tests (kept separate
+    /// from `seed` so the shared fixture stays stable for other tests).
+    fn seed_library_filter_extras(conn: &Connection) {
+        conn.execute_batch(
+            "INSERT INTO cards VALUES
+               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL),
+               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL);
+             INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0);",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn library_discipline_filter_requires_all_listed() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_filter_extras(&conn);
+        // Absolute Tyranny requires pot+pre; requiring both matches only it.
+        let params = LibrarySearchParams {
+            disciplines: vec!["pot".into(), "pre".into()],
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Absolute Tyranny");
+        // A single discipline narrows to cards carrying it.
+        let params = LibrarySearchParams {
+            disciplines: vec!["dom".into()],
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Deflection");
+    }
+
+    #[test]
+    fn library_superior_flag_excludes_inferior_matches() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_filter_extras(&conn);
+        // Absolute Tyranny's pot is inferior — requiring superior excludes it.
+        let params = LibrarySearchParams {
+            disciplines: vec!["pot".into()],
+            disciplines_superior: true,
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &params).unwrap().is_empty());
+        // Deflection's dom is superior — it survives the superior requirement.
+        let params = LibrarySearchParams {
+            disciplines: vec!["dom".into()],
+            disciplines_superior: true,
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Deflection");
+    }
+
+    #[test]
+    fn library_cost_filters_cast_text_and_skip_null_costs() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_filter_extras(&conn);
+        // blood_cost_max: only cards WITH a blood cost <= max match; NULL
+        // blood cost (Villein, Arcane Library, Deflection) never matches.
+        let params = LibrarySearchParams {
+            blood_cost_max: Some(1),
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(
+            results.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            vec!["Absolute Tyranny", "Theft of Vitae"]
+        );
+        // pool_cost_max works the same way over pool_cost.
+        let params = LibrarySearchParams {
+            pool_cost_max: Some(2),
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(
+            results.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            vec!["Arcane Library", "Villein"]
+        );
+        // A max below every stored cost matches nothing.
+        let params = LibrarySearchParams {
+            pool_cost_max: Some(1),
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_disciplines_csv_deserializes_from_query_string() {
+        let params: LibrarySearchParams =
+            serde_urlencoded::from_str("disciplines=POT,%20pre&blood_cost_max=1").unwrap();
+        assert_eq!(params.disciplines, vec!["pot", "pre"]);
+        assert_eq!(params.blood_cost_max, Some(1));
+        let params: LibrarySearchParams =
+            serde_json::from_str(r#"{"disciplines":["dom"],"disciplines_superior":true}"#).unwrap();
+        assert_eq!(params.disciplines, vec!["dom"]);
+        assert!(params.disciplines_superior);
     }
 }
