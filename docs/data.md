@@ -4,7 +4,7 @@
 
 - **VEKN official card list** — canonical card texts (CSV)
 - **KRCG static files** (`static.krcg.org`) — normalized card JSON, rulings database,
-  card name index, TWD archive (parsed), set/precon metadata
+  card name index, set/precon metadata
 - **Card images** — Black Chantry / Dark Pack assets; legacy scans (VTES.PL, CCGAMEZ)
   referenced by URL, not committed to this repo
 
@@ -17,10 +17,9 @@ A small Rust (or Python, TBD in implementation) tool that:
     per-card legality/set data). Cards outside the pool are dropped entirely, which
     also shrinks `cards.sqlite`. Filter option lists (clans, sects, titles,
     disciplines, groups, sets, precons, artists) are emitted from the surviving
-    pool, never hardcoded. TWD/TDA decks that aren't fully V5-legal are excluded.
+    pool, never hardcoded.
 2. Normalizes into the SQLite schema below
-3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group,
-   every TWD deck resolves to known cards, …)
+3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group, …)
 4. Emits `cards.sqlite` + `cards.meta.json` (version, date, counts, content hash)
 
 Runs in CI weekly (`card-data.yml`) and on demand; when the output hash changes it
@@ -58,12 +57,6 @@ CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);   -- KRCG rulings
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards);
-
--- TWD companion tables
-CREATE TABLE twd_decks(id TEXT PRIMARY KEY, event TEXT, year INT, players INT,
-  country TEXT, city TEXT, winner TEXT, date TEXT, score TEXT);
-CREATE TABLE twd_deck_cards(deck_id TEXT, card_id INT, qty INT);
-CREATE TABLE twd_tags(deck_id TEXT, tag TEXT);             -- precomputed archetype tags
 ```
 
 Trait flags (`card_traits`) are precomputed by the pipeline with the same regex/rules
@@ -74,5 +67,5 @@ vdb.im results.
 ## User data
 
 - Browser (`user.sqlite` in OPFS) and server (`app.sqlite`) share one migration set:
-  `users`, `decks`, `deck_cards`, `deck_branches`, `inventory`, `pda_published`,
-  `favorites`. Written via the same typed data-access layer in `core/`.
+  `users`, `decks`, `deck_cards`, `deck_branches`, `inventory`. Written via the same
+  typed data-access layer in `core/`.

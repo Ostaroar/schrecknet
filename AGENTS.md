@@ -17,12 +17,17 @@ This file is the canonical, tool-agnostic instruction set for any AI coding agen
   offline-first
 - **Docker** image built by GitHub Actions → GHCR
 
-**Scope: V5 only.** The site hosts exclusively the V5 format of VTES: the card
-pool is the VEKN V5-legal list (Fifth Edition-era products). The data pipeline
-filters to that pool; legality checking implements V5 rules (plus custom limited
-formats *within* the V5 pool); filter options (clans, sects, titles, disciplines,
-sets, precons) are derived from the pool at build time, never hardcoded from the
-full VTES universe. TWD/TDA ingestion keeps only decks that are V5-legal.
+**Scope: V5 only, card search/research + deck building only.** The site hosts
+exclusively the V5 format of VTES: the card pool is the VEKN V5-legal list
+(Fifth Edition-era products). The data pipeline filters to that pool; legality
+checking implements V5 rules (plus custom limited formats *within* the V5
+pool); filter options (clans, sects, titles, disciplines, sets, precons) are
+derived from the pool at build time, never hardcoded from the full VTES
+universe. **No tournament/community-data features** — TWD (Tournament Winning
+Decks), TDA, PDA, and the playtest program are explicitly out of scope; don't
+add them even if a vdb-parity instinct says to. Deck-in-URL sharing and common
+plaintext import/export formats (Lackey, JOL) stay in scope — that's deck
+building interop, not a tournament feature.
 
 **Prime directive: feature parity.** The rebuild must not lose a single vdb feature.
 `docs/feature-parity.md` is the authoritative checklist — when you implement something,

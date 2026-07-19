@@ -25,8 +25,6 @@ what you need to implement the app correctly — consult KRCG rulings for edge c
   full VTES universe. Custom limited formats remain possible *within* the pool.
 
 ## Common jargon (used in filters/tags)
-- **TWD** — Tournament Winning Deck; **TWDA** — their archive. **TDA** — Tournament
-  Decks Archive (incl. non-winners). **PDA** — VDB's Public Deck Archive (community).
 - **Bleed** — attacking a rival's pool; **bounce** — redirecting a bleed;
   **stealth/intercept** — action evasion/blocking; **rush** — forcing combat;
   **MMPA** — multi-master pool acceleration archetype; **swarm** — many small vampires;
@@ -44,5 +42,3 @@ what you need to implement the app correctly — consult KRCG rulings for edge c
   separate cards sharing a name (disambiguated by `(ADV)` and group).
 - Discipline levels matter: filters distinguish inferior (`aus`) vs superior (`AUS`).
 - Set filters have temporal modes (or-newer/or-older/…) keyed on set release dates.
-- The TWD archive is community-maintained text with historical inconsistencies —
-  the KRCG-normalized version is the machine-readable source of truth.

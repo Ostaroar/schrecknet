@@ -13,17 +13,14 @@ client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** tra
 | --- | --- |
 | `search_crypt` | **Live.** MVP filters: text/name search, clan, group (`server/src/cards_db.rs`). Remaining vdb filters (disciplines incl. superior/inferior + OR-groups, capacity range, sect, votes, titles, traits, set/precon/artist, regex mode) land incrementally — see docs/feature-parity.md |
 | `search_library` | **Live.** MVP filters: text/name search, exact card type, clan/path requirement. Remaining vdb filters (discipline, blood/pool cost range, capacity requirement, traits, set/precon/artist, regex mode) land incrementally |
-| `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`). ☐ lookup by name, ☐ TWD stats |
-| `list_decks` / `get_deck` | Authenticated user's decks (or public deck by share id) |
+| `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`). ☐ lookup by name |
+| `list_decks` / `get_deck` | Authenticated user's decks (or a deck shared via deck-in-URL) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |
 | `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |
-| `import_deck` / `export_deck` | Formats: VDB URL, plain text, Lackey, JOL, TWD, XLSX |
+| `import_deck` / `export_deck` | Formats: plain text, Lackey, JOL, XLSX |
 | `diff_decks` | Structured diff of two decks/revisions |
 | `draw_hand` | Draw simulator: opening crypt/library hands with seeded RNG |
-| `search_twd` | TWD archive search (all UI filters: year, players, cards, tags, …) |
-| `search_pda` | Public Deck Archive search |
 | `get_inventory` / `update_inventory` | Collection management |
-| `recommend_cards` | Cards frequently co-played with a given deck (TWD co-occurrence) |
 
 ### Resources
 
@@ -32,7 +29,7 @@ client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** tra
 - `db://cards/meta` — card database version/date
 
 Auth: MCP requests carry the same bearer/session token as REST; anonymous access is
-allowed for read-only card/TWD tools.
+allowed for read-only card tools.
 
 ## REST API
 

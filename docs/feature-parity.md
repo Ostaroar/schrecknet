@@ -4,18 +4,26 @@ Source of truth for "no missing features". Compiled from a live survey of https:
 (2026-07-18) and the `smeea/vdb` source tree (`frontend/src/pages/`). Every item must be
 checked off (or explicitly descoped with a note) before v1.0.
 
+**Scope note (2026-07-19):** SchreckNet is card search/research + deck building only —
+no tournament/community-data features. Explicitly out of scope and removed from this
+list: TWD (Tournament Winning Decks) browser, TDA (Tournament Decks Archive), PDA
+(Public Deck Archive), the playtest program, Hall of Fame, and any recommendation
+engine built on tournament co-occurrence data. Deck import/export still supports
+common plaintext deck-list formats (Lackey, JOL, etc.) since that's interop, not a
+tournament feature; deck-in-URL sharing (for a deck you built) also stays — publishing
+to a public community archive does not.
+
 **V5 scope (2026-07-18):** the site hosts only the V5 format. Read every item below
 against the V5 card pool: filter *capabilities* are kept 1:1, but their option lists
 (clans, sects, titles, disciplines, groups, sets, precons, artists) are derived from
 the V5-legal pool at build time — options with zero matching cards don't render.
 Legality = V5 rules (+ custom limited formats within the pool); "standard 60–90"
-checks are replaced by V5 deck-construction rules. TWD/TDA/PDA hold only V5-legal
-decks.
+checks are replaced by V5 deck-construction rules.
 
 Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during implementation
 
 ## Navigation / Shell
-- ☐ Top navigation: Account/Login, About, PDA, TDA, TWD, Inventory, Decks, Crypt, Library
+- ☐ Top navigation: Account/Login, About, Inventory, Decks, Crypt, Library
 - ☑ Quick card search by name — ⌘K/Ctrl+K command palette, prefix-ranked,
       across both kinds, keyboard-driven (↑↓/Enter/Esc), jumps to the card page
 - ☐ Language switcher for card texts (EN/ES/FR/PT-BR) ✎
@@ -48,8 +56,7 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       Magaji not yet in the V5 pool ✎ recheck as new sets ship)
 - ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
       Maneuver, Additional Strike, Aggravated, Prevent, Press, Enter combat, Unlock,
-      Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement,
-      Banned, Not in TWD
+      Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement, Banned
 - ☐ Set filter: Any / Or Newer / Or Older / Not Newer / Not Older / Only In /
       First Print / Reprint
 - ☐ Precon filter (same modes)
@@ -80,7 +87,7 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       Block Denial, Dodge, Maneuver, Additional Strike, Aggravated, Prevent, Press,
       Combat Ends, Multi-Type, Multi-Discipline, Enter Combat, Create Vampire,
       Blood to Uncontrolled, Bounce Bleed, Reduce Bleed, Wake/Unlock, Black Hand,
-      Seraph, Infernal, Burn Option, Banned, Not in TWD, No Requirement
+      Seraph, Infernal, Burn Option, Banned, No Requirement
 - ☐ Set / Precon / Artist filters (same as crypt)
 
 ## Card Detail (`/cards/:id`)
@@ -93,7 +100,6 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text live; ☐ links to source not rendered yet
 - ☑ Artist credit(s) — live
-- ☐ TWD appearances / usage statistics ✎
 - ☑ Card text translations — full translated name + text on the card page
 - ☑ Shareable deep link per card — `#/cards/{id}` hash routes (tiny hand-rolled
       router in frontend/src/lib/route.ts; no router dep, per AGENTS.md rule 7)
@@ -109,42 +115,17 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Deck tags (auto-derived archetype tags + user tags) ✎
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☐ Clone / copy deck
-- ☐ Import: paste text, Lackey `.txt`, JOL, TWD format, Amaranth link ✎, file upload
-- ☐ Export: text, Lackey, JOL, TWD, XLSX ✎, clipboard, file download
+- ☐ Import: paste text, Lackey `.txt`, JOL, Amaranth link ✎, file upload
+- ☐ Export: text, Lackey, JOL, XLSX ✎, clipboard, file download
 - ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎
-- ☐ Draw simulator / playtest hand (crypt draw 4, library draw 7, redraws) ✎
+- ☐ Draw simulator / test hand (crypt draw 4, library draw 7, redraws) ✎
 - ☐ Deck diff: compare two decks/revisions (`/diff`)
-- ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a (TWD) deck
+- ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a deck
 - ☐ Share deck via public URL (deck-in-URL encoding for anonymous users) ✎
-- ☐ Publish deck to Public Deck Archive (PDA)
 - ☐ Missing cards vs. inventory ("what do I need to buy")
 - ☐ Precon decks browser (all official preconstructed decks)
 - ☐ Table Seating randomizer tool
-- ☐ Recommendation engine (cards frequently played with the current deck) ✎
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
-
-## Tournament Winning Decks (`/twd`)
-*(V5 scope: the archive ingests only V5-legal decks — filtered by event format tag
-where available, else by validating the deck list against the V5 pool ✎)*
-- ☐ TWD search: year range, players range, contains crypt card(s) (+ "with star"),
-      contains library card(s), library size buckets (60–67/68–75/76–83/84–90),
-      clan/path (+ mono-clan), sect, capacity average buckets (1-4/4-6/6-8/8-11),
-      library discipline % sliders, library card-type % sliders (custom %),
-      tags (Acceleration, Ally, Bleed, Block, Combat, MMPA, Rush, Stealth, Swarm, Vote),
-      event name, location (country/city), winner name
-- ☐ Random TWD, New TWDs, load-more pagination
-- ☐ TWD deck view with full deck list + tournament metadata
-- ☐ TWD Cards History (`/twd/cards_history`): when each card first won ✎
-- ☐ TWD Check (`/twd/check`): validate a deck list against TWD archive format ✎
-- ☐ TWD Hall of Fame — Cards (`/twd/hall_of_fame_cards`) ✎
-- ☐ TWD Hall of Fame — Tournaments (`/twd/hall_of_fame_tournaments`) ✎
-
-## Tournament Decks Archive (`/tda`)
-- ☐ Browse/search archive of tournament decks (incl. non-winning) ✎
-
-## Public Deck Archive (`/pda`)
-- ☐ Browse/search community-published decks; sort by date/popularity ✎
-- ☐ Favorite/star decks ✎
 
 ## Inventory (`/inventory`)
 - ☐ Add crypt/library cards with quantities
@@ -157,8 +138,6 @@ where available, else by validating the deck list against the V5 pool ✎)*
 - ☐ Register: username, password, optional email (for password reset only)
 - ☐ Login / logout, forgot-password flow (email reset)
 - ☐ Change password / email; delete account ✎
-- ☐ Playtest program area (`/playtest`): admin-granted access, playtest cards,
-      report forms ✎ (behind role flag)
 
 ## Non-functional parity
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with

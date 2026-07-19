@@ -3,6 +3,10 @@
 Phases are vertical slices — each ends with a deployable Docker image and a demo.
 Feature-parity items (docs/feature-parity.md) get checked off as they land.
 
+**Scope:** card search/research + deck building only — no tournament/community-data
+phase (TWD/TDA/PDA/playtest program are explicitly out of scope, see
+docs/feature-parity.md's scope note).
+
 ## Phase 0 — Foundations (repo bootstrap)
 - Monorepo scaffolding: `core/` (Rust, wasm-pack), `server/` (axum), `frontend/`
   (Vite + React 19 + TS + Tailwind 4), `data/` pipeline skeleton
@@ -65,12 +69,7 @@ Feature-parity items (docs/feature-parity.md) get checked off as they land.
 - Inventory management with deck cross-referencing
 - MCP/REST authenticated surface
 
-## Phase 4 — Community data
-- TWD browser with all filters + cards history + hall of fame + TWD check
-- TDA archive; PDA publish/browse/favorite; recommendation engine
-- Playtest program area (role-gated)
-
-## Phase 5 — Polish & v1.0
+## Phase 4 — Polish & v1.0
 - Full feature-parity audit vs vdb.im (side-by-side golden tests)
 - Performance budget: search < 16ms p95 local; first load < 200KB JS gzipped
   (excl. wasm+db which stream/cache separately)

@@ -2,14 +2,16 @@
 
 A ground-up rebuild of [VDB](https://github.com/smeea/vdb) (React 19 + Flask + SQLAlchemy)
 as an offline-first, WebAssembly-powered app with SQLite as the single storage technology
-and MCP as the primary machine API. **Scope: the V5 format only** — the card pool is the
-VEKN V5-legal list, filtered at data-pipeline time (see docs/data.md); all filter
-options and archives derive from that pool.
+and MCP as the primary machine API. **Scope: the V5 format only**, card search/research
++ deck building — no tournament or community-data features (TWD/TDA/PDA/playtest
+program; see docs/feature-parity.md's scope note). The card pool is the VEKN V5-legal
+list, filtered at data-pipeline time (see docs/data.md); all filter options derive
+from that pool.
 
 ## Guiding decisions (see docs/adr/ for full records)
 
 1. **One Rust core, two targets.** All domain logic lives in the `core/` Rust crate:
-   deck parsing/serialization (VDB URL, Lackey, JOL, TWD text), format legality
+   deck parsing/serialization (deck-in-URL, Lackey, JOL), format legality
    validation, draw simulation, deck diff, seating algorithm, proxy layout. It compiles
    to **WebAssembly** for the browser and links natively into the server. One
    implementation, zero drift between client and server behavior.
@@ -21,8 +23,8 @@ options and archives derive from that pool.
    - *Browser*: official **SQLite WASM** build with **OPFS** persistence. Card search
      filters compile to SQL over FTS5 + indexed columns → instant, fully offline search.
      Anonymous users' decks/inventory live in a local `user.sqlite` (OPFS).
-   - *Server*: the same `cards.sqlite` plus `app.sqlite` (accounts, decks, inventory,
-     PDA) via `rusqlite`. WAL mode. Litestream-compatible layout for backups.
+   - *Server*: the same `cards.sqlite` plus `app.sqlite` (accounts, decks, inventory)
+     via `rusqlite`. WAL mode. Litestream-compatible layout for backups.
      Postgres is deliberately **not** in scope "for beginning" — the schema avoids
      SQLite-only features where reasonable to keep the door open.
 
@@ -87,15 +89,14 @@ flowchart LR
         MCP --> NativeCore
     end
 
-    Browser -- "sync: accounts, decks,<br/>inventory, PDA/TWD" --> REST
+    Browser -- "sync: accounts, decks,<br/>inventory" --> REST
     Agents[AI agents / tools] --> MCP
     CI[GitHub Actions<br/>card-data pipeline] -- "cards.sqlite" --> Server
 ```
 
 Search, deck building, stats, draw simulation, diff, proxy generation and format
 validation all run **client-side** (WASM + SQLite WASM) and keep working offline.
-The server is only needed for accounts, cross-device sync, PDA/TWD community data,
-and the machine APIs.
+The server is only needed for accounts, cross-device sync, and the machine APIs.
 
 ## Key flows
 
@@ -107,8 +108,6 @@ and the machine APIs.
   branches are first-class rows, mirroring vdb's branch feature).
 - **Anonymous deck sharing**: `core/` encodes the deck into a compact URL-safe string
   (same idea as vdb's deck-in-URL), so decks are shareable without accounts.
-- **TWD/PDA data**: TWD archive ingested by the data pipeline into `cards.sqlite`
-  companion tables; PDA is server-side (app.sqlite) with public read API.
 
 ## Security & legal
 

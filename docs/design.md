@@ -48,6 +48,6 @@ ships as re-stepped tokens; dark is the definitive reading.
 
 ## Screens covered by R1 mockups
 
-01 Crypt search · 02 Deck builder (+ draw simulator, stats rail) · 03 TWD archive ·
-04 Mobile/PWA. Library search, Inventory, Diff, Review, Seating, Precons, Playtest
-and Account reuse the same shell, atoms and tokens.
+01 Crypt search · 02 Deck builder (+ draw simulator, stats rail) · 03 Mobile/PWA.
+Library search, Inventory, Diff, Review, Seating, Precons, and Account reuse the
+same shell, atoms and tokens.

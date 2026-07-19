@@ -34,10 +34,6 @@ CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards, content_rowid=id);
-CREATE TABLE twd_decks(id TEXT PRIMARY KEY, event TEXT, year INT, players INT,
-  country TEXT, city TEXT, winner TEXT, date TEXT, score TEXT);
-CREATE TABLE twd_deck_cards(deck_id TEXT, card_id INT, qty INT);
-CREATE TABLE twd_tags(deck_id TEXT, tag TEXT);
 ";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -84,16 +80,18 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '2'), ('data_version', '2'), ('scope', 'v5'),
+         ('schema_version', '3'), ('data_version', '2'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2)",
         rusqlite::params![stats.crypt.to_string(), stats.library.to_string()],
     )?;
     conn.execute_batch("VACUUM")?;
 
     let meta = serde_json::json!({
-        // schema_version bumps when the column layout changes (v2: image_url
-        // added to cards); data_version when the same schema gets new content.
-        "schema_version": 2,
+        // schema_version bumps when the table/column layout changes (v2:
+        // image_url added to cards; v3: dropped the never-populated twd_*
+        // tables — tournament features are out of scope, see AGENTS.md);
+        // data_version when the same schema gets new content.
+        "schema_version": 3,
         "data_version": 2,
         "scope": "v5",
         "cards": total,

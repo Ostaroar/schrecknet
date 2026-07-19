@@ -13,7 +13,7 @@ variant, while staying usable from ordinary HTTP clients.
 - Every capability is implemented once in `server/src/service/` and exposed through
   both MCP tools and `/api/v1` REST endpoints (OpenAPI 3.1 generated via utoipa).
   "Both or neither" is a review rule (AGENTS.md).
-- Read-only card/TWD tools work unauthenticated; user tools use the same token as
+- Read-only card tools work unauthenticated; user tools use the same token as
   REST sessions.
 
 ## Alternatives considered

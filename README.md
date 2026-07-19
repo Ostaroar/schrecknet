@@ -1,13 +1,15 @@
 # SchreckNet
 
-A ground-up rebuild of [VDB](https://github.com/smeea/vdb) — card search, deck
-building, inventory management and tournament-deck archives for
-**Vampire: The Eternal Struggle (VTES)** — with a modern engine.
+A ground-up rebuild of [VDB](https://github.com/smeea/vdb) — card search and
+deck building for **Vampire: The Eternal Struggle (VTES)** — with a modern
+engine.
 
-**Scope: this site hosts the V5 format exclusively.** The card pool is the
-VEKN-defined V5-legal list (Fifth Edition-era products); deck legality, search
-filters, archives and precons all derive from that pool. Every VDB *capability*
-is preserved (see the parity checklist) — applied to the V5 pool.
+**Scope: this site hosts the V5 format exclusively**, and covers card search/research
++ deck building only — no tournament or community-data features (no TWD/TDA/PDA
+archives, no playtest program). The card pool is the VEKN-defined V5-legal list
+(Fifth Edition-era products); deck legality, search filters and precons all derive
+from that pool. Every in-scope VDB *capability* is preserved (see the parity
+checklist) — applied to the V5 pool.
 
 - ⚡ **WebAssembly core** — one Rust crate for deck logic, running in the browser
   (WASM) and on the server (native). Search, deck building, draw simulation, diffs
@@ -41,7 +43,7 @@ is preserved (see the parity checklist) — applied to the V5 pool.
 ## Acknowledgments & legal
 
 - Built on the shoulders of [smeea/vdb](https://github.com/smeea/vdb) (MIT) and the
-  [KRCG](https://static.krcg.org) project's card data, rulings and TWD archive.
+  [KRCG](https://static.krcg.org) project's card data and rulings.
 - Code licensed under [MIT](LICENSE).
 - Portions of the materials are the copyrights and trademarks of Paradox Interactive AB,
   and are used with permission under the **Dark Pack** agreement. All rights reserved.
