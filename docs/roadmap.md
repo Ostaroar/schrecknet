@@ -82,6 +82,8 @@ docs/feature-parity.md's scope note).
   Dockerfile (was a manual-only step through Phase 1).
 - ☑ Rich deck statistics through Rust/WASM: weighted capacity min/average/max,
   library type and discipline distributions, and blood/pool cost curves
+- ☑ VDB-style deck organization: library grouped by canonical type combination
+  and crypt sortable by capacity, clan, group, name, or quantity
 - ☑ Clone deck (name + card quantities) — live in both the deck list and editor
 - ☑ Draw simulator — live (frontend/src/lib/drawHand.ts): draws a crypt hand
   of 4 / library hand of 7 respecting each card's quantity in the deck,

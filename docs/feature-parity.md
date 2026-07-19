@@ -117,9 +117,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 ## Deck Building (`/decks`)
 - ☑ Create / rename / delete decks — MVP live, local (anonymous, OPFS-only, no
       account); ☐ author/description fields not yet exposed in the UI
-- ☑ Crypt & library sections with quantity steppers — MVP live
-      (frontend/src/components/DeckEditor.tsx); grouped-by-type display within
-      each section still pending
+- ☑ Crypt & library sections with quantity steppers — live
+      (frontend/src/components/DeckEditor.tsx); library cards are grouped by
+      canonical type combination and crypt cards can be sorted by capacity,
+      clan, group, name, or quantity, matching VDB's useful deck organization
 - ☑ Deck stats: crypt/library count, V5 legality, weighted crypt capacity
       min/average/max, library type distribution, discipline distribution,
       and blood/pool cost curves — all aggregation runs in the Rust WASM core
