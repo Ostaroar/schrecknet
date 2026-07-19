@@ -84,9 +84,11 @@ marked ✎ specifically need that verification.
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 
-# core to wasm (bindings pkg for the frontend arrives in Phase 1)
-cargo build -p schrecknet-core --target wasm32-unknown-unknown
-wasm-pack build core --target web
+# core to wasm — REQUIRED before any frontend build/dev (deck legality runs
+# as real compiled Rust, not a JS reimplementation; frontend/src/wasm/ is a
+# gitignored build artifact, wired into ci.yml and the Dockerfile already)
+cargo build -p schrecknet-core --target wasm32-unknown-unknown   # fast sanity check
+wasm-pack build core --target web --out-dir ../frontend/src/wasm # actual bindings frontend imports
 
 # server (serves frontend/dist + /healthz + /api/v1/meta + /data/* on :8000)
 cargo run -p schrecknet-server
@@ -98,8 +100,9 @@ cargo run -p schrecknet-server
 # under .cache/ (gitignored) via SCHRECKNET_DATA_CACHE
 cargo run -p schrecknet-data -- build --out dist
 
-# frontend — run the server first (`cargo run -p schrecknet-server`, needs
-# dist/cards.sqlite built above) so /api and /data proxy correctly
+# frontend — run wasm-pack (above) once, and the server first (`cargo run -p
+# schrecknet-server`, needs dist/cards.sqlite built above) so /api and /data
+# proxy correctly
 cd frontend && npm install && npm run dev   # Vite dev server, proxies /api + /data to :8000
 npm run build                               # tsc --noEmit && vite build
 

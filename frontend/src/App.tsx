@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react'
 import CryptSearch from './components/CryptSearch'
 import LibrarySearch from './components/LibrarySearch'
 import CardPage from './components/CardPage'
+import DeckList from './components/DeckList'
+import DeckEditor from './components/DeckEditor'
 import CommandPalette from './components/CommandPalette'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { useHashRoute, navigate } from './lib/route'
+
+const TABS = ['crypt', 'library', 'decks'] as const
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
@@ -14,8 +18,10 @@ export default function App() {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
 
+  const wide = route.page === 'deck' || route.page === 'decks'
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-6">
+    <div className={'mx-auto flex min-h-screen flex-col px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
       <header className="flex items-center gap-3 py-6">
         <span className="grid size-8 place-items-center rounded-lg bg-blood font-display text-lg font-bold text-white">
           S
@@ -29,9 +35,9 @@ export default function App() {
         </span>
       </header>
 
-      {route.page !== 'card' && (
+      {route.page !== 'card' && route.page !== 'deck' && (
         <nav className="mb-4 flex gap-1">
-          {(['crypt', 'library'] as const).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t}
               onClick={() => navigate({ page: t })}
@@ -40,7 +46,7 @@ export default function App() {
                 (route.page === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
               }
             >
-              {t} search
+              {t === 'decks' ? 'Decks' : `${t} search`}
             </button>
           ))}
         </nav>
@@ -49,6 +55,10 @@ export default function App() {
       <main className="flex-1 pb-10">
         {route.page === 'card' ? (
           <CardPage id={route.id} />
+        ) : route.page === 'deck' ? (
+          <DeckEditor id={route.id} />
+        ) : route.page === 'decks' ? (
+          <DeckList />
         ) : route.page === 'library' ? (
           <LibrarySearch />
         ) : (

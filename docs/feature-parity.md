@@ -105,13 +105,18 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       router in frontend/src/lib/route.ts; no router dep, per AGENTS.md rule 7)
 
 ## Deck Building (`/decks`)
-- ☐ Create / rename / delete decks; deck name, author, description
-- ☐ Crypt & library sections with quantity steppers, grouped by card type
-- ☐ Deck stats: crypt count + avg/min/max capacity, group legality, library count,
-      type distribution, discipline distribution, cost curves (blood/pool)
-- ☐ Format legality checks: V5 (site default — the only base format), plus custom
-      limited formats within the V5 pool ✎ (limited format editor: allowed sets/cards);
-      2-Players variant within V5 ✎ (keep only if the V5 pool supports it)
+- ☑ Create / rename / delete decks — MVP live, local (anonymous, OPFS-only, no
+      account); ☐ author/description fields not yet exposed in the UI
+- ☑ Crypt & library sections with quantity steppers — MVP live
+      (frontend/src/components/DeckEditor.tsx); grouped-by-type display within
+      each section still pending
+- ☑ Deck stats: crypt count, library count, V5 legality (group rule + size
+      bounds, via the real core/legality.rs compiled to WASM) — live; ☐ still
+      missing avg/min/max capacity, type distribution, discipline
+      distribution, cost curves
+- ☐ Format legality checks: custom limited formats within the V5 pool ✎
+      (limited format editor: allowed sets/cards); 2-Players variant within V5 ✎
+      (keep only if the V5 pool supports it) — V5 base-format legality is live
 - ☐ Deck tags (auto-derived archetype tags + user tags) ✎
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☐ Clone / copy deck

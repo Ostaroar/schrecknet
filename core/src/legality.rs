@@ -54,6 +54,32 @@ pub fn validate_counts(
     violations
 }
 
+/// Human-readable description of a violation, for direct display in the UI.
+/// Kept in `core` alongside the rule it describes (AGENTS.md hard rule #1) so
+/// wasm and native callers show identical text.
+pub fn describe(v: &Violation) -> String {
+    match v {
+        Violation::CryptTooSmall { count } => {
+            format!("Crypt has {count} vampire(s); the V5 minimum is {CRYPT_MIN}.")
+        }
+        Violation::GroupsIllegal { groups } => {
+            let mut sorted = groups.clone();
+            sorted.sort_unstable();
+            sorted.dedup();
+            format!(
+                "Crypt groups {sorted:?} span more than 2 consecutive groups \
+                 (the group rule: every vampire must be within 1 group of every other)."
+            )
+        }
+        Violation::LibraryTooSmall { count } => {
+            format!("Library has {count} card(s); the V5 minimum is {LIBRARY_MIN}.")
+        }
+        Violation::LibraryTooLarge { count } => {
+            format!("Library has {count} card(s); the V5 maximum is {LIBRARY_MAX}.")
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,5 +114,15 @@ mod tests {
                 Violation::LibraryTooLarge { count: 91 },
             ]
         );
+    }
+
+    #[test]
+    fn descriptions_are_human_readable_and_mention_the_offending_number() {
+        assert!(describe(&Violation::CryptTooSmall { count: 11 }).contains("11"));
+        assert!(describe(&Violation::LibraryTooLarge { count: 91 }).contains("91"));
+        let msg = describe(&Violation::GroupsIllegal {
+            groups: vec![7, 5, 5],
+        });
+        assert!(msg.contains("[5, 7]")); // sorted + deduped for readability
     }
 }

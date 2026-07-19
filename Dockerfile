@@ -1,15 +1,17 @@
 # Multi-stage build -> single small image: server binary + frontend + cards.sqlite.
-# The core WASM bundle joins the web stage in Phase 1 when the frontend consumes it.
 
-# --- stage 1: rust workspace -> server + data binaries, card database ---
+# --- stage 1: rust workspace -> server + data binaries, card database, core.wasm ---
 FROM rust:1-bookworm AS rust-build
 WORKDIR /src
+RUN rustup target add wasm32-unknown-unknown && \
+    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 COPY Cargo.toml Cargo.lock ./
 COPY core core
 COPY server server
 COPY data data
 RUN cargo build --release -p schrecknet-server -p schrecknet-data
 RUN ./target/release/schrecknet-data build --out /out
+RUN wasm-pack build core --release --target web --out-dir /out/wasm
 
 # --- stage 2: frontend ---
 FROM node:22-bookworm AS web-build
@@ -17,6 +19,7 @@ WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend .
+COPY --from=rust-build /out/wasm src/wasm
 RUN npm run build
 
 # --- final image ---

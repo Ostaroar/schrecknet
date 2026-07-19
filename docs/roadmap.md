@@ -59,10 +59,20 @@ docs/feature-parity.md's scope note).
   comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL
 
 ## Phase 2 — Deck builder
-- Local (anonymous) decks in OPFS; full editor with stats, V5 legality, tags
-- Import/export all formats; deck-in-URL sharing; clone; diff; draw simulator
-- Proxy PDF generation; precon browser; table seating tool
-- MCP: deck tools (`create_deck` … `draw_hand`)
+- ☑ Local (anonymous) decks MVP, verified live in-browser: create/rename/delete,
+  add/remove cards with qty steppers via inline search, live stats (crypt/library
+  counts, V5 legality) — persisted in a separate writable OPFS database
+  (`user.sqlite`, frontend/src/lib/userDbWorker.ts) alongside the read-only
+  `cards.sqlite`. Legality is the **actual compiled Rust core** running as WASM
+  (`core/src/legality.rs` → `frontend/src/lib/core.ts`), not a JS
+  reimplementation — verified the group-rule violation renders the exact
+  string the Rust unit tests assert. `core.wasm` build wired into CI and the
+  Dockerfile (was a manual-only step through Phase 1).
+- ☐ Tags (auto-derived + user); branches/revisions; clone
+- ☐ Import/export all formats; deck-in-URL sharing; diff; draw simulator
+- ☐ Proxy PDF generation; precon browser; table seating tool
+- ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
+  are local-only; becomes relevant with Phase 3 server sync
 
 ## Phase 3 — Accounts & sync
 - Register/login/reset (parity) + passkeys; server-synced decks & branches
