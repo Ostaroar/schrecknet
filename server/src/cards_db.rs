@@ -66,6 +66,29 @@ pub enum TextMode {
     Text,
 }
 
+/// Numeric comparison used by library blood/pool cost filters.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CostMode {
+    /// Cost must be less than or equal to the supplied value (default).
+    #[default]
+    AtMost,
+    /// Cost must equal the supplied value.
+    Exact,
+    /// Cost must be greater than or equal to the supplied value.
+    AtLeast,
+}
+
+impl CostMode {
+    fn as_sql_value(self) -> &'static str {
+        match self {
+            Self::AtMost => "at_most",
+            Self::Exact => "exact",
+            Self::AtLeast => "at_least",
+        }
+    }
+}
+
 /// Accepts either a JSON array (MCP) or a comma-separated string (REST query
 /// strings can't express arrays with axum's default Query extractor).
 fn deserialize_disciplines<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
@@ -128,12 +151,26 @@ pub struct LibrarySearchParams {
     /// If true, every discipline in `disciplines` must be at superior level.
     #[serde(default)]
     pub disciplines_superior: bool,
-    /// Maximum blood cost (inclusive); cards with no blood cost never match.
+    /// Maximum blood cost (inclusive); backwards-compatible alias for
+    /// `blood_cost` with `blood_cost_mode=at_most`.
     #[serde(default)]
     pub blood_cost_max: Option<i64>,
-    /// Maximum pool cost (inclusive); cards with no pool cost never match.
+    /// Maximum pool cost (inclusive); backwards-compatible alias for
+    /// `pool_cost` with `pool_cost_mode=at_most`.
     #[serde(default)]
     pub pool_cost_max: Option<i64>,
+    /// Blood cost value to compare; cards with no numeric cost never match.
+    #[serde(default)]
+    pub blood_cost: Option<i64>,
+    /// Comparison applied to `blood_cost` (at_most, exact, or at_least).
+    #[serde(default)]
+    pub blood_cost_mode: CostMode,
+    /// Pool cost value to compare; cards with no numeric cost never match.
+    #[serde(default)]
+    pub pool_cost: Option<i64>,
+    /// Comparison applied to `pool_cost` (at_most, exact, or at_least).
+    #[serde(default)]
+    pub pool_cost_mode: CostMode,
     /// Exact set name match (e.g. "Fifth Edition"); a card matches if any of
     /// its printings belong to this set.
     #[serde(default)]
@@ -244,6 +281,18 @@ pub fn search_library(
     params: &LibrarySearchParams,
 ) -> rusqlite::Result<Vec<LibraryCard>> {
     let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
+    let blood_cost = params.blood_cost.or(params.blood_cost_max);
+    let blood_cost_mode = if params.blood_cost.is_some() {
+        params.blood_cost_mode
+    } else {
+        CostMode::AtMost
+    };
+    let pool_cost = params.pool_cost.or(params.pool_cost_max);
+    let pool_cost_mode = if params.pool_cost.is_some() {
+        params.pool_cost_mode
+    } else {
+        CostMode::AtMost
+    };
     // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. A
     // NULL cost never matches a cost filter, and neither does the variable
     // cost "X" (CAST('X') is 0, which would otherwise match every max —
@@ -261,16 +310,20 @@ pub fn search_library(
                 OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
            AND (?4 IS NULL OR c.types LIKE ?4)
            AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
-           AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
-                AND CAST(c.blood_cost AS INTEGER) <= ?6))
-           AND (?7 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
-                AND CAST(c.pool_cost AS INTEGER) <= ?7))
-           AND (?8 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-                WHERE p.card_id = c.id AND s.name = ?8))
-           AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p
-                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?9 || '%'))
-           AND (?10 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?10 || '%'))",
+           AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X' AND
+                ((?7 = 'at_most' AND CAST(c.blood_cost AS INTEGER) <= ?6) OR
+                 (?7 = 'exact' AND CAST(c.blood_cost AS INTEGER) = ?6) OR
+                 (?7 = 'at_least' AND CAST(c.blood_cost AS INTEGER) >= ?6))))
+           AND (?8 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X' AND
+                ((?9 = 'at_most' AND CAST(c.pool_cost AS INTEGER) <= ?8) OR
+                 (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
+                 (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
+           AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+                WHERE p.card_id = c.id AND s.name = ?10))
+           AND (?11 IS NULL OR EXISTS (SELECT 1 FROM printings p
+                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?11 || '%'))
+           AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
@@ -278,8 +331,10 @@ pub fn search_library(
         Box::new(params.text_mode != TextMode::Name),
         Box::new(type_pattern),
         Box::new(params.clan.clone()),
-        Box::new(params.blood_cost_max),
-        Box::new(params.pool_cost_max),
+        Box::new(blood_cost),
+        Box::new(blood_cost_mode.as_sql_value()),
+        Box::new(pool_cost),
+        Box::new(pool_cost_mode.as_sql_value()),
         Box::new(params.set.clone()),
         Box::new(params.precon.clone()),
         Box::new(params.artist.clone()),
@@ -713,7 +768,8 @@ mod tests {
             "INSERT INTO cards VALUES
                (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL),
                (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL),
-               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL);
+               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL),
+               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL);
              INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0),(8,'for',0);",
         )
         .unwrap();
@@ -821,6 +877,56 @@ mod tests {
         // …but it still appears when no cost filter is set.
         let results = search_library(&conn, &LibrarySearchParams::default()).unwrap();
         assert!(results.iter().any(|c| c.name == "Hidden Strength"));
+    }
+
+    #[test]
+    fn library_cost_filter_supports_all_comparison_modes() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_filter_extras(&conn);
+
+        let exact = LibrarySearchParams {
+            blood_cost: Some(1),
+            blood_cost_mode: CostMode::Exact,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &exact)
+                .unwrap()
+                .iter()
+                .map(|card| card.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Absolute Tyranny", "Theft of Vitae"]
+        );
+
+        let at_least = LibrarySearchParams {
+            blood_cost: Some(2),
+            blood_cost_mode: CostMode::AtLeast,
+            ..Default::default()
+        };
+        let results = search_library(&conn, &at_least).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Expensive Action");
+
+        let at_most = LibrarySearchParams {
+            blood_cost: Some(1),
+            blood_cost_mode: CostMode::AtMost,
+            ..Default::default()
+        };
+        assert_eq!(search_library(&conn, &at_most).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn library_cost_modes_deserialize_for_rest_and_mcp() {
+        let rest: LibrarySearchParams =
+            serde_urlencoded::from_str("blood_cost=2&blood_cost_mode=at_least").unwrap();
+        assert_eq!(rest.blood_cost, Some(2));
+        assert_eq!(rest.blood_cost_mode, CostMode::AtLeast);
+
+        let mcp: LibrarySearchParams =
+            serde_json::from_str(r#"{"pool_cost":1,"pool_cost_mode":"exact"}"#).unwrap();
+        assert_eq!(mcp.pool_cost, Some(1));
+        assert_eq!(mcp.pool_cost_mode, CostMode::Exact);
     }
 
     #[test]

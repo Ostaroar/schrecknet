@@ -4,6 +4,7 @@
 import { query } from './db'
 
 export type TextMode = 'any' | 'name' | 'text'
+export type CostMode = 'at_most' | 'exact' | 'at_least'
 
 export interface LibraryFilters {
   text: string
@@ -12,8 +13,10 @@ export interface LibraryFilters {
   clan: string | null
   disciplines: string[]
   disciplinesSuperior: boolean
-  bloodCostMax: number | null
-  poolCostMax: number | null
+  bloodCost: number | null
+  bloodCostMode: CostMode
+  poolCost: number | null
+  poolCostMode: CostMode
   set: string | null
   precon: string | null
   artist: string | null
@@ -26,8 +29,10 @@ export const emptyLibraryFilters: LibraryFilters = {
   clan: null,
   disciplines: [],
   disciplinesSuperior: false,
-  bloodCostMax: null,
-  poolCostMax: null,
+  bloodCost: null,
+  bloodCostMode: 'at_most',
+  poolCost: null,
+  poolCostMode: 'at_most',
   set: null,
   precon: null,
   artist: null,
@@ -56,7 +61,7 @@ interface LibraryRow {
 export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCard[]> {
   const typePattern = filters.cardType ? `%"${filters.cardType}"%` : null
   // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. NULL
-  // costs and the variable cost "X" (CAST('X') is 0) never match a max
+  // costs and the variable cost "X" (CAST('X') is 0) never match a numeric
   // filter — mirrors server/src/cards_db.rs exactly. Per-discipline EXISTS
   // clauses are built dynamically like searchCrypt — every value is bound.
   let sql = `SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
@@ -69,24 +74,30 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
             OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
        AND (?4 IS NULL OR c.types LIKE ?4)
        AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
-       AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
-            AND CAST(c.blood_cost AS INTEGER) <= ?6))
-       AND (?7 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
-            AND CAST(c.pool_cost AS INTEGER) <= ?7))
-       AND (?8 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-            WHERE p.card_id = c.id AND s.name = ?8))
-       AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p
-            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?9 || '%'))
-       AND (?10 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?10 || '%'))`
+       AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X' AND
+            ((?7 = 'at_most' AND CAST(c.blood_cost AS INTEGER) <= ?6) OR
+             (?7 = 'exact' AND CAST(c.blood_cost AS INTEGER) = ?6) OR
+             (?7 = 'at_least' AND CAST(c.blood_cost AS INTEGER) >= ?6))))
+       AND (?8 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X' AND
+            ((?9 = 'at_most' AND CAST(c.pool_cost AS INTEGER) <= ?8) OR
+             (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
+             (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
+       AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+            WHERE p.card_id = c.id AND s.name = ?10))
+       AND (?11 IS NULL OR EXISTS (SELECT 1 FROM printings p
+            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?11 || '%'))
+       AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))`
   const params: (string | number | null)[] = [
     filters.text.trim(),
     filters.textMode !== 'text' ? 1 : 0,
     filters.textMode !== 'name' ? 1 : 0,
     typePattern,
     filters.clan,
-    filters.bloodCostMax,
-    filters.poolCostMax,
+    filters.bloodCost,
+    filters.bloodCostMode,
+    filters.poolCost,
+    filters.poolCostMode,
     filters.set,
     filters.precon,
     filters.artist,

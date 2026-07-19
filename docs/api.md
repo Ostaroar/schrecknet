@@ -12,7 +12,7 @@ client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** tra
 | Tool | Description |
 | --- | --- |
 | `search_crypt` | **Live.** MVP filters: text/name search, clan, group (`server/src/cards_db.rs`). Remaining vdb filters (disciplines incl. superior/inferior + OR-groups, capacity range, sect, votes, titles, traits, set/precon/artist, regex mode) land incrementally — see docs/feature-parity.md |
-| `search_library` | **Live.** MVP filters: text/name search, exact card type, clan/path requirement. Remaining vdb filters (discipline, blood/pool cost range, capacity requirement, traits, set/precon/artist, regex mode) land incrementally |
+| `search_library` | **Live.** Text scope, exact card type, clan/path and discipline requirements, independent blood/pool cost comparisons (`at_most`, `exact`, `at_least`), set, precon, and artist. Remaining filters: capacity requirement, traits, and regex mode |
 | `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`). ☐ lookup by name |
 | `list_decks` / `get_deck` | Authenticated user's decks (or a deck shared via deck-in-URL) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |

@@ -33,9 +33,9 @@ docs/feature-parity.md's scope note).
   exact set-name match, precon substring, artist substring — each via
   bound-param EXISTS subqueries over printings/sets/artists; ☐ still missing
   set filter's Or Newer/Or Older/Only In/First Print/Reprint modes
-- ☐ Remaining crypt filters (sect, title, votes, traits,
-  per-discipline level mixing, OR-groups) + remaining library filters
-  (discipline, costs, traits) + routed card detail page
+- ☐ Remaining crypt filters (sect, votes, traits, per-discipline level mixing,
+  OR-groups) + remaining library filters (capacity requirement, traits,
+  per-discipline level mixing) + regex search
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep

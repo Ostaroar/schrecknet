@@ -87,9 +87,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Clan / Path requirement filter — MVP live
 - ☐ Sect requirement filter
 - ☐ Title requirement filter
-- ☐ Blood cost / Pool cost filters (`<=`, `>=`, `=`) — partial: `<=` (max)
-      live for both costs (cards with no cost never match a cost filter);
-      `>=` and `=` modes not built yet
+- ☑ Blood cost / Pool cost filters (`<=`, `>=`, `=`) — live independently for
+      both costs on browser, REST, and MCP; cards with no numeric cost and
+      variable `X` costs never match a numeric cost filter
 - ☐ Capacity requirement filter
 - ☐ Traits: +Intercept/-Stealth, +Stealth/-Intercept, +Bleed, +Votes/Title, +Strength,
       Block Denial, Dodge, Maneuver, Additional Strike, Aggravated, Prevent, Press,

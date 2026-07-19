@@ -9,6 +9,7 @@ import {
   emptyLibraryFilters,
   type LibraryCard,
   type TextMode,
+  type CostMode,
 } from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
 
@@ -31,8 +32,10 @@ export default function LibrarySearch() {
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
-  const [bloodCostMax, setBloodCostMax] = useState<number | null>(null)
-  const [poolCostMax, setPoolCostMax] = useState<number | null>(null)
+  const [bloodCost, setBloodCost] = useState<number | null>(null)
+  const [bloodCostMode, setBloodCostMode] = useState<CostMode>('at_most')
+  const [poolCost, setPoolCost] = useState<number | null>(null)
+  const [poolCostMode, setPoolCostMode] = useState<CostMode>('at_most')
   const [set, setSet] = useState<string | null>(null)
   const [precon, setPrecon] = useState<string | null>(null)
   const [artist, setArtist] = useState<string | null>(null)
@@ -70,8 +73,10 @@ export default function LibrarySearch() {
       textMode,
       cardType,
       clan,
-      bloodCostMax,
-      poolCostMax,
+      bloodCost,
+      bloodCostMode,
+      poolCost,
+      poolCostMode,
       set,
       precon,
       artist,
@@ -80,7 +85,7 @@ export default function LibrarySearch() {
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, textMode, cardType, clan, bloodCostMax, poolCostMax, set, precon, artist, discModes])
+  }, [text, textMode, cardType, clan, bloodCost, bloodCostMode, poolCost, poolCostMode, set, precon, artist, discModes])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -166,26 +171,45 @@ export default function LibrarySearch() {
           ))}
         </select>
         <div className="flex items-center gap-1 text-sm text-ink-dim">
-          cost ≤
+          <span>blood</span>
+          <select
+            aria-label="Blood cost comparison"
+            value={bloodCostMode}
+            onChange={(e) => setBloodCostMode(e.target.value as CostMode)}
+            className="rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+          >
+            <option value="at_most">≤</option>
+            <option value="exact">=</option>
+            <option value="at_least">≥</option>
+          </select>
           <input
             type="number"
             min={0}
             max={9}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            placeholder="blood"
-            title="Maximum blood cost"
-            value={bloodCostMax ?? ''}
-            onChange={(e) => setBloodCostMax(e.target.value ? Number(e.target.value) : null)}
+            aria-label="Blood cost"
+            value={bloodCost ?? ''}
+            onChange={(e) => setBloodCost(e.target.value ? Number(e.target.value) : null)}
           />
+          <span>pool</span>
+          <select
+            aria-label="Pool cost comparison"
+            value={poolCostMode}
+            onChange={(e) => setPoolCostMode(e.target.value as CostMode)}
+            className="rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+          >
+            <option value="at_most">≤</option>
+            <option value="exact">=</option>
+            <option value="at_least">≥</option>
+          </select>
           <input
             type="number"
             min={0}
             max={9}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            placeholder="pool"
-            title="Maximum pool cost"
-            value={poolCostMax ?? ''}
-            onChange={(e) => setPoolCostMax(e.target.value ? Number(e.target.value) : null)}
+            aria-label="Pool cost"
+            value={poolCost ?? ''}
+            onChange={(e) => setPoolCost(e.target.value ? Number(e.target.value) : null)}
           />
         </div>
         <select
