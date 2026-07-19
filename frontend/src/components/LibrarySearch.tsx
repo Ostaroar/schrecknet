@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { searchLibrary, listLibraryTypes, listLibraryClans, type LibraryCard } from '../lib/librarySearch'
+import {
+  searchLibrary,
+  listLibraryTypes,
+  listLibraryClans,
+  listLibraryDisciplines,
+  emptyLibraryFilters,
+  type LibraryCard,
+} from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
+
+/** Per-discipline filter state, cycling off → required (any level) → superior. */
+type DisciplineMode = 'off' | 'any' | 'superior'
 
 function CostPill({ blood, pool }: { blood: string | null; pool: string | null }) {
   if (!blood && !pool) return null
@@ -16,18 +26,23 @@ export default function LibrarySearch() {
   const [text, setText] = useState('')
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
+  const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
+  const [bloodCostMax, setBloodCostMax] = useState<number | null>(null)
+  const [poolCostMax, setPoolCostMax] = useState<number | null>(null)
   const [types, setTypes] = useState<string[]>([])
   const [clans, setClans] = useState<string[]>([])
+  const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [results, setResults] = useState<LibraryCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([listLibraryTypes(), listLibraryClans()])
-      .then(([t, c]) => {
+    Promise.all([listLibraryTypes(), listLibraryClans(), listLibraryDisciplines()])
+      .then(([t, c, d]) => {
         setTypes(t)
         setClans(c)
+        setAllDisciplines(d)
         setStatus('ready')
       })
       .catch((e: Error) => {
@@ -36,7 +51,29 @@ export default function LibrarySearch() {
       })
   }, [])
 
-  const filters = useMemo(() => ({ text, cardType, clan }), [text, cardType, clan])
+  const filters = useMemo(() => {
+    const active = Object.entries(discModes).filter(([, m]) => m !== 'off')
+    return {
+      ...emptyLibraryFilters,
+      text,
+      cardType,
+      clan,
+      bloodCostMax,
+      poolCostMax,
+      disciplines: active.map(([code]) => code),
+      // vdb lets you mix levels per discipline; MVP applies "superior" to the
+      // whole selection when any badge is in superior mode (feature-parity ✎).
+      disciplinesSuperior: active.some(([, m]) => m === 'superior'),
+    }
+  }, [text, cardType, clan, bloodCostMax, poolCostMax, discModes])
+
+  const cycle = (code: string) => {
+    setDiscModes((m) => {
+      const next: DisciplineMode =
+        m[code] === 'any' ? 'superior' : m[code] === 'superior' ? 'off' : 'any'
+      return { ...m, [code]: next }
+    })
+  }
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -92,6 +129,60 @@ export default function LibrarySearch() {
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-1 text-sm text-ink-dim">
+          cost ≤
+          <input
+            type="number"
+            min={0}
+            max={9}
+            className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+            placeholder="blood"
+            title="Maximum blood cost"
+            value={bloodCostMax ?? ''}
+            onChange={(e) => setBloodCostMax(e.target.value ? Number(e.target.value) : null)}
+          />
+          <input
+            type="number"
+            min={0}
+            max={9}
+            className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+            placeholder="pool"
+            title="Maximum pool cost"
+            value={poolCostMax ?? ''}
+            onChange={(e) => setPoolCostMax(e.target.value ? Number(e.target.value) : null)}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {allDisciplines.map((code) => {
+          const mode = discModes[code] ?? 'off'
+          return (
+            <button
+              key={code}
+              onClick={() => cycle(code)}
+              title={`${code}: click to require, again for superior only, again to clear`}
+              className={
+                'inline-grid h-6 min-w-9 place-items-center rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
+                (mode === 'superior'
+                  ? 'bg-gold text-[#241a06]'
+                  : mode === 'any'
+                    ? 'bg-blood text-white'
+                    : 'border border-line text-ink-dim hover:text-ink-muted')
+              }
+            >
+              {code}
+            </button>
+          )
+        })}
+        {Object.values(discModes).some((m) => m !== 'off') && (
+          <button
+            onClick={() => setDiscModes({})}
+            className="ml-1 text-xs text-ink-dim underline hover:text-ink-muted"
+          >
+            clear
+          </button>
+        )}
       </div>
 
       {status === 'loading' ? (

@@ -62,12 +62,16 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       Master, Political Action, Reaction, Retainer — Event/Power/Conviction
       not yet in the V5 pool ✎ recheck as new sets ship); exact-token matching
       verified (querying "Master" does not spuriously match "Action Modifier")
-- ☐ Discipline filter (incl. multi-discipline) — discipline data already
-      queried/displayed on results, filter control not built yet
+- ☑ Discipline filter (incl. multi-discipline) — MVP live, 3-state toggles
+      (off → required any level → superior only), require-ALL semantics;
+      ☐ still missing per-discipline level mixing (MVP applies "superior" to
+      the whole selection ✎, same as the crypt MVP)
 - ☑ Clan / Path requirement filter — MVP live
 - ☐ Sect requirement filter
 - ☐ Title requirement filter
-- ☐ Blood cost / Pool cost filters (`<=`, `>=`, `=`)
+- ☐ Blood cost / Pool cost filters (`<=`, `>=`, `=`) — partial: `<=` (max)
+      live for both costs (cards with no cost never match a cost filter);
+      `>=` and `=` modes not built yet
 - ☐ Capacity requirement filter
 - ☐ Traits: +Intercept/-Stealth, +Stealth/-Intercept, +Bleed, +Votes/Title, +Strength,
       Block Denial, Dodge, Maneuver, Additional Strike, Aggravated, Prevent, Press,
