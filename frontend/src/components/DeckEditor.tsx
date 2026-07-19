@@ -97,6 +97,12 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
     }
   }
 
+  const loadFile = async (file: File) => {
+    setText(await file.text())
+    setResult(null)
+    setOpen(true)
+  }
+
   return (
     <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -113,6 +119,19 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
         >
           {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? "Couldn't copy" : 'Copy text'}
         </button>
+        <label className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink">
+          Load .txt
+          <input
+            type="file"
+            accept=".txt,text/plain"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) loadFile(file)
+              event.target.value = ''
+            }}
+          />
+        </label>
         <button
           onClick={() => setOpen((o) => !o)}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"

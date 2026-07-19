@@ -135,8 +135,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Import: paste text, Lackey-style `"<qty>x <name>"` — live
       (core/src/dtext.rs parses; frontend resolves names against
       cards.sqlite, reports unmatched names rather than dropping them
-      silently); ☐ still missing: JOL format specifics, Amaranth link, file
-      upload (paste-only for now)
+      silently); local `.txt` file loading is also live; ☐ still missing: JOL
+      format specifics and Amaranth link import
 - ☑ Export: plain text (Lackey-style) with section headers, file download, and
       clipboard copy — live; ☐ still missing: JOL-specific format and XLSX
 - ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎

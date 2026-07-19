@@ -86,6 +86,7 @@ docs/feature-parity.md's scope note).
   and crypt sortable by capacity, clan, group, name, or quantity
 - ☑ Editable deck author/description metadata + clipboard text export; local
   user-data schema is now upgraded through the shared `migrations/` SQL set
+- ☑ Local `.txt` deck import (browser-only file read; nothing uploaded)
 - ☑ Clone deck (name + card quantities) — live in both the deck list and editor
 - ☑ Draw simulator — live (frontend/src/lib/drawHand.ts): draws a crypt hand
   of 4 / library hand of 7 respecting each card's quantity in the deck,
