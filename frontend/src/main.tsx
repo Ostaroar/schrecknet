@@ -11,3 +11,15 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 )
+
+// Register the app-shell service worker (src/sw.ts) so the PWA loads
+// offline after a first successful visit. Card data offline support is
+// handled separately by the OPFS-backed dbWorker; this only covers the
+// static JS/CSS/wasm/HTML shell.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { type: 'module' }).catch((error) => {
+      console.error('service worker registration failed', error)
+    })
+  })
+}

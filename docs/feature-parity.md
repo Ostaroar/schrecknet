@@ -27,7 +27,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Quick card search by name — ⌘K/Ctrl+K command palette, prefix-ranked,
       across both kinds, keyboard-driven (↑↓/Enter/Esc), jumps to the card page
 - ☐ Language switcher for card texts (EN/ES/FR/PT-BR) ✎
-- ☐ Responsive mobile layout + installable PWA (offline card search)
+- ☐ Responsive mobile layout
+- ☑ Installable PWA (manifest + offline app shell via hand-written service
+      worker; offline card search itself is handled separately by the
+      OPFS-backed dbWorker.ts)
 - ☐ Changelog page
 - ☐ Documentation / Help page
 - ☐ About page (credits, Dark Pack notice, related projects, donations/contacts)
