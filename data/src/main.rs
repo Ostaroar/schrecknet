@@ -24,7 +24,8 @@ CREATE TABLE cards(
   types TEXT,
   blood_cost TEXT, pool_cost TEXT, burn_option INT,
   requirement_clan TEXT, requirement_capacity TEXT, requirement_title TEXT,
-  requirement_sect TEXT
+  requirement_sect TEXT,
+  image_url TEXT
 );
 CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
 CREATE TABLE card_traits(card_id INT, trait TEXT);
@@ -83,7 +84,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '1'), ('data_version', '1'), ('scope', 'v5'),
+         ('schema_version', '1'), ('data_version', '2'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2)",
         rusqlite::params![stats.crypt.to_string(), stats.library.to_string()],
     )?;
@@ -91,7 +92,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
 
     let meta = serde_json::json!({
         "schema_version": 1,
-        "data_version": 1,
+        "data_version": 2,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

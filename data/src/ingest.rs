@@ -84,10 +84,11 @@ fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<
         "INSERT OR REPLACE INTO cards
          (id, kind, name, name_ascii, aka, card_text, clan, sect, capacity, grp, title,
           votes, adv, banned, types, blood_cost, pool_cost, burn_option,
-          requirement_clan, requirement_capacity, requirement_title, requirement_sect)
+          requirement_clan, requirement_capacity, requirement_title, requirement_sect,
+          image_url)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, ?8, ?9, ?10,
                  NULL, 0, NULL, ?11, ?12, ?13, NULL,
-                 NULL, NULL, NULL, NULL)",
+                 NULL, NULL, NULL, NULL, ?14)",
         params![
             id,
             kind,
@@ -104,6 +105,7 @@ fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<
             types_json,
             str_field(card, "blood_cost"),
             str_field(card, "pool_cost"),
+            str_field(card, "url"),
         ],
     )?;
     Ok(())
