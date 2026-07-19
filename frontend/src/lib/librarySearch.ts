@@ -8,6 +8,7 @@ import {
 } from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 import { appendLibraryRequirementFilter, type RequirementLogic } from './requirementFilter'
+import { appendTraitFilters, listCardTraits } from './cardTraits'
 
 export type TextMode = 'any' | 'name' | 'text'
 export type CostMode = 'at_most' | 'exact' | 'at_least'
@@ -34,6 +35,7 @@ export interface LibraryFilters {
   bloodCostMode: CostMode
   poolCost: number | null
   poolCostMode: CostMode
+  traits: string[]
   set: string | null
   setAge: SetAgeMode
   setPrint: SetPrintMode
@@ -62,6 +64,7 @@ export const emptyLibraryFilters: LibraryFilters = {
   bloodCostMode: 'at_most',
   poolCost: null,
   poolCostMode: 'at_most',
+  traits: [],
   set: null,
   setAge: defaultSetAge,
   setPrint: defaultSetPrint,
@@ -197,6 +200,7 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
     false,
     'title',
   )
+  sql = appendTraitFilters(sql, params, filters.traits)
   if (filters.capacityRequirement !== null) {
     params.push(filters.capacityRequirement)
     const placeholder = `?${params.length}`
@@ -241,6 +245,10 @@ export async function listLibraryDisciplines(): Promise<string[]> {
      JOIN cards c ON c.id = cd.card_id WHERE c.kind = 'library' ORDER BY cd.discipline`,
   )
   return rows.map((r) => r.discipline)
+}
+
+export async function listLibraryTraits(): Promise<string[]> {
+  return listCardTraits('library')
 }
 
 export async function listLibrarySectRequirements(): Promise<string[]> {

@@ -1639,6 +1639,7 @@ name = "schrecknet-core"
 version = "0.1.0"
 dependencies = [
  "fastembed",
+ "regex",
  "serde",
  "serde_json",
  "sha2",

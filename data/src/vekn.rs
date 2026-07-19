@@ -10,15 +10,24 @@ use serde::Deserialize;
 
 pub const SOURCE_URL: &str = "https://www.vekn.net/images/stories/downloads/vtescsv_utf8.zip";
 const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
+const LIBRARY_CARDS_MEMBER: &str = "vteslib.csv";
 const LIBRARY_MEMBER: &str = "vteslibmeta.csv";
 const CRYPT_MEMBER: &str = "vtescrypt.csv";
 
 pub type LibraryRequirements = HashMap<i64, String>;
+pub type LibraryMetadataById = HashMap<i64, LibraryMetadata>;
 pub type CryptMetadataById = HashMap<i64, CryptMetadata>;
 
 pub struct VeknMetadata {
+    pub library: LibraryMetadataById,
     pub library_requirements: LibraryRequirements,
     pub crypt: CryptMetadataById,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LibraryMetadata {
+    pub burn_option: bool,
+    pub banned: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,6 +36,16 @@ struct RequirementRow {
     id: i64,
     #[serde(rename = "Requirement")]
     requirement: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct LibraryRow {
+    #[serde(rename = "Id")]
+    id: i64,
+    #[serde(rename = "Burn Option")]
+    burn_option: String,
+    #[serde(rename = "Banned")]
+    banned: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,6 +96,10 @@ pub fn fetch_metadata(cache_dir: &Path) -> Result<VeknMetadata, Box<dyn std::err
 
 fn parse_metadata(archive: &[u8]) -> Result<VeknMetadata, Box<dyn std::error::Error>> {
     let mut zip = zip::ZipArchive::new(Cursor::new(archive))?;
+    let library = {
+        let member = zip.by_name(LIBRARY_CARDS_MEMBER)?;
+        parse_library_card_csv(member)?
+    };
     let library_requirements = {
         let member = zip.by_name(LIBRARY_MEMBER)?;
         parse_library_csv(member)?
@@ -86,9 +109,30 @@ fn parse_metadata(archive: &[u8]) -> Result<VeknMetadata, Box<dyn std::error::Er
         parse_crypt_csv(member)?
     };
     Ok(VeknMetadata {
+        library,
         library_requirements,
         crypt,
     })
+}
+
+fn parse_library_card_csv(
+    reader: impl Read,
+) -> Result<LibraryMetadataById, Box<dyn std::error::Error>> {
+    let mut metadata = LibraryMetadataById::new();
+    for row in csv::Reader::from_reader(reader).deserialize::<LibraryRow>() {
+        let row = row?;
+        metadata.insert(
+            row.id,
+            LibraryMetadata {
+                burn_option: matches!(
+                    row.burn_option.trim().to_ascii_lowercase().as_str(),
+                    "y" | "yes" | "true" | "1"
+                ),
+                banned: (!row.banned.trim().is_empty()).then(|| row.banned.trim().to_owned()),
+            },
+        );
+    }
+    Ok(metadata)
 }
 
 fn parse_library_csv(reader: impl Read) -> Result<LibraryRequirements, Box<dyn std::error::Error>> {
@@ -133,6 +177,16 @@ mod tests {
             Some("prince,justicar")
         );
         assert!(!requirements.contains_key(&100001));
+    }
+
+    #[test]
+    fn parses_official_library_burn_and_banned_flags() {
+        let csv = b"Id,Name,Burn Option,Banned\n101780,Sight Beyond Sight,Y,\n100074,Anthelios,,2016\n100001,.44 Magnum,,\n";
+        let metadata = parse_library_card_csv(csv.as_slice()).unwrap();
+        assert!(metadata[&101780].burn_option);
+        assert_eq!(metadata[&100074].banned.as_deref(), Some("2016"));
+        assert!(!metadata[&100001].burn_option);
+        assert_eq!(metadata[&100001].banned, None);
     }
 
     #[test]

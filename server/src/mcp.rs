@@ -39,8 +39,8 @@ impl SchreckNetMcp {
 
     #[tool(
         description = "Search VTES V5 crypt (vampire) cards by text, clan, sects, title, vote \
-        threshold, groups, capacity, independently leveled discipline requirements, VDB-style \
-        OR-discipline rows, and V5 set/printing history. Returns cards sorted by capacity \
+        threshold, traits, groups, capacity, independently leveled discipline requirements, \
+        VDB-style OR-discipline rows, and V5 set/printing history. Returns cards sorted by capacity \
         descending."
     )]
     async fn search_crypt(
@@ -53,7 +53,7 @@ impl SchreckNetMcp {
 
     #[tool(
         description = "Search VTES V5 library cards by text, type, discipline requirements \
-        (all/any/none/only, including no requirement), clan, sect, title, and \
+        (all/any/none/only, including no requirement), clan, sect, title, traits, \
         vampire-capacity requirements, costs, and V5 set/printing history. Returns cards \
         sorted by name."
     )]

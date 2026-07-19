@@ -19,6 +19,11 @@
     "votes": 3,
     "expected_ids": [201733, 201741, 201735, 201760]
   },
+  "crypt_traits": {
+    "rest_query": "traits=1%20bleed%2Cunlock",
+    "controls": ["+1 bleed", "Wake / Unlock"],
+    "expected_ids": [201733]
+  },
   "library": {
     "rest_query": "disciplines=pot%2Cpre&discipline_logic=only",
     "disciplines": ["pot", "pre"],
@@ -36,5 +41,50 @@
     "sect": "Anarch",
     "title": "Baron",
     "expected_ids": [102218, 102246, 101324, 102230, 101631]
+  },
+  "library_traits": {
+    "rest_query": "traits=stealth%2Ccombat%20ends",
+    "controls": ["+Stealth / -Intercept", "Combat Ends"],
+    "expected_ids": [100771, 102279, 101542]
+  },
+  "trait_counts": {
+    "crypt": {
+      "1 bleed": 13,
+      "1 intercept": 7,
+      "1 stealth": 1,
+      "1 strength": 8,
+      "aggravated": 1,
+      "enter combat": 4,
+      "hand size": 3,
+      "maneuver": 3,
+      "press": 2,
+      "prevent": 2,
+      "unlock": 8
+    },
+    "library": {
+      "additional strike": 11,
+      "aggravated": 15,
+      "bleed": 53,
+      "block denial": 20,
+      "bounce bleed": 5,
+      "burn": 1,
+      "combat ends": 12,
+      "dodge": 9,
+      "embrace": 2,
+      "enter combat": 28,
+      "intercept": 49,
+      "maneuver": 30,
+      "multi-discipline": 46,
+      "multi-type": 13,
+      "no-requirements": 112,
+      "press": 21,
+      "prevent": 22,
+      "put blood": 16,
+      "reduce bleed": 8,
+      "stealth": 50,
+      "strength": 16,
+      "unlock": 50,
+      "votes-title": 21
+    }
   }
 }

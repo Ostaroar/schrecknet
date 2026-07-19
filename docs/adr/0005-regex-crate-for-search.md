@@ -15,9 +15,10 @@ requires an ADR for a new runtime dependency; this is that ADR.
 
 ## Decision
 - Add the `regex` crate (rust-lang team, linear-time NFA-based, no catastrophic
-  backtracking, `no_std`-friendly) as a `server`-only dependency — regex *matching* is
-  generic text processing, not VTES domain logic, so it does not belong in `core/`
-  (AGENTS.md hard rule #1 is about deck/card domain rules specifically).
+  backtracking, `no_std`-friendly) to the native server and native-only core build.
+  Interactive regex matching is generic server text processing; VDB-compatible
+  trait classification is card-domain behavior and therefore lives in `core/`, but
+  is gated out of the browser target because it runs only during data ingestion.
 - Server: a rusqlite scalar function `regexp_match(pattern, text)` registered via
   `Connection::create_scalar_function`, compiling the pattern once per query
   (not per row) and reusing it across all rows via a cached-compile guard.
@@ -33,6 +34,10 @@ requires an ADR for a new runtime dependency; this is that ADR.
 - Invalid regex patterns are handled the same way on both ends: caught and reported
   back to the caller as a normal search error (empty result + message), never a
   panic/500.
+- Data pipeline: `core/src/traits.rs` ports VDB's curated trait regexes and
+  structured special cases. It classifies canonical card rows once and writes
+  indexed `card_traits`; neither browser nor server evaluates those regexes at
+  query time.
 
 ## Alternatives considered
 - **Hand-rolled regex engine**: appropriate for the base64 encoder (a fixed,
@@ -48,7 +53,9 @@ requires an ADR for a new runtime dependency; this is that ADR.
   each platform's idiomatic regex engine directly.
 
 ## Consequences
-- One new server dependency (`regex`), zero new frontend dependencies.
+- One shared native Rust dependency (`regex`) used by server search and build-time
+  core trait classification; zero new frontend dependencies and no browser-WASM
+  size impact.
 - Search UI gains a "Regex" toggle next to the existing All/Name/Text mode control,
   orthogonal to it (regex applies to whichever field(s) the mode already selects).
 - A close (but not 100%) syntax match between the two engines; documented in the UI

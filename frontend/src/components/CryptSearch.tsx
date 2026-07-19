@@ -5,6 +5,7 @@ import {
   listGroups,
   listCryptDisciplines,
   listCryptSects,
+  listCryptTraits,
   listTitles,
   listSets,
   listPrecons,
@@ -15,6 +16,7 @@ import {
 import CardDetailPanel from './CardDetailPanel'
 import SemanticModeControl from './SemanticModeControl'
 import SetFilterControls from './SetFilterControls'
+import TraitFilterControls from './TraitFilterControls'
 import {
   defaultSetAge,
   defaultSetPrint,
@@ -59,6 +61,7 @@ export default function CryptSearch() {
   const [selectedSects, setSelectedSects] = useState<string[]>([])
   const [sectLogic, setSectLogic] = useState<RequirementLogic>('all')
   const [votes, setVotes] = useState<number | null>(null)
+  const [selectedTraits, setSelectedTraits] = useState<string[]>([])
   const [selectedGroups, setSelectedGroups] = useState<number[]>([])
   const [capacityMin, setCapacityMin] = useState<number | null>(null)
   const [capacityMax, setCapacityMax] = useState<number | null>(null)
@@ -76,6 +79,7 @@ export default function CryptSearch() {
   const [sets, setSets] = useState<string[]>([])
   const [precons, setPrecons] = useState<string[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
+  const [allTraits, setAllTraits] = useState<string[]>([])
   const [results, setResults] = useState<Array<CryptCard | SemanticResult<CryptCard>>>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -94,8 +98,9 @@ export default function CryptSearch() {
       listCryptSects(),
       listSets(),
       listPrecons(),
+      listCryptTraits(),
     ])
-      .then(([c, g, d, t, sc, s, p]) => {
+      .then(([c, g, d, t, sc, s, p, tr]) => {
         setClans(c)
         setGroups(g)
         setTitles(t)
@@ -103,6 +108,7 @@ export default function CryptSearch() {
         setAllDisciplines(d)
         setSets(s)
         setPrecons(p)
+        setAllTraits(tr)
         setStatus('ready')
       })
       .catch((e: Error) => {
@@ -123,6 +129,7 @@ export default function CryptSearch() {
       sects: selectedSects,
       sectLogic,
       votes,
+      traits: selectedTraits,
       group: null,
       groups: selectedGroups,
       capacityMin,
@@ -149,6 +156,7 @@ export default function CryptSearch() {
     selectedSects,
     sectLogic,
     votes,
+    selectedTraits,
     selectedGroups,
     capacityMin,
     capacityMax,
@@ -247,6 +255,14 @@ export default function CryptSearch() {
       selected.includes(sect)
         ? selected.filter((value) => value !== sect)
         : [...selected, sect].sort(),
+    )
+  }
+
+  const toggleTrait = (trait: string) => {
+    setSelectedTraits((selected) =>
+      selected.includes(trait)
+        ? selected.filter((value) => value !== trait)
+        : [...selected, trait],
     )
   }
 
@@ -456,6 +472,12 @@ export default function CryptSearch() {
           disabled={status === 'loading'}
         />
       </div>
+
+      <TraitFilterControls
+        options={allTraits}
+        selected={selectedTraits}
+        onToggle={toggleTrait}
+      />
 
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="mr-1 text-xs text-ink-dim">Sect</span>

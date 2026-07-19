@@ -16,6 +16,8 @@ pub mod semantic;
 pub mod semantic_native;
 pub mod share;
 pub mod stats;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod traits;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm;

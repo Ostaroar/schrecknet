@@ -3,18 +3,18 @@
 //!
 //! Known gaps, left NULL rather than guessed (tracked in
 //! docs/feature-parity.md, marked ✎ for verification):
-//! - `requirement_clan`, `requirement_title`, `requirement_sect`, and
-//!   `burn_option`: legacy scalar columns superseded by normalized tables or
-//!   not yet joined from the official VEKN archive.
+//! - `requirement_clan`, `requirement_title`, and `requirement_sect`: legacy
+//!   scalar columns superseded by normalized requirement tables.
 
 use rusqlite::{params, Connection};
 use schrecknet_core::capacity::parse_capacity_requirement;
 use schrecknet_core::crypt_metadata::CryptMetadata;
 use schrecknet_core::requirements::normalize_library_requirements;
+use schrecknet_core::traits::{classify_crypt_traits, classify_library_traits, LibraryTraitFacts};
 use serde_json::Value;
 
 use crate::v5pool::{is_in_v5_pool, V5_SET_NAMES};
-use crate::vekn::{LibraryRequirements, VeknMetadata};
+use crate::vekn::{LibraryMetadata, LibraryRequirements, VeknMetadata};
 
 pub fn run(
     conn: &Connection,
@@ -27,10 +27,20 @@ pub fn run(
     for card in &pool {
         let kind = if is_crypt(card) { "crypt" } else { "library" };
         let id = card.get("id").and_then(Value::as_i64).unwrap_or_default();
-        insert_card(conn, card, kind, vekn.crypt.get(&id))?;
+        let crypt_metadata = vekn.crypt.get(&id);
+        let library_metadata = vekn.library.get(&id);
+        insert_card(conn, card, kind, crypt_metadata, library_metadata)?;
         insert_disciplines(conn, card)?;
         insert_capacity_requirement(conn, card, kind)?;
         insert_requirements(conn, card, kind, &vekn.library_requirements)?;
+        insert_traits(
+            conn,
+            card,
+            kind,
+            crypt_metadata,
+            library_metadata,
+            &vekn.library_requirements,
+        )?;
         insert_printings(conn, card)?;
         insert_artists(conn, card)?;
         insert_rulings(conn, card)?;
@@ -82,6 +92,7 @@ fn insert_card(
     card: &Value,
     kind: &str,
     crypt_metadata: Option<&CryptMetadata>,
+    library_metadata: Option<&LibraryMetadata>,
 ) -> rusqlite::Result<()> {
     let id = card.get("id").and_then(|v| v.as_i64()).unwrap_or_default();
     let name = str_field(card, "printed_name")
@@ -99,8 +110,8 @@ fn insert_card(
           requirement_clan, requirement_title, requirement_sect,
           image_url)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11,
-                 ?12, ?13, ?14, ?15, ?16, ?17, NULL,
-                 NULL, NULL, NULL, ?18)",
+                 ?12, ?13, ?14, ?15, ?16, ?17, ?18,
+                 NULL, NULL, NULL, ?19)",
         params![
             id,
             kind,
@@ -119,13 +130,75 @@ fn insert_card(
                 .or_else(|| str_field(card, "title")),
             crypt_metadata.map(|metadata| metadata.votes),
             crypt_metadata.map(|metadata| i64::from(metadata.advanced)),
-            crypt_metadata.and_then(|metadata| metadata.banned.as_deref()),
+            crypt_metadata
+                .and_then(|metadata| metadata.banned.as_deref())
+                .or_else(|| library_metadata.and_then(|metadata| metadata.banned.as_deref())),
             types_json,
             str_field(card, "blood_cost"),
             str_field(card, "pool_cost"),
+            library_metadata.map(|metadata| i64::from(metadata.burn_option)),
             str_field(card, "url"),
         ],
     )?;
+    Ok(())
+}
+
+fn insert_traits(
+    conn: &Connection,
+    card: &Value,
+    kind: &str,
+    crypt_metadata: Option<&CryptMetadata>,
+    library_metadata: Option<&LibraryMetadata>,
+    requirements: &LibraryRequirements,
+) -> rusqlite::Result<()> {
+    let id = card.get("id").and_then(Value::as_i64).unwrap_or_default();
+    let name = str_field(card, "printed_name")
+        .or_else(|| str_field(card, "name"))
+        .unwrap_or_default();
+    let text = str_field(card, "card_text").unwrap_or_default();
+    let traits = if kind == "crypt" {
+        classify_crypt_traits(
+            name,
+            text,
+            crypt_metadata.is_some_and(|metadata| metadata.advanced),
+            crypt_metadata.is_some_and(|metadata| metadata.banned.is_some()),
+        )
+    } else {
+        let type_count = card
+            .get("types")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        let discipline_count = card
+            .get("disciplines")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        // Preserve VDB's exact No Requirement special case: its historical
+        // predicate checks Clan but not the separate Path field.
+        let has_clan = card
+            .get("clans")
+            .and_then(Value::as_array)
+            .is_some_and(|values| !values.is_empty());
+        let has_requirements = requirements.contains_key(&id)
+            || discipline_count > 0
+            || has_clan
+            || text.to_ascii_lowercase().contains("requires a");
+        classify_library_traits(
+            text,
+            LibraryTraitFacts {
+                type_count,
+                discipline_count,
+                burn_option: library_metadata.is_some_and(|metadata| metadata.burn_option),
+                banned: library_metadata.is_some_and(|metadata| metadata.banned.is_some()),
+                has_requirements,
+            },
+        )
+    };
+    for trait_name in traits {
+        conn.execute(
+            "INSERT INTO card_traits (card_id, trait) VALUES (?1, ?2)",
+            params![id, trait_name],
+        )?;
+    }
     Ok(())
 }
 
@@ -376,7 +449,7 @@ mod tests {
             advanced: true,
             banned: Some("Banned".into()),
         };
-        insert_card(&conn, &card, "crypt", Some(&metadata)).unwrap();
+        insert_card(&conn, &card, "crypt", Some(&metadata), None).unwrap();
 
         let stored: (String, String, i64, i64, String) = conn
             .query_row(
@@ -397,6 +470,60 @@ mod tests {
             stored,
             ("Sabbat".into(), "Cardinal".into(), 3, 1, "Banned".into())
         );
+    }
+
+    #[test]
+    fn vdb_traits_and_official_library_flags_are_inserted() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE cards(
+               id INT, kind TEXT, name TEXT, name_ascii TEXT, aka TEXT, card_text TEXT,
+               clan TEXT, sect TEXT, capacity INT, grp INT, title TEXT, votes INT,
+               adv INT, banned TEXT, types TEXT, blood_cost TEXT, pool_cost TEXT,
+               burn_option INT, requirement_clan TEXT, requirement_title TEXT,
+               requirement_sect TEXT, image_url TEXT);
+             CREATE TABLE card_traits(card_id INT, trait TEXT);",
+        )
+        .unwrap();
+        let card = json!({
+            "id": 101780,
+            "name": "Sight Beyond Sight",
+            "card_text": "+1 intercept. This card can be used to prevent damage.",
+            "types": ["Reaction"],
+            "disciplines": ["aus"]
+        });
+        let metadata = LibraryMetadata {
+            burn_option: true,
+            banned: None,
+        };
+        insert_card(&conn, &card, "library", None, Some(&metadata)).unwrap();
+        insert_traits(
+            &conn,
+            &card,
+            "library",
+            None,
+            Some(&metadata),
+            &LibraryRequirements::new(),
+        )
+        .unwrap();
+
+        let burn_option: i64 = conn
+            .query_row("SELECT burn_option FROM cards WHERE id=101780", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(burn_option, 1);
+        let traits = conn
+            .prepare("SELECT trait FROM card_traits WHERE card_id=101780 ORDER BY trait")
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert!(traits.contains(&"burn".into()));
+        assert!(traits.contains(&"intercept".into()));
+        assert!(traits.contains(&"prevent".into()));
+        assert!(!traits.contains(&"no-requirements".into()));
     }
 
     #[test]

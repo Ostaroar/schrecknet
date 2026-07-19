@@ -1,8 +1,6 @@
 // Crypt search query builder — mirrors server/src/cards_db.rs::search_crypt
 // exactly (same filters, same dynamically-built EXISTS clauses per required
-// discipline) so the browser and server agree. Remaining vdb filter families
-// (traits — docs/feature-parity.md) land incrementally behind
-// this same query() seam.
+// discipline and trait) so the browser and server agree.
 
 import { query } from './db'
 import {
@@ -11,6 +9,7 @@ import {
 } from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 import type { RequirementLogic } from './requirementFilter'
+import { appendTraitFilters, listCardTraits } from './cardTraits'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
@@ -24,6 +23,7 @@ export interface CryptFilters {
   sects: string[]
   sectLogic: RequirementLogic
   votes: number | null
+  traits: string[]
   group: number | null
   groups: number[]
   capacityMin: number | null
@@ -48,6 +48,7 @@ export const emptyCryptFilters: CryptFilters = {
   sects: [],
   sectLogic: 'all',
   votes: null,
+  traits: [],
   group: null,
   groups: [],
   capacityMin: null,
@@ -210,6 +211,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     sql += ` AND c.grp IN (${placeholders.join(',')})`
   }
   sql = appendCryptSectFilter(sql, params, filters.sects, filters.sectLogic)
+  sql = appendTraitFilters(sql, params, filters.traits)
   sql = appendDisciplineFilters(
     sql,
     params,
@@ -245,6 +247,10 @@ export async function listCryptSects(): Promise<string[]> {
      WHERE kind = 'crypt' AND sect IS NOT NULL AND sect != '' ORDER BY sect`,
   )
   return rows.map((r) => r.sect)
+}
+
+export async function listCryptTraits(): Promise<string[]> {
+  return listCardTraits('crypt')
 }
 
 export async function listGroups(): Promise<number[]> {

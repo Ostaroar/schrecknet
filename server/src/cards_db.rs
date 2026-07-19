@@ -43,6 +43,10 @@ pub struct CryptSearchParams {
     /// `4` mean at least that many votes.
     #[serde(default)]
     pub votes: Option<i64>,
+    /// VDB-compatible precomputed trait tokens. Every selected trait must
+    /// match. REST accepts CSV; MCP accepts an array.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub traits: Vec<String>,
     /// Crypt group (V5 pool is limited to groups 5-7).
     #[serde(default)]
     pub group: Option<i64>,
@@ -248,7 +252,11 @@ where
         Csv(String),
     }
     Ok(match ListOrCsv::deserialize(deserializer)? {
-        ListOrCsv::List(list) => list,
+        ListOrCsv::List(list) => list
+            .into_iter()
+            .map(|value| value.trim().to_lowercase())
+            .filter(|value| !value.is_empty())
+            .collect(),
         ListOrCsv::Csv(csv) => csv
             .split(',')
             .map(|s| s.trim().to_lowercase())
@@ -453,6 +461,10 @@ pub struct LibrarySearchParams {
     /// Comparison applied to `pool_cost` (at_most, exact, or at_least).
     #[serde(default)]
     pub pool_cost_mode: CostMode,
+    /// VDB-compatible precomputed trait tokens. Every selected trait must
+    /// match. REST accepts CSV; MCP accepts an array.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub traits: Vec<String>,
     /// Selected set name (e.g. "Fifth Edition"); `set_age` and `set_print`
     /// control how the card's V5 print history is compared with it.
     #[serde(default)]
@@ -766,6 +778,21 @@ fn push_crypt_sect_filter(
     sql.push(')');
 }
 
+fn push_trait_filters(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    traits: &[String],
+) {
+    for trait_name in traits {
+        sql.push_str(&format!(
+            " AND EXISTS (SELECT 1 FROM card_traits ct
+                WHERE ct.card_id = c.id AND ct.trait = ?{})",
+            bound.len() + 1
+        ));
+        bound.push(Box::new(trait_name.clone()));
+    }
+}
+
 pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
@@ -871,6 +898,7 @@ fn search_crypt_inner(
     ];
     push_group_filter(&mut sql, &mut bound, &params.groups);
     push_crypt_sect_filter(&mut sql, &mut bound, &params.sects, params.sect_logic);
+    push_trait_filters(&mut sql, &mut bound, &params.traits);
     for requirement in effective_discipline_requirements(
         &params.discipline_requirements,
         &params.disciplines,
@@ -1034,6 +1062,7 @@ fn search_library_inner(
         false,
         "title",
     );
+    push_trait_filters(&mut sql, &mut bound, &params.traits);
     if let Some(capacity) = params.capacity_requirement {
         let (column, operator) = match params.capacity_requirement_mode {
             CapacityRequirementMode::AtMost => ("max_capacity", "<="),
@@ -1148,6 +1177,7 @@ mod tests {
              CREATE TABLE card_requirements(
                card_id INT, requirement TEXT, kind TEXT,
                PRIMARY KEY(card_id, requirement));
+             CREATE TABLE card_traits(card_id INT, trait TEXT);
              CREATE TABLE sets(id INT, name TEXT, release_date TEXT);
              CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
              CREATE TABLE artists(id INT, name TEXT);
@@ -1159,6 +1189,9 @@ mod tests {
                (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL,NULL,NULL),
                (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL);
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);
+             INSERT INTO card_traits VALUES
+               (1,'1 bleed'),(1,'unlock'),(2,'maneuver'),
+               (3,'no-requirements'),(4,'multi-type'),(4,'multi-discipline');
              INSERT INTO sets VALUES
                (1,'Fifth Edition','2020-11-30'),
                (2,'Anarch Revolt','2021-12-01');
@@ -1499,7 +1532,7 @@ mod tests {
             r#"{"sects":["Camarilla"],"sect_logic":"none","title":"non-titled","votes":0}"#,
         )
         .unwrap();
-        assert_eq!(mcp.sects, vec!["Camarilla"]);
+        assert_eq!(mcp.sects, vec!["camarilla"]);
         assert_eq!(mcp.sect_logic, RequirementLogic::None);
         assert_eq!(mcp.title.as_deref(), Some("non-titled"));
         assert_eq!(mcp.votes, Some(0));
@@ -2439,6 +2472,59 @@ mod tests {
             ..Default::default()
         };
         assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn crypt_trait_filters_require_every_selected_trait() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let one = CryptSearchParams {
+            traits: vec!["1 bleed".into()],
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &one).unwrap()[0].name, "Aaradhya");
+
+        let all = CryptSearchParams {
+            traits: vec!["1 bleed".into(), "unlock".into()],
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &all).unwrap()[0].name, "Aaradhya");
+
+        let impossible = CryptSearchParams {
+            traits: vec!["1 bleed".into(), "maneuver".into()],
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &impossible).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_trait_filters_and_rest_mcp_shapes_match() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let multi = LibrarySearchParams {
+            traits: vec!["multi-type".into(), "multi-discipline".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &multi).unwrap()[0].name,
+            "Absolute Tyranny"
+        );
+
+        let no_requirements = LibrarySearchParams {
+            traits: vec!["no-requirements".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &no_requirements).unwrap()[0].name,
+            "Villein"
+        );
+
+        let rest: CryptSearchParams =
+            serde_urlencoded::from_str("traits=1%20bleed%2Cunlock").unwrap();
+        assert_eq!(rest.traits, vec!["1 bleed", "unlock"]);
+        let mcp: LibrarySearchParams =
+            serde_json::from_str(r#"{"traits":["Burn","no-requirements"]}"#).unwrap();
+        assert_eq!(mcp.traits, vec!["burn", "no-requirements"]);
     }
 
     #[test]

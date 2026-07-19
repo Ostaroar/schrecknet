@@ -64,9 +64,14 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       all three surfaces. The generic 1-vote/2-vote titles remain supported by
       normalization/listing if they enter V5; current V5 titles are Archbishop,
       Baron, Bishop, Cardinal, Justicar, Primogen, Prince, and Priscus ✎
-- ☐ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
+- ☑ Traits: +1 intercept, +1 stealth, +1 bleed, +2 bleed, +1 strength, +2 strength,
       Maneuver, Additional Strike, Aggravated, Prevent, Press, Enter combat, Unlock,
-      Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement, Banned
+      Black Hand, Seraph, Infernal, Red List, Flight, Hand Size, Advancement, Banned.
+      VDB's exact text regexes and structured Advancement/Banned cases run once
+      in shared native Rust during ingestion; selections are ANDed on browser,
+      REST, MCP, and semantic search. Options with no V5 matches are omitted
+      (11 currently render); real-VEKN per-trait counts and compositions are
+      golden-tested ✎
 - ☑ Set filter: single selected set plus independent release-age modes
       (In Set / Or Newer / Or Older / Not Newer / Not Older) and printing
       modes (Any / Only In / First Print / Reprint), on browser, REST, and
@@ -110,11 +115,16 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       ingestion matches vdb's four same-line forms (`less than N`, `N or less`,
       `N or more`, `above N`) and stores inclusive min/max bounds; a real-V5
       golden rejects cross-line false positives ✎
-- ☐ Traits: +Intercept/-Stealth, +Stealth/-Intercept, +Bleed, +Votes/Title, +Strength,
+- ☑ Traits: +Intercept/-Stealth, +Stealth/-Intercept, +Bleed, +Votes/Title, +Strength,
       Block Denial, Dodge, Maneuver, Additional Strike, Aggravated, Prevent, Press,
       Combat Ends, Multi-Type, Multi-Discipline, Enter Combat, Create Vampire,
       Blood to Uncontrolled, Bounce Bleed, Reduce Bleed, Wake/Unlock, Black Hand,
-      Seraph, Infernal, Burn Option, Banned, No Requirement
+      Seraph, Infernal, Burn Option, Banned, No Requirement. Same shared build-time
+      classifier and all-selected AND behavior as crypt; Multi-Type,
+      Multi-Discipline, Burn Option, Banned, and No Requirement use VDB's structured
+      fields rather than text guesses. The official VEKN library CSV supplies Burn
+      Option/Banned (23 traits currently render; Sight Beyond Sight is the current
+      V5 Burn Option card) ✎
 - ☑ Set / Precon / Artist filters (same as crypt): full set age/printing
       modes plus precon and artist matching on all three surfaces
 
@@ -208,8 +218,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with
       update script (original updates via `misc/` scripts) — `schrecknet-data build`
       fetches KRCG's `vtes.json`, filters to the V5 pool (`data/src/v5pool.rs`),
-      joins VEKN's official crypt metadata and normalized library requirements, and populates
-      cards/disciplines/requirements/printings/artists/rulings/translations/FTS.
+      joins VEKN's official crypt metadata, library Burn Option/Banned flags, and
+      normalized requirements, then populates cards/disciplines/requirements/
+      traits/printings/artists/rulings/translations/FTS.
       ✎ still missing: full canonical-text cross-check against VEKN, incremental/
       diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)

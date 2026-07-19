@@ -25,8 +25,10 @@ checklist) — applied to the V5 pool.
 
 ## Status
 
-🚧 Planning/bootstrap. See [docs/roadmap.md](docs/roadmap.md) for phases and
-[docs/architecture.md](docs/architecture.md) for the system design.
+🚧 Active development. Offline V5 card search—including exact, regex, semantic,
+and VDB-compatible structured/trait filters—is complete across browser, REST, and
+MCP; deck-building parity is in progress. See [docs/roadmap.md](docs/roadmap.md)
+for phases and [docs/architecture.md](docs/architecture.md) for the system design.
 
 ## Documentation
 

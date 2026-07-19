@@ -201,6 +201,22 @@ try {
   await page.getByLabel('Votes', { exact: true }).selectOption(String(cryptMetadataFixture.votes))
   await waitForExactIds(cryptMetadataFixture.expected_ids)
 
+  // Trait tokens are classified at build time by shared Rust using VDB's
+  // original regex/special-field rules. Multiple selected traits are ANDed.
+  const cryptTraitsFixture = searchFixture.crypt_traits
+  const cryptTraitsRest = await exactRestSearch('crypt', cryptTraitsFixture.rest_query)
+  assert.deepEqual(
+    cryptTraitsRest.map((card) => card.id),
+    cryptTraitsFixture.expected_ids,
+    'crypt trait composition REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  for (const trait of cryptTraitsFixture.controls) {
+    await page.getByLabel(`Trait ${trait}`, { exact: true }).click()
+  }
+  await waitForExactIds(cryptTraitsFixture.expected_ids)
+
   await page.getByRole('button', { name: 'library search', exact: true }).click()
   await page.waitForFunction(() => location.hash === '#/library')
   await page.getByPlaceholder('Name / text').waitFor()
@@ -259,6 +275,30 @@ try {
     .getByLabel(`Title requirement ${requirementFixture.title}`, { exact: true })
     .click()
   await waitForExactIds(requirementFixture.expected_ids)
+
+  const libraryTraitsFixture = searchFixture.library_traits
+  const libraryTraitsRest = await exactRestSearch('library', libraryTraitsFixture.rest_query)
+  assert.deepEqual(
+    libraryTraitsRest.map((card) => card.id),
+    libraryTraitsFixture.expected_ids,
+    'library trait composition REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  for (const trait of libraryTraitsFixture.controls) {
+    await page.getByLabel(`Trait ${trait}`, { exact: true }).click()
+  }
+  await waitForExactIds(libraryTraitsFixture.expected_ids)
+
+  // Independent VDB-source oracle snapshot: every currently emitted trait
+  // keeps its exact V5 cardinality, catching classifier or source drift even
+  // when a representative multi-trait composition remains unchanged.
+  for (const [kind, counts] of Object.entries(searchFixture.trait_counts)) {
+    for (const [trait, expectedCount] of Object.entries(counts)) {
+      const rows = await exactRestSearch(kind, `traits=${encodeURIComponent(trait)}`)
+      assert.equal(rows.length, expectedCount, `${kind} trait count drifted: ${trait}`)
+    }
+  }
 
   // The semantic golden queries intentionally start with no structured
   // filters. Reload to discard the exact-search component state above while

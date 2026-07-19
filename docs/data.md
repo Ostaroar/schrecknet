@@ -3,8 +3,9 @@
 ## Sources (all community/official, same as vdb)
 
 - **VEKN official card lists** — canonical CSV bundle; `vtescrypt.csv` supplies
-  crypt sect/title/vote/advancement/banned metadata and `vteslibmeta.csv` supplies
-  normalized library requirements used by VDB's sect/title filters
+  crypt sect/title/vote/advancement/banned metadata, `vteslib.csv` supplies
+  library Burn Option/Banned flags, and `vteslibmeta.csv`
+  supplies normalized library requirements used by VDB's sect/title filters
 - **KRCG static files** (`static.krcg.org`) — normalized card JSON, rulings database,
   card name index, set/precon metadata
 - **Card images** — Black Chantry / Dark Pack assets; legacy scans (VTES.PL, CCGAMEZ)
@@ -116,10 +117,13 @@ that survive the V5-pool ingest. Consequently, "first print" means first V5
 printing in SchreckNet, never an older classic-era printing that is outside the
 site's scope.
 
-Trait flags (`card_traits`) are precomputed by the pipeline with the same regex/rules
-vdb uses (e.g. "+1 bleed", "bounce bleed", "enter combat") so client filters are pure
-indexed lookups — port these rules from vdb's search code and golden-test them against
-vdb.im results.
+Trait flags (`card_traits`) are precomputed by native shared Rust with VDB's exact
+`traitsRegexMaps.js`/`missingTrait` rules (including structured Multi-Type,
+Multi-Discipline, Advancement, Burn Option, Banned, and No Requirement cases), so
+client filters are pure indexed lookups. KRCG's `Ⓓ` directed-action glyph is
+normalized to VEKN/VDB's `(D)` exclusion semantics. The real-data smoke suite locks
+every positive trait's V5 cardinality and exact representative AND-compositions;
+an independent source-oracle comparison covers all 662 current cards.
 
 ## User data
 

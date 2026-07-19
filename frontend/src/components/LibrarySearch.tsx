@@ -6,6 +6,7 @@ import {
   listLibraryDisciplines,
   listLibrarySectRequirements,
   listLibraryTitleRequirements,
+  listLibraryTraits,
   listSets,
   listPrecons,
   emptyLibraryFilters,
@@ -17,6 +18,7 @@ import {
 import CardDetailPanel from './CardDetailPanel'
 import SemanticModeControl from './SemanticModeControl'
 import SetFilterControls from './SetFilterControls'
+import TraitFilterControls from './TraitFilterControls'
 import {
   defaultSetAge,
   defaultSetPrint,
@@ -176,6 +178,7 @@ export default function LibrarySearch() {
   const [bloodCostMode, setBloodCostMode] = useState<CostMode>('at_most')
   const [poolCost, setPoolCost] = useState<number | null>(null)
   const [poolCostMode, setPoolCostMode] = useState<CostMode>('at_most')
+  const [selectedTraits, setSelectedTraits] = useState<string[]>([])
   const [set, setSet] = useState<string | null>(null)
   const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
   const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
@@ -188,6 +191,7 @@ export default function LibrarySearch() {
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [allSectRequirements, setAllSectRequirements] = useState<string[]>([])
   const [allTitleRequirements, setAllTitleRequirements] = useState<string[]>([])
+  const [allTraits, setAllTraits] = useState<string[]>([])
   const [results, setResults] = useState<Array<LibraryCard | SemanticResult<LibraryCard>>>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -204,8 +208,9 @@ export default function LibrarySearch() {
       listLibraryTitleRequirements(),
       listSets(),
       listPrecons(),
+      listLibraryTraits(),
     ])
-      .then(([t, c, d, sr, tr, s, p]) => {
+      .then(([t, c, d, sr, tr, s, p, traits]) => {
         setTypes(t)
         setClans(c)
         setAllDisciplines(d)
@@ -213,6 +218,7 @@ export default function LibrarySearch() {
         setAllTitleRequirements(tr)
         setSets(s)
         setPrecons(p)
+        setAllTraits(traits)
         setStatus('ready')
       })
       .catch((e: Error) => {
@@ -245,6 +251,7 @@ export default function LibrarySearch() {
       bloodCostMode,
       poolCost,
       poolCostMode,
+      traits: selectedTraits,
       set,
       setAge,
       setPrint,
@@ -271,6 +278,7 @@ export default function LibrarySearch() {
     bloodCostMode,
     poolCost,
     poolCostMode,
+    selectedTraits,
     set,
     setAge,
     setPrint,
@@ -286,6 +294,14 @@ export default function LibrarySearch() {
       const next: DisciplineMode = m[code] === 'selected' ? 'off' : 'selected'
       return { ...m, [code]: next }
     })
+  }
+
+  const toggleTrait = (trait: string) => {
+    setSelectedTraits((selected) =>
+      selected.includes(trait)
+        ? selected.filter((value) => value !== trait)
+        : [...selected, trait],
+    )
   }
 
   useEffect(() => {
@@ -640,6 +656,12 @@ export default function LibrarySearch() {
         }
         onLogicChange={setTitleRequirementLogic}
         onClear={() => setTitleRequirements({})}
+      />
+
+      <TraitFilterControls
+        options={allTraits}
+        selected={selectedTraits}
+        onToggle={toggleTrait}
       />
 
       {status === 'loading' ? (

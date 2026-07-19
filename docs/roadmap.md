@@ -60,7 +60,11 @@ docs/feature-parity.md's scope note).
   pool-derived All/Any/Not sect controls, VDB's None/1+/2+/3+/4+ vote semantics,
   and Non-titled agree across browser, REST, MCP, semantic filtering, and a
   real-V5 golden
-- ☐ Remaining crypt and library filters: traits
+- ☑ Crypt + library traits: VDB's regex maps and structured special cases are
+  ported to shared native Rust and precomputed into indexed `card_traits` rows;
+  pool-derived controls, REST/MCP arrays, semantic candidate filtering, exact
+  multi-trait result sets, and all current per-trait counts agree with the
+  original source over all 662 V5 cards
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
@@ -96,11 +100,11 @@ docs/feature-parity.md's scope note).
   cards' clan *requirement* wrongly nulled — both fixed with regression tests)
 - ☑ MCP resources: `card://{id}` template and `db://cards/meta`; routed card
   detail page with shareable deep links is also live
-- ✎ Known data gap to close before Phase 1 is "done": library `burn_option`
-  remains NULL. Crypt `sect`, `title`, `votes`, `adv`, and `banned` now come
-  from official VEKN metadata with complete V5-id coverage. Legacy scalar
-  `requirement_*` columns remain NULL; capacity and official sect/title
-  requirements live in normalized `card_capacity_requirements` and
+- ☑ Official metadata columns are complete for the V5 pool: crypt `sect`,
+  `title`, `votes`, `adv`, and `banned`, plus library `burn_option` and `banned`,
+  come from VEKN CSV rows with complete id coverage. Legacy scalar
+  `requirement_*` columns remain intentionally NULL; capacity and official
+  sect/title requirements live in normalized `card_capacity_requirements` and
   `card_requirements` tables
 - 🐛 Fixed (found building the Phase 2 precon browser, data_version bumped to
   3 to force OPFS re-download): `printings`/`sets` were storing a card's

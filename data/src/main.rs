@@ -42,6 +42,7 @@ CREATE TABLE card_requirements(
   PRIMARY KEY(card_id, requirement)
 ) WITHOUT ROWID;
 CREATE TABLE card_traits(card_id INT, trait TEXT);
+CREATE INDEX card_traits_card_trait_idx ON card_traits(card_id, trait);
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
@@ -88,7 +89,8 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("krcg: {} total cards fetched", all_cards.len());
     let vekn_metadata = vekn::fetch_metadata(&cache_dir)?;
     eprintln!(
-        "vekn: {} library requirement rows and {} crypt metadata rows fetched",
+        "vekn: {} library card rows, {} library requirement rows, and {} crypt metadata rows fetched",
+        vekn_metadata.library.len(),
         vekn_metadata.library_requirements.len(),
         vekn_metadata.crypt.len()
     );
@@ -121,6 +123,26 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         ))
         .into());
     }
+    let library_metadata_cards: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM cards WHERE kind='library' AND burn_option IS NOT NULL",
+        [],
+        |row| row.get(0),
+    )?;
+    if library_metadata_cards != i64::from(stats.library) {
+        return Err(std::io::Error::other(format!(
+            "VEKN metadata covered {library_metadata_cards} of {} V5 library cards",
+            stats.library
+        ))
+        .into());
+    }
+    let (trait_cards, trait_rows): (i64, i64) = conn.query_row(
+        "SELECT COUNT(DISTINCT card_id), COUNT(*) FROM card_traits",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    if trait_rows == 0 {
+        return Err(std::io::Error::other("VDB trait classification produced no rows").into());
+    }
     let languages = available_languages(&conn)?;
     let semantic_model = semantic::prepare_model(&cache_dir, &out_dir)?;
     let embedding_count = semantic::embed_cards(&conn, &semantic_model)?;
@@ -133,7 +155,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '6'), ('data_version', '7'), ('scope', 'v5'),
+         ('schema_version', '6'), ('data_version', '8'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -153,11 +175,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // tables; v4: added card_embeddings for local semantic search; v5:
         // normalized derived library capacity requirements into their own table;
         // v6: added normalized official VEKN requirement tokens).
-        // data_version changes whenever emitted content changes (v7 fills
-        // crypt sect/title/vote/advancement/banned columns from official VEKN
-        // metadata; v6 added library sect/title requirement rows).
+        // data_version changes whenever emitted content changes (v8 fills
+        // card_traits plus official library Burn Option/Banned; v7 filled
+        // crypt sect/title/vote/advancement/banned columns).
         "schema_version": 6,
-        "data_version": 7,
+        "data_version": 8,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
@@ -183,6 +205,13 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         "vekn_source": vekn::SOURCE_URL,
         "crypt_metadata": {
             "cards": crypt_metadata_cards,
+        },
+        "library_metadata": {
+            "cards": library_metadata_cards,
+        },
+        "traits": {
+            "cards": trait_cards,
+            "rows": trait_rows,
         },
         "requirements": {
             "cards": requirement_cards,
