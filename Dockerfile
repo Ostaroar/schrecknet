@@ -1,7 +1,11 @@
 # Multi-stage build -> single small image: server binary + frontend + cards.sqlite.
 
 # --- stage 1: rust workspace -> server + data binaries, card database, core.wasm ---
-FROM rust:1-bookworm AS rust-build
+# fastembed's pinned ONNX Runtime archive references glibc's C23 conversion
+# symbols, which are not available in Debian 12/bookworm. Keep the native
+# builder and final runtime on Debian 13 together so link- and run-time libc
+# contracts match.
+FROM rust:1-trixie AS rust-build
 WORKDIR /src
 RUN rustup target add wasm32-unknown-unknown && \
     curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -27,7 +31,7 @@ COPY --from=rust-build /out/models public/models
 RUN npm run build
 
 # --- final image ---
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/cc-debian13
 WORKDIR /app
 COPY --from=rust-build /src/target/release/schrecknet-server /app/server
 COPY --from=rust-build /out/cards.sqlite /app/data/cards.sqlite
