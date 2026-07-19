@@ -4,6 +4,7 @@ import {
   getDeckCardDetails,
   setCardQty,
   renameDeck,
+  updateDeckMetadata,
   deleteDeck,
   cloneDeck,
   buildShareUrl,
@@ -64,6 +65,7 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
   const [text, setText] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [importing, setImporting] = useState(false)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
 
   const doExport = async () => {
     const content = await exportDeckText(deckId)
@@ -85,6 +87,16 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
     onImported()
   }
 
+  const doCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(await exportDeckText(deckId))
+      setCopyStatus('copied')
+      setTimeout(() => setCopyStatus('idle'), 2000)
+    } catch {
+      setCopyStatus('error')
+    }
+  }
+
   return (
     <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -94,6 +106,12 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
         >
           Export .txt
+        </button>
+        <button
+          onClick={doCopy}
+          className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
+        >
+          {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? "Couldn't copy" : 'Copy text'}
         </button>
         <button
           onClick={() => setOpen((o) => !o)}
@@ -384,6 +402,8 @@ export default function DeckEditor({ id }: { id: number }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const [error, setError] = useState('')
   const [nameDraft, setNameDraft] = useState('')
+  const [authorDraft, setAuthorDraft] = useState('')
+  const [descriptionDraft, setDescriptionDraft] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const [cryptSort, setCryptSort] = useState<CryptSort>('capacity')
 
@@ -396,6 +416,8 @@ export default function DeckEditor({ id }: { id: number }) {
       }
       setDeck(d)
       setNameDraft(d.name)
+      setAuthorDraft(d.author ?? '')
+      setDescriptionDraft(d.description ?? '')
       setCards(c)
       setStats(await computeDeckStats(c))
       setStatus('ready')
@@ -419,6 +441,19 @@ export default function DeckEditor({ id }: { id: number }) {
   const changeQty = async (cardId: number, qty: number) => {
     await setCardQty(id, cardId, qty)
     refresh()
+  }
+
+  const saveMetadata = async () => {
+    await updateDeckMetadata(id, authorDraft, descriptionDraft)
+    setDeck((current) =>
+      current
+        ? {
+            ...current,
+            author: authorDraft.trim() || null,
+            description: descriptionDraft.trim() || null,
+          }
+        : current,
+    )
   }
 
   const cryptCards = useMemo(() => cards.filter((c) => c.kind === 'crypt'), [cards])
@@ -484,6 +519,23 @@ export default function DeckEditor({ id }: { id: number }) {
         >
           Delete deck
         </button>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-[minmax(12rem,0.35fr)_1fr]">
+        <input
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+          placeholder="Author"
+          value={authorDraft}
+          onChange={(event) => setAuthorDraft(event.target.value)}
+          onBlur={saveMetadata}
+        />
+        <textarea
+          className="min-h-10 resize-y rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+          placeholder="Deck description, strategy, or notes…"
+          value={descriptionDraft}
+          onChange={(event) => setDescriptionDraft(event.target.value)}
+          onBlur={saveMetadata}
+        />
       </div>
 
       <TagChips deckId={id} />

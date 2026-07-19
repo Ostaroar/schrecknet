@@ -6,6 +6,7 @@ mod api;
 mod card_detail;
 mod cards_db;
 mod mcp;
+mod user_db;
 
 use axum::{routing::get, Json, Router};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
@@ -26,6 +27,7 @@ fn env_or(key: &str, default: &str) -> String {
 async fn main() {
     let static_dir = env_or("SCHRECKNET_STATIC_DIR", "frontend/dist");
     let data_dir = env_or("SCHRECKNET_DATA_DIR", "dist");
+    let app_db = env_or("SCHRECKNET_APP_DB", "dist/app.sqlite");
     let bind = env_or("SCHRECKNET_BIND", "0.0.0.0:8000");
     let index = format!("{static_dir}/index.html");
 
@@ -39,6 +41,8 @@ async fn main() {
             .expect("run MCP stdio transport");
         return;
     }
+
+    user_db::migrate(&app_db).expect("migrate app database");
 
     let state = AppState {
         data_dir: data_dir.clone(),

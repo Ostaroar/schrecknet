@@ -115,8 +115,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       router in frontend/src/lib/route.ts; no router dep, per AGENTS.md rule 7)
 
 ## Deck Building (`/decks`)
-- ☑ Create / rename / delete decks — MVP live, local (anonymous, OPFS-only, no
-      account); ☐ author/description fields not yet exposed in the UI
+- ☑ Create / rename / delete decks — live, local (anonymous, OPFS-only, no
+      account), including editable author and description metadata
 - ☑ Crypt & library sections with quantity steppers — live
       (frontend/src/components/DeckEditor.tsx); library cards are grouped by
       canonical type combination and crypt cards can be sorted by capacity,
@@ -137,8 +137,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       cards.sqlite, reports unmatched names rather than dropping them
       silently); ☐ still missing: JOL format specifics, Amaranth link, file
       upload (paste-only for now)
-- ☑ Export: plain text (Lackey-style) with section headers, file download —
-      live; ☐ still missing: JOL-specific format, XLSX, clipboard copy
+- ☑ Export: plain text (Lackey-style) with section headers, file download, and
+      clipboard copy — live; ☐ still missing: JOL-specific format and XLSX
 - ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎
 - ☑ Draw simulator / test hand — live: crypt draw 4 / library draw 7,
       redrawable, respects each card's quantity in the deck

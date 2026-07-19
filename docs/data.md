@@ -67,5 +67,8 @@ vdb.im results.
 ## User data
 
 - Browser (`user.sqlite` in OPFS) and server (`app.sqlite`) share one migration set:
-  `users`, `decks`, `deck_cards`, `deck_branches`, `inventory`. Written via the same
-  typed data-access layer in `core/`.
+  the ordered SQL files under `migrations/`. The browser migration runner is in
+  `frontend/src/lib/userDbWorker.ts`; `server/src/user_db.rs` applies the same
+  files to `app.sqlite` at startup. Current tables are `decks`, `deck_cards`, and
+  `deck_tags`; `users`, `deck_branches`, and `inventory` arrive with their owning
+  features.

@@ -69,19 +69,28 @@ export default function DeckList() {
             <div key={d.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
               <button
                 onClick={() => navigate({ page: 'deck', id: d.id })}
-                className="flex flex-1 items-center gap-2 truncate text-left hover:text-blood-hi"
+                className="grid min-w-0 flex-1 gap-0.5 text-left hover:text-blood-hi"
               >
-                <span className="truncate">{d.name}</span>
-                {d.tags.length > 0 && (
-                  <span className="flex shrink-0 gap-1">
-                    {d.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded-full border border-line bg-raised px-1.5 py-0.5 text-[10px] text-ink-dim"
-                      >
-                        {t}
-                      </span>
-                    ))}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">{d.name}</span>
+                  {d.tags.length > 0 && (
+                    <span className="flex shrink-0 gap-1">
+                      {d.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-full border border-line bg-raised px-1.5 py-0.5 text-[10px] text-ink-dim"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </span>
+                {(d.author || d.description) && (
+                  <span className="truncate text-xs text-ink-dim">
+                    {d.author && <>by {d.author}</>}
+                    {d.author && d.description && ' · '}
+                    {d.description}
                   </span>
                 )}
               </button>

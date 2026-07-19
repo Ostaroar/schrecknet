@@ -9,6 +9,8 @@
 //   in:  { id, kind: 'run', sql, params }             → { id, ok, lastInsertRowid?, changes?, error? }
 
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm'
+import migration001 from '../../../migrations/0001_user_data.sql?raw'
+import migration002 from '../../../migrations/0002_deck_author.sql?raw'
 
 type OpenMsg = { id: number; kind: 'open' }
 type QueryMsg = { id: number; kind: 'query'; sql: string; params: (string | number | null)[] }
@@ -16,27 +18,7 @@ type RunMsg = { id: number; kind: 'run'; sql: string; params: (string | number |
 type InMsg = OpenMsg | QueryMsg | RunMsg
 
 const DB_NAME = '/user.sqlite'
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS decks(
-  id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS deck_cards(
-  deck_id INTEGER NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
-  card_id INTEGER NOT NULL,
-  qty INTEGER NOT NULL CHECK(qty > 0),
-  PRIMARY KEY (deck_id, card_id)
-);
-CREATE TABLE IF NOT EXISTS deck_tags(
-  deck_id INTEGER NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
-  tag TEXT NOT NULL,
-  PRIMARY KEY (deck_id, tag)
-);
-`
+const MIGRATIONS = [migration001, migration002]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null
@@ -45,7 +27,8 @@ async function open(): Promise<void> {
   const sqlite3 = await sqlite3InitModule()
   const pool = await sqlite3.installOpfsSAHPoolVfs({ name: 'schrecknet-user-pool' })
   db = new pool.OpfsSAHPoolDb(DB_NAME)
-  db.exec(SCHEMA)
+  const currentVersion = Number(db.selectValue('PRAGMA user_version'))
+  for (const migration of MIGRATIONS.slice(currentVersion)) db.exec(migration)
 }
 
 function runQuery(sql: string, params: (string | number | null)[]): Record<string, unknown>[] {

@@ -22,13 +22,14 @@ import { routeTo } from './route'
 export interface DeckSummary {
   id: number
   name: string
+  author: string | null
   description: string | null
   created_at: string
   updated_at: string
   tags: string[]
 }
 
-const SUMMARY_COLUMNS = 'id, name, description, created_at, updated_at'
+const SUMMARY_COLUMNS = 'id, name, author, description, created_at, updated_at'
 
 export async function listDecks(): Promise<DeckSummary[]> {
   const decks = await userQuery<Omit<DeckSummary, 'tags'>>(
@@ -75,7 +76,7 @@ export async function getDeck(id: number): Promise<DeckSummary | null> {
 export async function createDeck(name: string): Promise<number> {
   const now = new Date().toISOString()
   const { lastInsertRowid } = await userRun(
-    'INSERT INTO decks (name, description, created_at, updated_at) VALUES (?1, NULL, ?2, ?2)',
+    'INSERT INTO decks (name, author, description, created_at, updated_at) VALUES (?1, NULL, NULL, ?2, ?2)',
     [name, now],
   )
   return lastInsertRowid
@@ -85,17 +86,27 @@ export async function renameDeck(id: number, name: string): Promise<void> {
   await userRun('UPDATE decks SET name = ?1, updated_at = ?2 WHERE id = ?3', [name, new Date().toISOString(), id])
 }
 
+export async function updateDeckMetadata(id: number, author: string, description: string): Promise<void> {
+  const normalizedAuthor = author.trim() || null
+  const normalizedDescription = description.trim() || null
+  await userRun(
+    'UPDATE decks SET author = ?1, description = ?2, updated_at = ?3 WHERE id = ?4',
+    [normalizedAuthor, normalizedDescription, new Date().toISOString(), id],
+  )
+}
+
 export async function deleteDeck(id: number): Promise<void> {
   await userRun('DELETE FROM deck_cards WHERE deck_id = ?1', [id])
   await userRun('DELETE FROM deck_tags WHERE deck_id = ?1', [id])
   await userRun('DELETE FROM decks WHERE id = ?1', [id])
 }
 
-/** Duplicates a deck (name + all card quantities + tags) as a new, independent deck. */
+/** Duplicates a deck (metadata + all card quantities + tags) as a new, independent deck. */
 export async function cloneDeck(id: number): Promise<number> {
   const source = await getDeck(id)
   if (!source) throw new Error(`no deck with id ${id}`)
   const newId = await createDeck(`${source.name} (copy)`)
+  await updateDeckMetadata(newId, source.author ?? '', source.description ?? '')
   const rows = await getDeckCardRows(id)
   for (const row of rows) {
     await userRun('INSERT INTO deck_cards (deck_id, card_id, qty) VALUES (?1, ?2, ?3)', [
