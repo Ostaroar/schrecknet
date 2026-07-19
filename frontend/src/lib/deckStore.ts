@@ -56,8 +56,9 @@ export async function removeTag(deckId: number, tag: string): Promise<void> {
 }
 
 export async function getDeck(id: number): Promise<DeckSummary | null> {
-  const rows = await userQuery<DeckSummary>(`SELECT ${SUMMARY_COLUMNS} FROM decks WHERE id = ?1`, [id])
-  return rows[0] ?? null
+  const rows = await userQuery<Omit<DeckSummary, 'tags'>>(`SELECT ${SUMMARY_COLUMNS} FROM decks WHERE id = ?1`, [id])
+  if (!rows[0]) return null
+  return { ...rows[0], tags: await listTags(id) }
 }
 
 export async function createDeck(name: string): Promise<number> {
@@ -79,7 +80,7 @@ export async function deleteDeck(id: number): Promise<void> {
   await userRun('DELETE FROM decks WHERE id = ?1', [id])
 }
 
-/** Duplicates a deck (name + all card quantities) as a new, independent deck. */
+/** Duplicates a deck (name + all card quantities + tags) as a new, independent deck. */
 export async function cloneDeck(id: number): Promise<number> {
   const source = await getDeck(id)
   if (!source) throw new Error(`no deck with id ${id}`)
@@ -91,6 +92,9 @@ export async function cloneDeck(id: number): Promise<number> {
       row.card_id,
       row.qty,
     ])
+  }
+  for (const tag of source.tags) {
+    await addTag(newId, tag)
   }
   return newId
 }
