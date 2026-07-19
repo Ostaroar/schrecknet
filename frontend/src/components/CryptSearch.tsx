@@ -26,6 +26,7 @@ import {
   type SemanticProgress,
   type SemanticResult,
 } from '../lib/semanticSearch'
+import type { DisciplineRequirement } from '../lib/disciplineFilter'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
   return (
@@ -42,6 +43,7 @@ function DisciplineBadge({ code, superior }: { code: string; superior: boolean }
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
+type OrDisciplineGroup = Array<DisciplineRequirement | null>
 
 export default function CryptSearch() {
   const [text, setText] = useState('')
@@ -52,7 +54,7 @@ export default function CryptSearch() {
   const [semanticRetry, setSemanticRetry] = useState(0)
   const [clan, setClan] = useState<string | null>(null)
   const [title, setTitle] = useState<string | null>(null)
-  const [group, setGroup] = useState<number | null>(null)
+  const [selectedGroups, setSelectedGroups] = useState<number[]>([])
   const [capacityMin, setCapacityMin] = useState<number | null>(null)
   const [capacityMax, setCapacityMax] = useState<number | null>(null)
   const [set, setSet] = useState<string | null>(null)
@@ -61,6 +63,7 @@ export default function CryptSearch() {
   const [precon, setPrecon] = useState<string | null>(null)
   const [artist, setArtist] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
+  const [orDisciplineGroups, setOrDisciplineGroups] = useState<OrDisciplineGroup[]>([])
   const [clans, setClans] = useState<string[]>([])
   const [titles, setTitles] = useState<string[]>([])
   const [groups, setGroups] = useState<number[]>([])
@@ -102,7 +105,8 @@ export default function CryptSearch() {
       textRegex,
       clan,
       title,
-      group,
+      group: null,
+      groups: selectedGroups,
       capacityMin,
       capacityMax,
       set,
@@ -110,10 +114,13 @@ export default function CryptSearch() {
       setPrint,
       precon,
       artist,
-      disciplines: active.map(([code]) => code),
-      // vdb lets you mix levels per discipline; MVP applies "superior" to the
-      // whole selection when any badge is in superior mode (feature-parity ✎).
-      disciplinesSuperior: active.some(([, m]) => m === 'superior'),
+      disciplineRequirements: active.map(([code, mode]) => ({
+        code,
+        superior: mode === 'superior',
+      })),
+      disciplineOr: orDisciplineGroups
+        .map((row) => row.filter((entry): entry is DisciplineRequirement => entry !== null))
+        .filter((row) => row.length > 0),
     }
   }, [
     text,
@@ -121,7 +128,7 @@ export default function CryptSearch() {
     textRegex,
     clan,
     title,
-    group,
+    selectedGroups,
     capacityMin,
     capacityMax,
     set,
@@ -130,6 +137,7 @@ export default function CryptSearch() {
     precon,
     artist,
     discModes,
+    orDisciplineGroups,
   ])
 
   useEffect(() => {
@@ -203,6 +211,36 @@ export default function CryptSearch() {
         m[code] === 'any' ? 'superior' : m[code] === 'superior' ? 'off' : 'any'
       return { ...m, [code]: next }
     })
+  }
+
+  const toggleGroup = (group: number) => {
+    setSelectedGroups((selected) =>
+      selected.includes(group)
+        ? selected.filter((value) => value !== group)
+        : [...selected, group].sort((a, b) => a - b),
+    )
+  }
+
+  const setOrDiscipline = (rowIndex: number, slotIndex: number, code: string) => {
+    setOrDisciplineGroups((rows) =>
+      rows.map((row, index) => {
+        if (index !== rowIndex) return row
+        const next = [...row]
+        next[slotIndex] = code ? { code, superior: false } : null
+        return next
+      }),
+    )
+  }
+
+  const toggleOrLevel = (rowIndex: number, slotIndex: number) => {
+    setOrDisciplineGroups((rows) =>
+      rows.map((row, index) => {
+        if (index !== rowIndex || !row[slotIndex]) return row
+        const next = [...row]
+        next[slotIndex] = { ...row[slotIndex], superior: !row[slotIndex].superior }
+        return next
+      }),
+    )
   }
 
   if (status === 'error') {
@@ -298,19 +336,29 @@ export default function CryptSearch() {
             </option>
           ))}
         </select>
-        <select
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
-          value={group ?? ''}
-          onChange={(e) => setGroup(e.target.value ? Number(e.target.value) : null)}
-          disabled={status === 'loading'}
+        <div
+          className="flex items-center overflow-hidden rounded-lg border border-line bg-surface"
+          aria-label="Crypt groups"
         >
-          <option value="">Any group</option>
+          <span className="px-2 text-xs text-ink-dim">Group</span>
           {groups.map((g) => (
-            <option key={g} value={g}>
-              Group {g}
-            </option>
+            <button
+              key={g}
+              type="button"
+              aria-pressed={selectedGroups.includes(g)}
+              onClick={() => toggleGroup(g)}
+              disabled={status === 'loading'}
+              className={
+                'border-l border-line px-2.5 py-2 text-xs ' +
+                (selectedGroups.includes(g)
+                  ? 'bg-blood text-white'
+                  : 'text-ink-dim hover:text-ink-muted')
+              }
+            >
+              {g}
+            </button>
           ))}
-        </select>
+        </div>
         <div className="flex items-center gap-1 text-sm text-ink-dim">
           cap
           <input
@@ -394,7 +442,70 @@ export default function CryptSearch() {
             clear
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setOrDisciplineGroups((rows) => [...rows, [null, null]])}
+          className="ml-1 rounded border border-dashed border-line px-2 py-1 text-xs text-ink-dim hover:border-blood hover:text-ink-muted"
+        >
+          + OR discipline
+        </button>
       </div>
+
+      {orDisciplineGroups.length > 0 && (
+        <div className="grid gap-2 rounded-lg border border-line-soft bg-raised/40 p-3">
+          <p className="text-xs text-ink-dim">
+            Match at least one discipline in each row. Rows combine with AND.
+          </p>
+          {orDisciplineGroups.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex flex-wrap items-center gap-2">
+              <span className="w-12 font-mono text-[10px] uppercase tracking-wide text-blood-hi">
+                OR {rowIndex + 1}
+              </span>
+              {row.map((entry, slotIndex) => (
+                <div key={slotIndex} className="flex overflow-hidden rounded-lg border border-line">
+                  <select
+                    aria-label={`OR discipline ${rowIndex + 1} alternative ${slotIndex + 1}`}
+                    value={entry?.code ?? ''}
+                    onChange={(event) =>
+                      setOrDiscipline(rowIndex, slotIndex, event.target.value)
+                    }
+                    className="bg-surface px-2 py-1.5 text-xs text-ink"
+                  >
+                    <option value="">Choose…</option>
+                    {allDisciplines.map((code) => (
+                      <option key={code} value={code}>
+                        {code.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!entry}
+                    onClick={() => toggleOrLevel(rowIndex, slotIndex)}
+                    aria-label={`OR discipline ${rowIndex + 1} alternative ${slotIndex + 1} level`}
+                    title="Toggle any level / superior only"
+                    className={
+                      'border-l border-line px-2 py-1.5 font-mono text-[10px] font-bold uppercase disabled:opacity-30 ' +
+                      (entry?.superior ? 'bg-gold text-[#241a06]' : 'bg-blood text-white')
+                    }
+                  >
+                    {entry?.superior ? 'sup' : 'any'}
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setOrDisciplineGroups((rows) => rows.filter((_, index) => index !== rowIndex))
+                }
+                className="text-xs text-ink-dim underline hover:text-blood-hi"
+              >
+                remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {status === 'loading' ? (
         <p className="text-sm text-ink-dim">Loading card database…</p>

@@ -2,6 +2,10 @@
 // exactly (same filters, same result shape) so the browser and server agree.
 
 import { query } from './db'
+import {
+  appendLibraryDisciplineFilters,
+  type LibraryDisciplineLogic,
+} from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 
 export type TextMode = 'any' | 'name' | 'text'
@@ -15,6 +19,8 @@ export interface LibraryFilters {
   clan: string | null
   disciplines: string[]
   disciplinesSuperior: boolean
+  disciplineLogic: LibraryDisciplineLogic
+  includeNoDiscipline: boolean
   bloodCost: number | null
   bloodCostMode: CostMode
   poolCost: number | null
@@ -34,6 +40,8 @@ export const emptyLibraryFilters: LibraryFilters = {
   clan: null,
   disciplines: [],
   disciplinesSuperior: false,
+  disciplineLogic: 'all',
+  includeNoDiscipline: false,
   bloodCost: null,
   bloodCostMode: 'at_most',
   poolCost: null,
@@ -149,11 +157,14 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
     filters.setAge,
     filters.setPrint,
   ]
-  for (const code of filters.disciplines) {
-    sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
-       WHERE cdx.card_id = c.id AND cdx.discipline = ?${params.length + 1} AND cdx.superior >= ?${params.length + 2})`
-    params.push(code.toLowerCase(), filters.disciplinesSuperior ? 1 : 0)
-  }
+  sql = appendLibraryDisciplineFilters(
+    sql,
+    params,
+    filters.disciplines,
+    filters.disciplineLogic,
+    filters.includeNoDiscipline,
+    filters.disciplinesSuperior,
+  )
   sql += ` GROUP BY c.id ORDER BY c.name ASC`
   if (limited) sql += ` LIMIT 200`
 

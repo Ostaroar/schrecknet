@@ -11,6 +11,10 @@ import { chromium } from 'playwright'
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const fixturePath = fileURLToPath(new URL('./fixtures/semantic-golden.json', import.meta.url))
 const fixture = JSON.parse(await readFile(fixturePath, 'utf8'))
+const searchFixturePath = fileURLToPath(
+  new URL('./fixtures/search-composition-golden.json', import.meta.url),
+)
+const searchFixture = JSON.parse(await readFile(searchFixturePath, 'utf8'))
 const port = Number(process.env.SCHRECKNET_E2E_PORT ?? 18180)
 const baseUrl = `http://127.0.0.1:${port}`
 const serverBinary = path.resolve(
@@ -83,6 +87,14 @@ async function restSearch(golden) {
   return response.json()
 }
 
+async function exactRestSearch(kind, query) {
+  const response = await fetch(`${baseUrl}/api/v1/${kind}/search?${query}`)
+  if (response.status !== 200) {
+    throw new Error(`${kind} exact REST returned ${response.status}: ${await response.text()}`)
+  }
+  return response.json()
+}
+
 let browser
 try {
   await waitForServer()
@@ -125,6 +137,74 @@ try {
 
   // The service worker registers after the first page load. One controlled
   // online reload fills the hashed shell cache before the true-offline check.
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('main')
+
+  async function waitForExactIds(expectedIds) {
+    await page.waitForFunction(
+      (expected) => {
+        const actual = [...document.querySelectorAll('main button[data-card-id]')].map((row) =>
+          Number(row.getAttribute('data-card-id')),
+        )
+        return JSON.stringify(actual) === JSON.stringify(expected)
+      },
+      expectedIds,
+    )
+  }
+
+  // Golden exact-search parity for the VDB composition grammar. This checks
+  // the REST adapter against the real V5 database, then recreates the same
+  // filter through the offline browser controls and requires identical order.
+  const cryptRest = await exactRestSearch('crypt', searchFixture.crypt.rest_query)
+  assert.deepEqual(
+    cryptRest.map((card) => card.id),
+    searchFixture.crypt.expected_ids,
+    'crypt composition REST fixture drifted',
+  )
+  const cryptGroupControls = page.locator('[aria-label="Crypt groups"]')
+  for (const group of searchFixture.crypt.groups) {
+    await cryptGroupControls.getByRole('button', { name: String(group), exact: true }).click()
+  }
+  for (const requirement of searchFixture.crypt.requirements) {
+    const control = page.getByRole('button', { name: requirement.code, exact: true })
+    for (let click = 0; click < requirement.clicks; click += 1) await control.click()
+  }
+  await page.getByRole('button', { name: '+ OR discipline', exact: true }).click()
+  for (let index = 0; index < searchFixture.crypt.or.length; index += 1) {
+    const alternative = searchFixture.crypt.or[index]
+    await page
+      .getByLabel(`OR discipline 1 alternative ${index + 1}`, { exact: true })
+      .selectOption(alternative.code)
+    if (alternative.superior) {
+      await page
+        .getByLabel(`OR discipline 1 alternative ${index + 1} level`, { exact: true })
+        .click()
+    }
+  }
+  await waitForExactIds(searchFixture.crypt.expected_ids)
+
+  await page.getByRole('button', { name: 'library search', exact: true }).click()
+  await page.waitForFunction(() => location.hash === '#/library')
+  await page.getByPlaceholder('Name / text').waitFor()
+  const libraryRest = await exactRestSearch('library', searchFixture.library.rest_query)
+  assert.deepEqual(
+    libraryRest.map((card) => card.id),
+    searchFixture.library.expected_ids,
+    'library composition REST fixture drifted',
+  )
+  for (const discipline of searchFixture.library.disciplines) {
+    await page.getByRole('button', { name: discipline, exact: true }).click()
+  }
+  await page
+    .getByText('Discipline logic', { exact: true })
+    .locator('..')
+    .getByRole('button', { name: searchFixture.library.logic, exact: true })
+    .click()
+  await waitForExactIds(searchFixture.library.expected_ids)
+
+  // The semantic golden queries intentionally start with no structured
+  // filters. Reload to discard the exact-search component state above while
+  // keeping the service worker/model caches warm.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForSelector('main')
 

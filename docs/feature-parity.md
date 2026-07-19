@@ -47,14 +47,14 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       (`text_regex` param, case-insensitive, orthogonal to the mode toggle —
       server via the `regex` crate as a rusqlite scalar function, browser via
       native `RegExp` as a sqlite-wasm scalar function; see ADR 0005)
-- ☑ Discipline filter MVP: per-discipline three-state toggle (off → required
-      any level → superior only), require-ALL semantics, verified on real data
-      (superior mode correctly excludes inferior matches). ☐ still missing:
-      per-discipline level mixing (MVP applies "superior" to the whole
-      selection), "+OR DIS" groups ✎
+- ☑ Discipline filter: independent per-discipline three-state toggles
+      (off → required any level → superior only), ordinary requirements ANDed;
+      VDB-style "+OR DIS" rows support two independently leveled alternatives,
+      OR within each row and AND between rows. Verified against VDB's
+      `cardFilters.js` behavior and a real-V5 browser/REST golden fixture ✎
 - ☑ Capacity filter: min/max range (inclusive) — live on all three surfaces
-- ☑ Group filter: single-select MVP live, correctly limited to the V5 pool's
-      groups (5–7); ☐ multi-select still needed
+- ☑ Group filter: multi-select with OR semantics, options derived from the V5
+      pool (currently groups 5–7); legacy single-group API remains compatible
 - ☑ Clan / Path filter — MVP live, options derived from the V5 pool (14 clans)
 - ☐ Sect filter (Camarilla, Sabbat, Laibon, Independent, Anarch, Imbued)
 - ☐ Votes filter (numeric)
@@ -91,10 +91,11 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       Master, Political Action, Reaction, Retainer — Event/Power/Conviction
       not yet in the V5 pool ✎ recheck as new sets ship); exact-token matching
       verified (querying "Master" does not spuriously match "Action Modifier")
-- ☑ Discipline filter (incl. multi-discipline) — MVP live, 3-state toggles
-      (off → required any level → superior only), require-ALL semantics;
-      ☐ still missing per-discipline level mixing (MVP applies "superior" to
-      the whole selection ✎, same as the crypt MVP)
+- ☑ Discipline filter (incl. multi-discipline): VDB's actual level-neutral
+      library requirement model with All / Any / Not / Only set logic and a
+      "No requirement" option. The earlier three-state superior UI was removed:
+      VDB does not apply crypt discipline levels to library requirements, and
+      KRCG's V5 library rows confirm that no such level data exists ✎
 - ☑ Clan / Path requirement filter — MVP live
 - ☐ Sect requirement filter
 - ☐ Title requirement filter

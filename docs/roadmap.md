@@ -44,9 +44,12 @@ docs/feature-parity.md's scope note).
   tool with a `POST /api/v1/cards/semantic` REST mirror. Delivery is split into
   ☑ shared ranking → ☑ embedded corpus → ☑ machine APIs → ☑ offline browser →
   ☑ VTES relevance/parity gates; see docs/adr/0006-offline-semantic-card-search.md
-- ☐ Remaining crypt filters (sect, votes, traits, per-discipline level mixing,
-  OR-groups) + remaining library filters (capacity requirement, traits,
-  per-discipline level mixing)
+- ☑ Advanced discipline/group composition: crypt group multi-select,
+  independently leveled AND requirements, two-alternative VDB `+OR DIS` rows;
+  library All/Any/Not/Only discipline-set logic plus No Requirement. Browser,
+  REST, MCP, semantic candidate filtering, and real-V5 golden coverage agree
+- ☐ Remaining crypt filters (sect, votes, traits) + remaining library filters
+  (capacity requirement, sect/title requirements, traits)
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep

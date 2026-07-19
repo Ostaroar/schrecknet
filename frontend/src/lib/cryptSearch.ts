@@ -1,10 +1,14 @@
 // Crypt search query builder — mirrors server/src/cards_db.rs::search_crypt
 // exactly (same filters, same dynamically-built EXISTS clauses per required
 // discipline) so the browser and server agree. Remaining vdb filter families
-// (sect, votes, traits, mixed discipline levels — docs/feature-parity.md)
-// land incrementally behind this same query() seam.
+// (sect, votes, traits — docs/feature-parity.md) land incrementally behind
+// this same query() seam.
 
 import { query } from './db'
+import {
+  appendDisciplineFilters,
+  type DisciplineRequirement,
+} from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 
 /** Scope of the text filter: card name, card text, or either. */
@@ -17,10 +21,13 @@ export interface CryptFilters {
   clan: string | null
   title: string | null
   group: number | null
+  groups: number[]
   capacityMin: number | null
   capacityMax: number | null
   disciplines: string[]
   disciplinesSuperior: boolean
+  disciplineRequirements: DisciplineRequirement[]
+  disciplineOr: DisciplineRequirement[][]
   set: string | null
   setAge: SetAgeMode
   setPrint: SetPrintMode
@@ -35,10 +42,13 @@ export const emptyCryptFilters: CryptFilters = {
   clan: null,
   title: null,
   group: null,
+  groups: [],
   capacityMin: null,
   capacityMax: null,
   disciplines: [],
   disciplinesSuperior: false,
+  disciplineRequirements: [],
+  disciplineOr: [],
   set: null,
   setAge: defaultSetAge,
   setPrint: defaultSetPrint,
@@ -93,6 +103,7 @@ export async function filterCrypt(filters: CryptFilters): Promise<CryptCard[]> {
 }
 
 async function searchCryptInner(filters: CryptFilters, limited: boolean): Promise<CryptCard[]> {
+  const singleGroup = filters.groups.length === 0 ? filters.group : null
   let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
      FROM cards c
@@ -145,7 +156,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     filters.textMode !== 'text' ? 1 : 0,
     filters.textMode !== 'name' ? 1 : 0,
     filters.clan,
-    filters.group,
+    singleGroup,
     filters.capacityMin,
     filters.capacityMax,
     filters.title,
@@ -156,11 +167,22 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     filters.setAge,
     filters.setPrint,
   ]
-  for (const code of filters.disciplines) {
-    sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
-       WHERE cdx.card_id = c.id AND cdx.discipline = ?${params.length + 1} AND cdx.superior >= ?${params.length + 2})`
-    params.push(code.toLowerCase(), filters.disciplinesSuperior ? 1 : 0)
+  if (filters.groups.length > 0) {
+    const placeholders: string[] = []
+    for (const group of filters.groups) {
+      placeholders.push(`?${params.length + 1}`)
+      params.push(group)
+    }
+    sql += ` AND c.grp IN (${placeholders.join(',')})`
   }
+  sql = appendDisciplineFilters(
+    sql,
+    params,
+    filters.disciplineRequirements,
+    filters.disciplines,
+    filters.disciplinesSuperior,
+    filters.disciplineOr,
+  )
   sql += ` GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC`
   if (limited) sql += ` LIMIT 200`
 

@@ -1,9 +1,8 @@
 //! Read-only access to `cards.sqlite`, shared by the MCP and REST surfaces
 //! (AGENTS.md hard rule #2: both adapters call the same service code).
 //!
-//! Query shape mirrors frontend/src/lib/cryptSearch.ts — same filters, same
-//! result shape — so client and server agree on what "crypt search" means.
-//! Phase 1 MVP: text/name search, clan, group. See docs/feature-parity.md.
+//! Query shape mirrors the browser search modules — same filters, same result
+//! shape — so client and server agree on exact and semantic candidate sets.
 
 use std::sync::Arc;
 
@@ -35,6 +34,10 @@ pub struct CryptSearchParams {
     /// Crypt group (V5 pool is limited to groups 5-7).
     #[serde(default)]
     pub group: Option<i64>,
+    /// Crypt groups to include (OR semantics). When non-empty this supersedes
+    /// the backwards-compatible single `group` field. REST accepts CSV.
+    #[serde(default, deserialize_with = "deserialize_i64_list")]
+    pub groups: Vec<i64>,
     /// Minimum capacity (inclusive).
     #[serde(default)]
     pub capacity_min: Option<i64>,
@@ -48,6 +51,16 @@ pub struct CryptSearchParams {
     /// If true, every discipline in `disciplines` must be at superior level.
     #[serde(default)]
     pub disciplines_superior: bool,
+    /// Per-discipline requirements with independent superior levels. All
+    /// entries are required. When non-empty this supersedes `disciplines` and
+    /// `disciplines_superior`. REST grammar: `dom:superior,for:any`.
+    #[serde(default, deserialize_with = "deserialize_discipline_requirements")]
+    pub discipline_requirements: Vec<DisciplineRequirement>,
+    /// VDB-compatible OR-discipline rows. At least one alternative in every
+    /// row must match; rows are ANDed. MCP accepts nested arrays. REST grammar:
+    /// `dom:superior|for:any;aus:any|ani:superior`.
+    #[serde(default, deserialize_with = "deserialize_discipline_or")]
+    pub discipline_or: Vec<Vec<DisciplineRequirement>>,
     /// Selected set name (e.g. "Fifth Edition"); `set_age` and `set_print`
     /// control how the card's V5 print history is compared with it.
     #[serde(default)]
@@ -81,6 +94,31 @@ pub enum TextMode {
     Name,
     /// Match card text only.
     Text,
+}
+
+/// Set logic for library discipline requirements, matching VDB's selector.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum DisciplineLogic {
+    /// Require every selected discipline (backwards-compatible default).
+    #[default]
+    All,
+    /// Require at least one selected discipline.
+    Any,
+    /// Exclude cards requiring any selected discipline.
+    None,
+    /// Require exactly the selected discipline set and no others.
+    Only,
+}
+
+/// One discipline requirement used by exact and semantic structured search.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
+pub struct DisciplineRequirement {
+    /// Lowercase discipline code, e.g. `dom` or `for`.
+    pub code: String,
+    /// Require superior level when true; either level matches when false.
+    #[serde(default)]
+    pub superior: bool,
 }
 
 /// Numeric comparison used by library blood/pool cost filters.
@@ -183,6 +221,104 @@ where
     })
 }
 
+/// Accepts either a JSON number array (MCP) or CSV (REST query string).
+fn deserialize_i64_list<'de, D>(deserializer: D) -> Result<Vec<i64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ListOrCsv {
+        List(Vec<i64>),
+        Csv(String),
+    }
+    match ListOrCsv::deserialize(deserializer)? {
+        ListOrCsv::List(list) => Ok(list),
+        ListOrCsv::Csv(csv) => csv
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| value.parse().map_err(serde::de::Error::custom))
+            .collect(),
+    }
+}
+
+fn parse_discipline_requirement(value: &str) -> Result<DisciplineRequirement, String> {
+    let (code, level) = value.split_once(':').unwrap_or((value, "any"));
+    let code = code.trim().to_lowercase();
+    if code.is_empty() {
+        return Err("discipline code cannot be empty".into());
+    }
+    let superior = match level.trim().to_lowercase().as_str() {
+        "any" => false,
+        "superior" => true,
+        other => {
+            return Err(format!(
+                "unknown discipline level `{other}`; use any or superior"
+            ))
+        }
+    };
+    Ok(DisciplineRequirement { code, superior })
+}
+
+/// MCP sends structured objects; REST uses `code:any,code:superior`.
+fn deserialize_discipline_requirements<'de, D>(
+    deserializer: D,
+) -> Result<Vec<DisciplineRequirement>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ListOrEncoded {
+        List(Vec<DisciplineRequirement>),
+        Encoded(String),
+    }
+    match ListOrEncoded::deserialize(deserializer)? {
+        ListOrEncoded::List(list) => Ok(list),
+        ListOrEncoded::Encoded(encoded) => encoded
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(parse_discipline_requirement)
+            .collect::<Result<_, _>>()
+            .map_err(serde::de::Error::custom),
+    }
+}
+
+/// MCP sends nested arrays; REST separates alternatives with `|` and rows
+/// with `;`, matching VDB's “+OR DIS” rows without JSON in a query string.
+fn deserialize_discipline_or<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Vec<DisciplineRequirement>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ListOrEncoded {
+        List(Vec<Vec<DisciplineRequirement>>),
+        Encoded(String),
+    }
+    match ListOrEncoded::deserialize(deserializer)? {
+        ListOrEncoded::List(list) => Ok(list),
+        ListOrEncoded::Encoded(encoded) => encoded
+            .split(';')
+            .map(str::trim)
+            .filter(|group| !group.is_empty())
+            .map(|group| {
+                group
+                    .split('|')
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(parse_discipline_requirement)
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .collect::<Result<_, _>>()
+            .map_err(serde::de::Error::custom),
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Discipline {
     pub code: String,
@@ -221,13 +357,20 @@ pub struct LibrarySearchParams {
     /// cards have no clan requirement.
     #[serde(default)]
     pub clan: Option<String>,
-    /// Lowercase discipline codes (e.g. ["dom","for"]); a card must require ALL
-    /// of them, at either level. REST accepts a comma-separated string.
+    /// Lowercase discipline codes (e.g. ["dom","for"]); combination is
+    /// controlled by `discipline_logic`. REST accepts a comma-separated string.
     #[serde(default, deserialize_with = "deserialize_disciplines")]
     pub disciplines: Vec<String>,
-    /// If true, every discipline in `disciplines` must be at superior level.
+    /// Backwards-compatible level flag from the first MVP. VDB library
+    /// requirements are level-neutral, so new clients should leave this false.
     #[serde(default)]
     pub disciplines_superior: bool,
+    /// How selected library disciplines combine: all, any, none, or only.
+    #[serde(default)]
+    pub discipline_logic: DisciplineLogic,
+    /// Treat “no discipline requirement” as an additional selected option.
+    #[serde(default)]
+    pub include_no_discipline: bool,
     /// Maximum blood cost (inclusive); backwards-compatible alias for
     /// `blood_cost` with `blood_cost_mode=at_most`.
     #[serde(default)]
@@ -312,6 +455,149 @@ fn register_regexp(conn: &Connection) -> rusqlite::Result<()> {
     )
 }
 
+fn effective_discipline_requirements(
+    requirements: &[DisciplineRequirement],
+    legacy_codes: &[String],
+    legacy_superior: bool,
+) -> Vec<DisciplineRequirement> {
+    if !requirements.is_empty() {
+        return requirements.to_vec();
+    }
+    legacy_codes
+        .iter()
+        .map(|code| DisciplineRequirement {
+            code: code.to_lowercase(),
+            superior: legacy_superior,
+        })
+        .collect()
+}
+
+/// Adds one ANDed requirement group whose entries are OR alternatives. A
+/// one-entry group is therefore a normal required discipline. Values are
+/// always bound; only placeholder indexes are written into the SQL string.
+fn push_discipline_group(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    requirements: &[DisciplineRequirement],
+) {
+    if requirements.is_empty() {
+        return;
+    }
+    sql.push_str(" AND (");
+    for (index, requirement) in requirements.iter().enumerate() {
+        if index > 0 {
+            sql.push_str(" OR ");
+        }
+        sql.push_str(&discipline_exists_expression(bound, requirement));
+    }
+    sql.push(')');
+}
+
+fn discipline_exists_expression(
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    requirement: &DisciplineRequirement,
+) -> String {
+    let expression = format!(
+        "EXISTS (SELECT 1 FROM card_disciplines cdx
+            WHERE cdx.card_id = c.id AND cdx.discipline = ?{n} AND cdx.superior >= ?{m})",
+        n = bound.len() + 1,
+        m = bound.len() + 2,
+    );
+    bound.push(Box::new(requirement.code.to_lowercase()));
+    bound.push(Box::new(requirement.superior as i64));
+    expression
+}
+
+fn push_library_discipline_filter(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    params: &LibrarySearchParams,
+) {
+    let requirements = params
+        .disciplines
+        .iter()
+        .map(|code| DisciplineRequirement {
+            code: code.to_lowercase(),
+            superior: params.disciplines_superior,
+        })
+        .collect::<Vec<_>>();
+    let no_requirement = "NOT EXISTS (SELECT 1 FROM card_disciplines cdn WHERE cdn.card_id = c.id)";
+
+    match params.discipline_logic {
+        DisciplineLogic::All => {
+            for requirement in &requirements {
+                push_discipline_group(sql, bound, std::slice::from_ref(requirement));
+            }
+            if params.include_no_discipline {
+                if requirements.is_empty() {
+                    sql.push_str(&format!(" AND {no_requirement}"));
+                } else {
+                    sql.push_str(" AND 0");
+                }
+            }
+        }
+        DisciplineLogic::Any | DisciplineLogic::None => {
+            let mut alternatives = requirements
+                .iter()
+                .map(|requirement| discipline_exists_expression(bound, requirement))
+                .collect::<Vec<_>>();
+            if params.include_no_discipline {
+                alternatives.push(no_requirement.into());
+            }
+            if !alternatives.is_empty() {
+                if params.discipline_logic == DisciplineLogic::None {
+                    sql.push_str(" AND NOT (");
+                } else {
+                    sql.push_str(" AND (");
+                }
+                sql.push_str(&alternatives.join(" OR "));
+                sql.push(')');
+            }
+        }
+        DisciplineLogic::Only => {
+            if params.include_no_discipline {
+                if requirements.is_empty() {
+                    sql.push_str(&format!(" AND {no_requirement}"));
+                } else {
+                    sql.push_str(" AND 0");
+                }
+                return;
+            }
+            if requirements.is_empty() {
+                return;
+            }
+            for requirement in &requirements {
+                push_discipline_group(sql, bound, std::slice::from_ref(requirement));
+            }
+            sql.push_str(&format!(
+                " AND (SELECT COUNT(DISTINCT cdo.discipline) FROM card_disciplines cdo
+                    WHERE cdo.card_id = c.id) = ?{}",
+                bound.len() + 1
+            ));
+            bound.push(Box::new(requirements.len() as i64));
+        }
+    }
+}
+
+fn push_group_filter(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    groups: &[i64],
+) {
+    if groups.is_empty() {
+        return;
+    }
+    sql.push_str(" AND c.grp IN (");
+    for (index, group) in groups.iter().enumerate() {
+        if index > 0 {
+            sql.push(',');
+        }
+        sql.push_str(&format!("?{}", bound.len() + 1));
+        bound.push(Box::new(*group));
+    }
+    sql.push(')');
+}
+
 pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
@@ -339,6 +625,11 @@ fn search_crypt_inner(
     // clauses would wrongly match set=X + precon=<B's precon> even though no
     // single printing has both (found live via the precon browser, which
     // was the first caller to combine the two).
+    let single_group = if params.groups.is_empty() {
+        params.group
+    } else {
+        None
+    };
     let mut sql = String::from(
         "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
                 GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
@@ -393,7 +684,7 @@ fn search_crypt_inner(
         Box::new(params.text_mode != TextMode::Text),
         Box::new(params.text_mode != TextMode::Name),
         Box::new(params.clan.clone()),
-        Box::new(params.group),
+        Box::new(single_group),
         Box::new(params.capacity_min),
         Box::new(params.capacity_max),
         Box::new(params.title.clone()),
@@ -404,15 +695,16 @@ fn search_crypt_inner(
         Box::new(params.set_age.as_sql_value()),
         Box::new(params.set_print.as_sql_value()),
     ];
-    for code in &params.disciplines {
-        sql.push_str(&format!(
-            " AND EXISTS (SELECT 1 FROM card_disciplines cdx
-                WHERE cdx.card_id = c.id AND cdx.discipline = ?{n} AND cdx.superior >= ?{m})",
-            n = bound.len() + 1,
-            m = bound.len() + 2,
-        ));
-        bound.push(Box::new(code.to_lowercase()));
-        bound.push(Box::new(params.disciplines_superior as i64));
+    push_group_filter(&mut sql, &mut bound, &params.groups);
+    for requirement in effective_discipline_requirements(
+        &params.discipline_requirements,
+        &params.disciplines,
+        params.disciplines_superior,
+    ) {
+        push_discipline_group(&mut sql, &mut bound, std::slice::from_ref(&requirement));
+    }
+    for group in &params.discipline_or {
+        push_discipline_group(&mut sql, &mut bound, group);
     }
     sql.push_str(" GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC");
     if limited {
@@ -548,16 +840,7 @@ fn search_library_inner(
         Box::new(params.set_age.as_sql_value()),
         Box::new(params.set_print.as_sql_value()),
     ];
-    for code in &params.disciplines {
-        sql.push_str(&format!(
-            " AND EXISTS (SELECT 1 FROM card_disciplines cdx
-                WHERE cdx.card_id = c.id AND cdx.discipline = ?{n} AND cdx.superior >= ?{m})",
-            n = bound.len() + 1,
-            m = bound.len() + 2,
-        ));
-        bound.push(Box::new(code.to_lowercase()));
-        bound.push(Box::new(params.disciplines_superior as i64));
-    }
+    push_library_discipline_filter(&mut sql, &mut bound, params);
     sql.push_str(" GROUP BY c.id ORDER BY c.name ASC");
     if limited {
         sql.push_str(" LIMIT 200");
@@ -781,12 +1064,137 @@ mod tests {
     }
 
     #[test]
+    fn crypt_per_discipline_levels_match_vdb_and_override_legacy_fields() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // VDB's ordinary discipline row ANDs entries while preserving each
+        // badge's own level. Aaradhya has superior dom + inferior for.
+        let params = CryptSearchParams {
+            disciplines: vec!["aus".into()],
+            disciplines_superior: true,
+            discipline_requirements: vec![
+                DisciplineRequirement {
+                    code: "dom".into(),
+                    superior: true,
+                },
+                DisciplineRequirement {
+                    code: "for".into(),
+                    superior: false,
+                },
+            ],
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+
+        let params = CryptSearchParams {
+            discipline_requirements: vec![
+                DisciplineRequirement {
+                    code: "dom".into(),
+                    superior: false,
+                },
+                DisciplineRequirement {
+                    code: "for".into(),
+                    superior: true,
+                },
+            ],
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn crypt_or_discipline_rows_are_or_within_and_and_between() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = CryptSearchParams {
+            discipline_or: vec![
+                vec![
+                    DisciplineRequirement {
+                        code: "dom".into(),
+                        superior: true,
+                    },
+                    DisciplineRequirement {
+                        code: "aus".into(),
+                        superior: true,
+                    },
+                ],
+                vec![
+                    DisciplineRequirement {
+                        code: "for".into(),
+                        superior: false,
+                    },
+                    DisciplineRequirement {
+                        code: "pre".into(),
+                        superior: false,
+                    },
+                ],
+            ],
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+    }
+
+    #[test]
+    fn crypt_multi_group_is_or_and_supersedes_single_group() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = CryptSearchParams {
+            group: Some(5),
+            groups: vec![6, 7],
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &params).unwrap().len(), 2);
+
+        let params = CryptSearchParams {
+            groups: vec![7],
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &params).unwrap()[0].name, "Abaddon");
+    }
+
+    #[test]
     fn discipline_csv_deserializes_from_query_string() {
         let params: CryptSearchParams =
             serde_urlencoded::from_str("disciplines=DOM,%20for").unwrap();
         assert_eq!(params.disciplines, vec!["dom", "for"]);
         let params: CryptSearchParams = serde_json::from_str(r#"{"disciplines":["dom"]}"#).unwrap();
         assert_eq!(params.disciplines, vec!["dom"]);
+    }
+
+    #[test]
+    fn advanced_composition_deserializes_for_rest_and_mcp() {
+        let rest: CryptSearchParams = serde_urlencoded::from_str(
+            "groups=5,7&discipline_requirements=DOM:superior,for:any&discipline_or=aus:superior%7Cani:any%3Bpot:any%7Cpre:superior",
+        )
+        .unwrap();
+        assert_eq!(rest.groups, vec![5, 7]);
+        assert_eq!(
+            rest.discipline_requirements,
+            vec![
+                DisciplineRequirement {
+                    code: "dom".into(),
+                    superior: true,
+                },
+                DisciplineRequirement {
+                    code: "for".into(),
+                    superior: false,
+                },
+            ]
+        );
+        assert_eq!(rest.discipline_or.len(), 2);
+        assert_eq!(rest.discipline_or[0][1].code, "ani");
+
+        let mcp: CryptSearchParams = serde_json::from_str(
+            r#"{"groups":[6,7],"discipline_requirements":[{"code":"dom","superior":true}],"discipline_or":[[{"code":"for"},{"code":"aus","superior":true}]]}"#,
+        )
+        .unwrap();
+        assert_eq!(mcp.groups, vec![6, 7]);
+        assert!(mcp.discipline_requirements[0].superior);
+        assert_eq!(mcp.discipline_or[0].len(), 2);
     }
 
     #[test]
@@ -1312,6 +1720,92 @@ mod tests {
         let results = search_library(&conn, &params).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].name, "Deflection");
+    }
+
+    #[test]
+    fn library_discipline_logic_matches_vdb_all_any_none_and_only() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_filter_extras(&conn);
+
+        let all = LibrarySearchParams {
+            disciplines: vec!["pot".into(), "pre".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &all).unwrap()[0].name,
+            "Absolute Tyranny"
+        );
+
+        let any = LibrarySearchParams {
+            disciplines: vec!["pot".into(), "dom".into()],
+            discipline_logic: DisciplineLogic::Any,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &any)
+                .unwrap()
+                .iter()
+                .map(|card| card.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Absolute Tyranny", "Deflection"]
+        );
+
+        let none = LibrarySearchParams {
+            disciplines: vec!["pot".into(), "dom".into()],
+            discipline_logic: DisciplineLogic::None,
+            ..Default::default()
+        };
+        let excluded = search_library(&conn, &none).unwrap();
+        assert!(excluded.iter().all(|card| card.name != "Absolute Tyranny"));
+        assert!(excluded.iter().all(|card| card.name != "Deflection"));
+
+        let only = LibrarySearchParams {
+            disciplines: vec!["pot".into(), "pre".into()],
+            discipline_logic: DisciplineLogic::Only,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &only).unwrap()[0].name,
+            "Absolute Tyranny"
+        );
+        let not_only = LibrarySearchParams {
+            disciplines: vec!["pot".into()],
+            discipline_logic: DisciplineLogic::Only,
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &not_only).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_no_discipline_requirement_is_a_real_filter_option() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = LibrarySearchParams {
+            discipline_logic: DisciplineLogic::Any,
+            include_no_discipline: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &params)
+                .unwrap()
+                .iter()
+                .map(|card| card.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Arcane Library", "Villein"]
+        );
+
+        let rest: LibrarySearchParams = serde_urlencoded::from_str(
+            "disciplines=pot,pre&discipline_logic=only&include_no_discipline=false",
+        )
+        .unwrap();
+        assert_eq!(rest.discipline_logic, DisciplineLogic::Only);
+        let mcp: LibrarySearchParams = serde_json::from_str(
+            r#"{"disciplines":["dom"],"discipline_logic":"none","include_no_discipline":true}"#,
+        )
+        .unwrap();
+        assert_eq!(mcp.discipline_logic, DisciplineLogic::None);
+        assert!(mcp.include_no_discipline);
     }
 
     #[test]

@@ -1,0 +1,22 @@
+{
+  "source": "https://github.com/smeea/vdb/blob/master/frontend/src/utils/cardFilters.js + V5 cards.sqlite snapshot",
+  "crypt": {
+    "rest_query": "groups=6%2C7&discipline_requirements=dom%3Asuperior%2Cfor%3Aany&discipline_or=cel%3Asuperior%7Cobf%3Aany",
+    "groups": [6, 7],
+    "requirements": [
+      { "code": "dom", "clicks": 2 },
+      { "code": "for", "clicks": 1 }
+    ],
+    "or": [
+      { "code": "cel", "superior": true },
+      { "code": "obf", "superior": false }
+    ],
+    "expected_ids": [201735, 201782, 201751]
+  },
+  "library": {
+    "rest_query": "disciplines=pot%2Cpre&discipline_logic=only",
+    "disciplines": ["pot", "pre"],
+    "logic": "Only",
+    "expected_ids": [102308, 102316, 101008, 101772, 102346]
+  }
+}

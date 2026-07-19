@@ -26,9 +26,9 @@ import {
   type SemanticProgress,
   type SemanticResult,
 } from '../lib/semanticSearch'
+import type { LibraryDisciplineLogic } from '../lib/disciplineFilter'
 
-/** Per-discipline filter state, cycling off → required (any level) → superior. */
-type DisciplineMode = 'off' | 'any' | 'superior'
+type DisciplineMode = 'off' | 'selected'
 
 function CostPill({ blood, pool }: { blood: string | null; pool: string | null }) {
   if (!blood && !pool) return null
@@ -50,6 +50,8 @@ export default function LibrarySearch() {
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
+  const [disciplineLogic, setDisciplineLogic] = useState<LibraryDisciplineLogic>('all')
+  const [includeNoDiscipline, setIncludeNoDiscipline] = useState(false)
   const [bloodCost, setBloodCost] = useState<number | null>(null)
   const [bloodCostMode, setBloodCostMode] = useState<CostMode>('at_most')
   const [poolCost, setPoolCost] = useState<number | null>(null)
@@ -106,9 +108,8 @@ export default function LibrarySearch() {
       precon,
       artist,
       disciplines: active.map(([code]) => code),
-      // vdb lets you mix levels per discipline; MVP applies "superior" to the
-      // whole selection when any badge is in superior mode (feature-parity ✎).
-      disciplinesSuperior: active.some(([, m]) => m === 'superior'),
+      disciplineLogic,
+      includeNoDiscipline,
     }
   }, [
     text,
@@ -126,12 +127,13 @@ export default function LibrarySearch() {
     precon,
     artist,
     discModes,
+    disciplineLogic,
+    includeNoDiscipline,
   ])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
-      const next: DisciplineMode =
-        m[code] === 'any' ? 'superior' : m[code] === 'superior' ? 'off' : 'any'
+      const next: DisciplineMode = m[code] === 'selected' ? 'off' : 'selected'
       return { ...m, [code]: next }
     })
   }
@@ -371,14 +373,13 @@ export default function LibrarySearch() {
             <button
               key={code}
               onClick={() => cycle(code)}
-              title={`${code}: click to require, again for superior only, again to clear`}
+              aria-pressed={mode === 'selected'}
+              title={`${code}: toggle this library discipline requirement`}
               className={
                 'inline-grid h-6 min-w-9 place-items-center rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
-                (mode === 'superior'
-                  ? 'bg-gold text-[#241a06]'
-                  : mode === 'any'
-                    ? 'bg-blood text-white'
-                    : 'border border-line text-ink-dim hover:text-ink-muted')
+                (mode === 'selected'
+                  ? 'bg-blood text-white'
+                  : 'border border-line text-ink-dim hover:text-ink-muted')
               }
             >
               {code}
@@ -393,6 +394,48 @@ export default function LibrarySearch() {
             clear
           </button>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-ink-dim">Discipline logic</span>
+        <div className="flex overflow-hidden rounded-lg border border-line">
+          {(
+            [
+              ['all', 'All'],
+              ['any', 'Any'],
+              ['none', 'Not'],
+              ['only', 'Only'],
+            ] as [LibraryDisciplineLogic, string][]
+          ).map(([logic, label]) => (
+            <button
+              key={logic}
+              type="button"
+              aria-pressed={disciplineLogic === logic}
+              onClick={() => setDisciplineLogic(logic)}
+              className={
+                'px-2.5 py-1.5 ' +
+                (disciplineLogic === logic
+                  ? 'bg-blood text-white'
+                  : 'bg-surface text-ink-dim hover:text-ink-muted')
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          aria-pressed={includeNoDiscipline}
+          onClick={() => setIncludeNoDiscipline((selected) => !selected)}
+          className={
+            'rounded-lg border px-2.5 py-1.5 ' +
+            (includeNoDiscipline
+              ? 'border-blood bg-blood text-white'
+              : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+          }
+        >
+          No requirement
+        </button>
       </div>
 
       {status === 'loading' ? (
