@@ -189,3 +189,23 @@ docs/feature-parity.md's scope note).
 - Performance budget: search < 16ms p95 local; first load < 200KB JS gzipped
   (excl. wasm+db which stream/cache separately)
 - Accessibility pass (WCAG AA), keyboard map, docs
+
+## Phase 5 — VTES v5 game-loop / rules reference (additive, beyond vdb parity)
+_Independent of Phases 3–4; could be pulled earlier. Additive reference tooling in the
+spirit of "card research" — rules-level and card-agnostic, not a play server, so it
+stays clear of the tournament/community-data scope exclusion. Full design + the
+"is there a better way to visualize it?" options in
+[docs/gameloop-visualizer.md](gameloop-visualizer.md)._
+- ☐ Interactive, decomposed game-loop explainer (drill-down statechart, not one flat
+  FSM): turn stepper → action / combat / block / referendum sub-views; Basic vs
+  Advanced/Judge complexity toggle. Sourced from the existing full-game-loop DOT FSM,
+  distilled to a build-time JSON (single source of truth, not two hand-maintained
+  representations). Zero-dep MVP path (inline SVG + CSS/JS); richer libs (React Flow /
+  XState) each need an ADR first
+- ☐ Impulse / priority interactive widget — the highest-teaching-value piece: a 5-seat
+  table with predator/prey, animating the context-specific pass orders (combat /
+  directed-at-one / directed-at-set / undirected)
+- ☐ Card-DB integration (the differentiator): map FSM timing windows → card types, then
+  deck-aware "when can I play this?" — a rules trainer no other VTES tool has
+- ☐ (Optional, own ADR) executable statechart (e.g. XState) as one source of truth for
+  the diagram, the trainer's step engine, and rules-consistency tests
