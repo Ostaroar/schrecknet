@@ -64,8 +64,8 @@ docs/feature-parity.md's scope note).
   detail panel in the browser (crypt/library field gating verified against
   two real bugs found live: `types` leaking onto crypt cards, and library
   cards' clan *requirement* wrongly nulled — both fixed with regression tests)
-- ☐ MCP resources (`card://`, `db://cards/meta`); a routed detail page with
-  shareable deep links (needs a router — not added yet)
+- ☑ MCP resources: `card://{id}` template and `db://cards/meta`; routed card
+  detail page with shareable deep links is also live
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
   comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL

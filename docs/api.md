@@ -24,9 +24,11 @@ client handshake (`initialize` → `tools/list` → `tools/call`). **stdio** tra
 
 ### Resources
 
-- `card://{id}` — card JSON
+- `card://{id}` — **Live.** Full V5 card JSON through an MCP resource template;
+  calls the same `card_detail::get_card` service as the `get_card` tool and REST
 - `deck://{share_id}` — public deck JSON
-- `db://cards/meta` — card database version/date
+- `db://cards/meta` — **Live.** Card database schema/data versions, V5 counts,
+  source, and included product names (same `cards.meta.json` served over HTTP)
 
 Auth: MCP requests carry the same bearer/session token as REST; anonymous access is
 allowed for read-only card tools.

@@ -5,8 +5,13 @@
 use std::sync::Arc;
 
 use rmcp::handler::server::wrapper::Parameters;
-use rmcp::model::{ServerCapabilities, ServerInfo};
-use rmcp::{tool, tool_handler, tool_router, ServerHandler};
+use rmcp::model::{
+    ListResourceTemplatesResult, ListResourcesResult, PaginatedRequestParams,
+    ReadResourceRequestParams, ReadResourceResult, Resource, ResourceContents, ResourceTemplate,
+    ServerCapabilities, ServerInfo,
+};
+use rmcp::service::RequestContext;
+use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 
 use crate::card_detail::{self, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
@@ -82,6 +87,26 @@ fn json_result<T: serde::Serialize>(
     ]))
 }
 
+fn card_id_from_uri(uri: &str) -> Option<i64> {
+    let id = uri.strip_prefix("card://")?;
+    if id.is_empty() || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    id.parse().ok()
+}
+
+fn json_resource<T: serde::Serialize>(
+    uri: &str,
+    value: &T,
+) -> Result<ReadResourceResult, rmcp::ErrorData> {
+    let json = serde_json::to_string(value)
+        .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+    Ok(ReadResourceResult::new(vec![ResourceContents::text(
+        json, uri,
+    )
+    .with_mime_type("application/json")]))
+}
+
 #[tool_handler]
 impl ServerHandler for SchreckNetMcp {
     fn get_info(&self) -> ServerInfo {
@@ -89,12 +114,82 @@ impl ServerHandler for SchreckNetMcp {
         info.server_info =
             rmcp::model::Implementation::new("schrecknet", env!("CARGO_PKG_VERSION"))
                 .with_title("SchreckNet — VTES V5 card search & deck building");
-        info.capabilities = ServerCapabilities::builder().enable_tools().build();
+        info.capabilities = ServerCapabilities::builder()
+            .enable_tools()
+            .enable_resources()
+            .build();
         info.instructions = Some(
             "SchreckNet hosts the V5 format of VTES exclusively. search_crypt searches \
              the V5-legal crypt pool only — there is no classic-era card data here."
                 .into(),
         );
         info
+    }
+
+    async fn list_resources(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourcesResult, rmcp::ErrorData> {
+        Ok(ListResourcesResult::with_all_items(vec![Resource::new(
+            "db://cards/meta",
+            "cards-meta",
+        )
+        .with_title("SchreckNet V5 card database metadata")
+        .with_description("Schema/data versions, V5 card counts, source, and included products")
+        .with_mime_type("application/json")]))
+    }
+
+    async fn list_resource_templates(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourceTemplatesResult, rmcp::ErrorData> {
+        Ok(ListResourceTemplatesResult::with_all_items(vec![
+            ResourceTemplate::new("card://{id}", "v5-card")
+                .with_title("VTES V5 card by id")
+                .with_description("Full card text, printings, artists, rulings, and translations")
+                .with_mime_type("application/json"),
+        ]))
+    }
+
+    async fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ReadResourceResult, rmcp::ErrorData> {
+        if request.uri == "db://cards/meta" {
+            let path = format!("{}/cards.meta.json", self.data_dir);
+            let text = std::fs::read_to_string(path)
+                .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+            let value: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
+            return json_resource(&request.uri, &value);
+        }
+
+        let Some(id) = card_id_from_uri(&request.uri) else {
+            return Err(rmcp::ErrorData::resource_not_found(
+                format!("unknown resource: {}", request.uri),
+                None,
+            ));
+        };
+        let conn = self.open()?;
+        let card = card_detail::get_card(&conn, &GetCardParams { id })
+            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?
+            .ok_or_else(|| rmcp::ErrorData::resource_not_found("card not found", None))?;
+        json_resource(&request.uri, &card)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::card_id_from_uri;
+
+    #[test]
+    fn parses_only_strict_card_resource_uris() {
+        assert_eq!(card_id_from_uri("card://201733"), Some(201733));
+        assert_eq!(card_id_from_uri("card://"), None);
+        assert_eq!(card_id_from_uri("card://12/extra"), None);
+        assert_eq!(card_id_from_uri("https://example.com/12"), None);
     }
 }
