@@ -97,8 +97,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       VDB does not apply crypt discipline levels to library requirements, and
       KRCG's V5 library rows confirm that no such level data exists ✎
 - ☑ Clan / Path requirement filter — MVP live
-- ☐ Sect requirement filter
-- ☐ Title requirement filter
+- ☑ Sect requirement filter — official VEKN tokens plus VDB-compatible implied
+      title sects; pool-derived selections, All/Any/Not logic, and Not Required
+      on browser, REST, MCP, and semantic filtering ✎
+- ☑ Title requirement filter — exact V5 title tokens plus VDB's synthetic
+      `titled_specific` selection (any specific title), with All/Any/Not logic
+      on browser, REST, MCP, and semantic filtering ✎
 - ☑ Blood cost / Pool cost filters (`<=`, `>=`, `=`) — live independently for
       both costs on browser, REST, and MCP; cards with no numeric cost and
       variable `X` costs never match a numeric cost filter
@@ -205,8 +209,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with
       update script (original updates via `misc/` scripts) — `schrecknet-data build`
       fetches KRCG's `vtes.json`, filters to the V5 pool (`data/src/v5pool.rs`),
-      populates cards/disciplines/printings/artists/rulings/translations/FTS.
-      ✎ still missing: VEKN official list cross-check, incremental/diff updates
+      joins VEKN's official normalized library requirements, and populates
+      cards/disciplines/requirements/printings/artists/rulings/translations/FTS.
+      ✎ still missing: full canonical-text cross-check against VEKN, incremental/
+      diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)
 - ☐ Keyboard-first UX on desktop, touch-first on mobile
 - ☐ Dark Pack legal notice on every page footer ✎

@@ -11,13 +11,16 @@
 
 use rusqlite::{params, Connection};
 use schrecknet_core::capacity::parse_capacity_requirement;
+use schrecknet_core::requirements::normalize_library_requirements;
 use serde_json::Value;
 
 use crate::v5pool::{is_in_v5_pool, V5_SET_NAMES};
+use crate::vekn::LibraryRequirements;
 
 pub fn run(
     conn: &Connection,
     all_cards: &[Value],
+    library_requirements: &LibraryRequirements,
 ) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let pool: Vec<&Value> = all_cards.iter().filter(|c| is_in_v5_pool(c)).collect();
 
@@ -27,6 +30,7 @@ pub fn run(
         insert_card(conn, card, kind)?;
         insert_disciplines(conn, card)?;
         insert_capacity_requirement(conn, card, kind)?;
+        insert_requirements(conn, card, kind, library_requirements)?;
         insert_printings(conn, card)?;
         insert_artists(conn, card)?;
         insert_rulings(conn, card)?;
@@ -135,6 +139,28 @@ fn insert_capacity_requirement(
          VALUES (?1, ?2, ?3)",
         params![id, requirement.min, requirement.max],
     )?;
+    Ok(())
+}
+
+fn insert_requirements(
+    conn: &Connection,
+    card: &Value,
+    kind: &str,
+    requirements: &LibraryRequirements,
+) -> rusqlite::Result<()> {
+    if kind != "library" {
+        return Ok(());
+    }
+    let id = card.get("id").and_then(Value::as_i64).unwrap_or_default();
+    let Some(raw) = requirements.get(&id) else {
+        return Ok(());
+    };
+    for token in normalize_library_requirements(raw) {
+        conn.execute(
+            "INSERT INTO card_requirements (card_id, requirement, kind) VALUES (?1, ?2, ?3)",
+            params![id, token.value, token.kind],
+        )?;
+    }
     Ok(())
 }
 
@@ -347,6 +373,51 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn official_requirements_are_normalized_only_for_library_cards() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE card_requirements(
+               card_id INT, requirement TEXT, kind TEXT,
+               PRIMARY KEY(card_id, requirement));",
+        )
+        .unwrap();
+        let requirements = LibraryRequirements::from([(42, "prince,justicar".to_owned())]);
+        let card = json!({ "id": 42 });
+        insert_requirements(&conn, &card, "library", &requirements).unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT requirement, kind FROM card_requirements
+                 WHERE card_id=42 ORDER BY requirement",
+            )
+            .unwrap();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                ("camarilla".into(), "sect".into()),
+                ("justicar".into(), "title".into()),
+                ("prince".into(), "title".into()),
+                ("titled_specific".into(), "other".into()),
+            ]
+        );
+
+        insert_requirements(&conn, &card, "crypt", &requirements).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM card_requirements", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(count, 4);
     }
 
     #[test]

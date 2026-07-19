@@ -9,6 +9,7 @@ pub mod capacity;
 pub mod diff;
 pub mod dtext;
 pub mod legality;
+pub mod requirements;
 pub mod semantic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod semantic_native;

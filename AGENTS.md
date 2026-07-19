@@ -99,8 +99,9 @@ cargo run -p schrecknet-server -- --mcp-stdio
 # SCHRECKNET_MODEL_DIR (verified local ONNX bundle), SCHRECKNET_APP_DB
 
 # data pipeline -> dist/cards.sqlite + cards.meta.json
-# fetches https://static.krcg.org/data/vtes.json (needs network); cached 24h
-# under .cache/ (gitignored) via SCHRECKNET_DATA_CACHE. Also fetches and
+# fetches KRCG vtes.json + VEKN's official card-list ZIP (needs network);
+# both cached 24h under .cache/ (gitignored) via SCHRECKNET_DATA_CACHE.
+# Also fetches and
 # checksum-verifies the ~23 MB semantic ONNX model pinned by
 # models/semantic.json, caches it under .cache/semantic/, embeds all V5 cards,
 # and emits browser-ready assets under dist/models/semantic/.

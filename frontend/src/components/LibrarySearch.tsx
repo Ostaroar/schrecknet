@@ -4,6 +4,8 @@ import {
   listLibraryTypes,
   listLibraryClans,
   listLibraryDisciplines,
+  listLibrarySectRequirements,
+  listLibraryTitleRequirements,
   listSets,
   listPrecons,
   emptyLibraryFilters,
@@ -28,8 +30,117 @@ import {
   type SemanticResult,
 } from '../lib/semanticSearch'
 import type { LibraryDisciplineLogic } from '../lib/disciplineFilter'
+import type { RequirementLogic } from '../lib/requirementFilter'
 
 type DisciplineMode = 'off' | 'selected'
+
+function requirementLabel(value: string): string {
+  if (value === 'titled_specific') return 'Titled (specific)'
+  if (value === 'titled') return 'Titled (any)'
+  if (value === 'non-titled') return 'Non-titled'
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+interface RequirementControlsProps {
+  label: 'Sect' | 'Title'
+  options: string[]
+  selected: Record<string, boolean>
+  logic: RequirementLogic
+  includeNoRequirement?: boolean
+  onToggle: (value: string) => void
+  onLogicChange: (logic: RequirementLogic) => void
+  onNoRequirementChange?: () => void
+  onClear: () => void
+}
+
+function RequirementControls({
+  label,
+  options,
+  selected,
+  logic,
+  includeNoRequirement = false,
+  onToggle,
+  onLogicChange,
+  onNoRequirementChange,
+  onClear,
+}: RequirementControlsProps) {
+  const hasSelected = Object.values(selected).some(Boolean)
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <span className="text-ink-dim">{label} requirement</span>
+      {options.map((value) => {
+        const active = selected[value] ?? false
+        const optionLabel = requirementLabel(value)
+        return (
+          <button
+            key={value}
+            type="button"
+            aria-label={`${label} requirement ${optionLabel}`}
+            aria-pressed={active}
+            onClick={() => onToggle(value)}
+            className={
+              'rounded-full border px-2.5 py-1.5 ' +
+              (active
+                ? 'border-blood bg-blood text-white'
+                : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+            }
+          >
+            {optionLabel}
+          </button>
+        )
+      })}
+      {onNoRequirementChange && (
+        <button
+          type="button"
+          aria-pressed={includeNoRequirement}
+          onClick={onNoRequirementChange}
+          className={
+            'rounded-full border px-2.5 py-1.5 ' +
+            (includeNoRequirement
+              ? 'border-blood bg-blood text-white'
+              : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+          }
+        >
+          Not required
+        </button>
+      )}
+      <div className="flex overflow-hidden rounded-lg border border-line">
+        {(
+          [
+            ['all', 'All'],
+            ['any', 'Any'],
+            ['none', 'Not'],
+          ] as [RequirementLogic, string][]
+        ).map(([value, logicLabel]) => (
+          <button
+            key={value}
+            type="button"
+            aria-label={`${label} requirement logic ${logicLabel}`}
+            aria-pressed={logic === value}
+            onClick={() => onLogicChange(value)}
+            className={
+              'px-2.5 py-1.5 ' +
+              (logic === value
+                ? 'bg-blood text-white'
+                : 'bg-surface text-ink-dim hover:text-ink-muted')
+            }
+          >
+            {logicLabel}
+          </button>
+        ))}
+      </div>
+      {(hasSelected || includeNoRequirement) && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-ink-dim underline hover:text-ink-muted"
+        >
+          clear
+        </button>
+      )}
+    </div>
+  )
+}
 
 function CostPill({ blood, pool }: { blood: string | null; pool: string | null }) {
   if (!blood && !pool) return null
@@ -50,6 +161,11 @@ export default function LibrarySearch() {
   const [semanticRetry, setSemanticRetry] = useState(0)
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
+  const [sectRequirements, setSectRequirements] = useState<Record<string, boolean>>({})
+  const [sectRequirementLogic, setSectRequirementLogic] = useState<RequirementLogic>('all')
+  const [includeNoSectRequirement, setIncludeNoSectRequirement] = useState(false)
+  const [titleRequirements, setTitleRequirements] = useState<Record<string, boolean>>({})
+  const [titleRequirementLogic, setTitleRequirementLogic] = useState<RequirementLogic>('all')
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
   const [disciplineLogic, setDisciplineLogic] = useState<LibraryDisciplineLogic>('all')
   const [includeNoDiscipline, setIncludeNoDiscipline] = useState(false)
@@ -70,6 +186,8 @@ export default function LibrarySearch() {
   const [sets, setSets] = useState<string[]>([])
   const [precons, setPrecons] = useState<string[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
+  const [allSectRequirements, setAllSectRequirements] = useState<string[]>([])
+  const [allTitleRequirements, setAllTitleRequirements] = useState<string[]>([])
   const [results, setResults] = useState<Array<LibraryCard | SemanticResult<LibraryCard>>>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -78,11 +196,21 @@ export default function LibrarySearch() {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([listLibraryTypes(), listLibraryClans(), listLibraryDisciplines(), listSets(), listPrecons()])
-      .then(([t, c, d, s, p]) => {
+    Promise.all([
+      listLibraryTypes(),
+      listLibraryClans(),
+      listLibraryDisciplines(),
+      listLibrarySectRequirements(),
+      listLibraryTitleRequirements(),
+      listSets(),
+      listPrecons(),
+    ])
+      .then(([t, c, d, sr, tr, s, p]) => {
         setTypes(t)
         setClans(c)
         setAllDisciplines(d)
+        setAllSectRequirements(sr)
+        setAllTitleRequirements(tr)
         setSets(s)
         setPrecons(p)
         setStatus('ready')
@@ -102,6 +230,15 @@ export default function LibrarySearch() {
       textRegex,
       cardType,
       clan,
+      sectRequirements: Object.entries(sectRequirements)
+        .filter(([, selected]) => selected)
+        .map(([value]) => value),
+      sectRequirementLogic,
+      includeNoSectRequirement,
+      titleRequirements: Object.entries(titleRequirements)
+        .filter(([, selected]) => selected)
+        .map(([value]) => value),
+      titleRequirementLogic,
       capacityRequirement,
       capacityRequirementMode,
       bloodCost,
@@ -123,6 +260,11 @@ export default function LibrarySearch() {
     textRegex,
     cardType,
     clan,
+    sectRequirements,
+    sectRequirementLogic,
+    includeNoSectRequirement,
+    titleRequirements,
+    titleRequirementLogic,
     capacityRequirement,
     capacityRequirementMode,
     bloodCost,
@@ -470,6 +612,35 @@ export default function LibrarySearch() {
           No requirement
         </button>
       </div>
+
+      <RequirementControls
+        label="Sect"
+        options={allSectRequirements}
+        selected={sectRequirements}
+        logic={sectRequirementLogic}
+        includeNoRequirement={includeNoSectRequirement}
+        onToggle={(value) =>
+          setSectRequirements((current) => ({ ...current, [value]: !current[value] }))
+        }
+        onLogicChange={setSectRequirementLogic}
+        onNoRequirementChange={() => setIncludeNoSectRequirement((selected) => !selected)}
+        onClear={() => {
+          setSectRequirements({})
+          setIncludeNoSectRequirement(false)
+        }}
+      />
+
+      <RequirementControls
+        label="Title"
+        options={allTitleRequirements}
+        selected={titleRequirements}
+        logic={titleRequirementLogic}
+        onToggle={(value) =>
+          setTitleRequirements((current) => ({ ...current, [value]: !current[value] }))
+        }
+        onLogicChange={setTitleRequirementLogic}
+        onClear={() => setTitleRequirements({})}
+      />
 
       {status === 'loading' ? (
         <p className="text-sm text-ink-dim">Loading card database…</p>

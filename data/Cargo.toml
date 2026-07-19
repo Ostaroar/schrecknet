@@ -6,8 +6,10 @@ license.workspace = true
 description = "SchreckNet card-data pipeline: KRCG/VEKN sources -> V5-filtered cards.sqlite"
 
 [dependencies]
+csv = "1.4"
 rusqlite = { version = "0.32", features = ["bundled"] }
 schrecknet-core = { path = "../core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 ureq = "2"
+zip = { version = "8.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }

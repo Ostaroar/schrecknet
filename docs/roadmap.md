@@ -17,8 +17,9 @@ docs/feature-parity.md's scope note).
 ## Phase 1 — Card search (offline-first)
 - ☑ Real `cards.sqlite`: `schrecknet-data` fetches KRCG's live export, filters to
   the V5 pool (662 cards: 218 crypt / 444 library, groups 5–7), populates cards,
-  disciplines (superior/inferior), printings, sets, artists, rulings,
-  translations, and an FTS5 index — verified end-to-end with `sqlite3` queries
+  disciplines (superior/inferior), official VEKN requirements, printings, sets,
+  artists, rulings, translations, and an FTS5 index — verified end-to-end with
+  `sqlite3` queries
 - ☑ Crypt search MVP, verified live in-browser: text/name search, clan filter,
   group filter, capacity-sorted results, superior/inferior discipline badges —
   server serves `cards.sqlite` at `/data/`, frontend loads it via sql.js
@@ -51,8 +52,12 @@ docs/feature-parity.md's scope note).
 - ☑ Library vampire-capacity requirement filter: shared Rust ingestion derives
   VDB's four same-line `Requires … capacity …` forms into inclusive min/max
   bounds; browser, REST, MCP, semantic filtering, and a real-V5 golden agree
+- ☑ Library sect/title requirement filters: official VEKN metadata is joined
+  to the V5 pool, shared Rust reproduces VDB's title-implied sects, and
+  pool-derived All/Any/Not controls agree across browser, REST, MCP, semantic
+  filtering, and a real-V5 golden
 - ☐ Remaining crypt filters (sect, votes, traits) + remaining library filters
-  (sect/title requirements, traits)
+  (traits)
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
@@ -90,9 +95,10 @@ docs/feature-parity.md's scope note).
   detail page with shareable deep links is also live
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
-  comment); `votes`/`banned`/`requirement_clan`/`requirement_title`/
-  `requirement_sect`/`burn_option` also NULL. Capacity requirements are now
-  derived from canonical card text into `card_capacity_requirements`
+  comment); `votes`/`banned`/`burn_option` also NULL. Legacy scalar
+  `requirement_*` columns remain NULL; capacity and official sect/title
+  requirements now live in normalized `card_capacity_requirements` and
+  `card_requirements` tables
 - 🐛 Fixed (found building the Phase 2 precon browser, data_version bumped to
   3 to force OPFS re-download): `printings`/`sets` were storing a card's
   *entire* print history, including classic-era sets explicitly out of scope

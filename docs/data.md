@@ -2,7 +2,8 @@
 
 ## Sources (all community/official, same as vdb)
 
-- **VEKN official card list** — canonical card texts (CSV)
+- **VEKN official card lists** — canonical CSV bundle; `vteslibmeta.csv` supplies
+  normalized library requirements used by VDB's sect/title filters
 - **KRCG static files** (`static.krcg.org`) — normalized card JSON, rulings database,
   card name index, set/precon metadata
 - **Card images** — Black Chantry / Dark Pack assets; legacy scans (VTES.PL, CCGAMEZ)
@@ -10,7 +11,7 @@
 
 ## Pipeline (`data/`)
 
-A small Rust (or Python, TBD in implementation) tool that:
+A Rust tool that:
 
 1. Downloads pinned-version source files (checksums recorded in `data/lock.json`)
 1a. **Filters to the V5-legal pool** — the VEKN V5 format card list (KRCG carries
@@ -18,7 +19,8 @@ A small Rust (or Python, TBD in implementation) tool that:
     also shrinks `cards.sqlite`. Filter option lists (clans, sects, titles,
     disciplines, groups, sets, precons, artists) are emitted from the surviving
     pool, never hardcoded.
-2. Normalizes into the SQLite schema below
+2. Joins official VEKN requirement metadata by stable card id, reproduces VDB's
+   title-implied sect tokens in shared Rust, and normalizes into the schema below
 3. Builds FTS5 indexes and integrity-checks (every crypt card has clan+group, …)
 4. Downloads the exact ONNX files locked by `models/semantic.json`, verifies every
    size + SHA-256, constructs deterministic English card documents, and generates
@@ -61,6 +63,12 @@ CREATE TABLE card_capacity_requirements(
   min_capacity INT,                -- “N or more” / “above N” normalized bound
   max_capacity INT                 -- “N or less” / “less than N” normalized bound
 );                                 -- schema v5
+CREATE TABLE card_requirements(
+  card_id INT,
+  requirement TEXT,                -- normalized/derived VDB-compatible token
+  kind TEXT CHECK(kind IN ('sect','title','other')),
+  PRIMARY KEY(card_id, requirement)
+) WITHOUT ROWID;                    -- schema v6; V5 rows only
 CREATE TABLE card_traits(card_id INT, trait TEXT);         -- precomputed trait flags
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
                        first_print BOOLEAN);
@@ -82,6 +90,12 @@ time by shared Rust code in `core/src/capacity.rs`. It deliberately matches vdb'
 same-line `Requires … of/with capacity …` grammar and normalizes strict forms
 (`less than N`, `above N`) to inclusive bounds. Text merely mentioning another
 card's capacity is not treated as a requirement.
+
+Sect/title requirements come from VEKN's official `vtescsv_utf8.zip`, cached beside
+KRCG's JSON for 24 hours. `core/src/requirements.rs` lowercases, deduplicates, and
+classifies only the rows that survive the V5 pool filter, then adds VDB-compatible
+title→sect implications. This keeps filter options pool-derived while avoiding
+false positives from ordinary card text; see ADR 0007.
 
 The model is not fetched at query time and its binary is not committed. The lock
 records one immutable Hugging Face revision plus checksums; the data build caches it

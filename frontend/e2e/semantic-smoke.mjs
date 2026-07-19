@@ -222,6 +222,26 @@ try {
     .fill(String(capacityFixture.value))
   await waitForExactIds(capacityFixture.expected_ids)
 
+  // Anarch is implied by the official Baron requirement during ingestion,
+  // exactly as in VDB. This protects the VEKN join, shared normalization, and
+  // both query builders with one real-pool composition.
+  const requirementFixture = searchFixture.library_requirements
+  const requirementRest = await exactRestSearch('library', requirementFixture.rest_query)
+  assert.deepEqual(
+    requirementRest.map((card) => card.id),
+    requirementFixture.expected_ids,
+    'library sect/title requirement REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  await page
+    .getByLabel(`Sect requirement ${requirementFixture.sect}`, { exact: true })
+    .click()
+  await page
+    .getByLabel(`Title requirement ${requirementFixture.title}`, { exact: true })
+    .click()
+  await waitForExactIds(requirementFixture.expected_ids)
+
   // The semantic golden queries intentionally start with no structured
   // filters. Reload to discard the exact-search component state above while
   // keeping the service worker/model caches warm.

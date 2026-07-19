@@ -1,13 +1,15 @@
 //! SchreckNet data pipeline.
 //!
-//! `build` fetches KRCG's card export, filters to the V5 pool (see
-//! `v5pool.rs` — the single source of truth for "is this card V5-legal"),
-//! and emits `cards.sqlite` (schema per docs/data.md) + `cards.meta.json`.
+//! `build` fetches KRCG's card export plus VEKN's official requirement
+//! metadata, filters to the V5 pool (see `v5pool.rs` — the single source of
+//! truth for "is this card V5-legal"), and emits `cards.sqlite` (schema per
+//! docs/data.md) + `cards.meta.json`.
 
 mod ingest;
 mod krcg;
 mod semantic;
 mod v5pool;
+mod vekn;
 
 use std::path::PathBuf;
 
@@ -33,6 +35,12 @@ CREATE TABLE card_capacity_requirements(
   min_capacity INT,
   max_capacity INT
 );
+CREATE TABLE card_requirements(
+  card_id INT,
+  requirement TEXT,
+  kind TEXT CHECK(kind IN ('sect','title','other')),
+  PRIMARY KEY(card_id, requirement)
+) WITHOUT ROWID;
 CREATE TABLE card_traits(card_id INT, trait TEXT);
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
 CREATE TABLE card_artists(card_id INT, artist_id INT);
@@ -78,11 +86,27 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(std::env::var("SCHRECKNET_DATA_CACHE").unwrap_or_else(|_| ".cache".into()));
     let all_cards = krcg::fetch_cards(&cache_dir)?;
     eprintln!("krcg: {} total cards fetched", all_cards.len());
+    let library_requirements = vekn::fetch_library_requirements(&cache_dir)?;
+    eprintln!(
+        "vekn: {} library requirement rows fetched",
+        library_requirements.len()
+    );
 
     let conn = rusqlite::Connection::open(&db_path)?;
     conn.execute_batch(SCHEMA)?;
 
-    let stats = ingest::run(&conn, &all_cards)?;
+    let stats = ingest::run(&conn, &all_cards, &library_requirements)?;
+    let (requirement_cards, requirement_tokens): (i64, i64) = conn.query_row(
+        "SELECT COUNT(DISTINCT card_id), COUNT(*) FROM card_requirements",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    if requirement_cards == 0 {
+        return Err(std::io::Error::other(
+            "VEKN metadata produced no requirements for the V5 library pool",
+        )
+        .into());
+    }
     let languages = available_languages(&conn)?;
     let semantic_model = semantic::prepare_model(&cache_dir, &out_dir)?;
     let embedding_count = semantic::embed_cards(&conn, &semantic_model)?;
@@ -95,7 +119,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '5'), ('data_version', '5'), ('scope', 'v5'),
+         ('schema_version', '6'), ('data_version', '6'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -113,11 +137,12 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // schema_version bumps when the table/column layout changes (v2:
         // image_url added to cards; v3: dropped the never-populated twd_*
         // tables; v4: added card_embeddings for local semantic search; v5:
-        // normalized derived library capacity requirements into their own table).
-        // data_version changes whenever the emitted content changes (v5 adds
-        // VDB-compatible capacity requirement bounds for library cards).
-        "schema_version": 5,
-        "data_version": 5,
+        // normalized derived library capacity requirements into their own table;
+        // v6: added normalized official VEKN requirement tokens).
+        // data_version changes whenever emitted content changes (v6 adds the
+        // V5 library sect/title requirement rows and implied title sects).
+        "schema_version": 6,
+        "data_version": 6,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
@@ -139,6 +164,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
             "path": format!("/models/semantic/{}/", semantic_model.manifest.model_id),
         },
         "source": "https://static.krcg.org/data/vtes.json",
+        "requirement_source": vekn::SOURCE_URL,
+        "requirements": {
+            "cards": requirement_cards,
+            "tokens": requirement_tokens,
+        },
         "v5_sets": v5pool::V5_SET_NAMES,
     });
     std::fs::write(

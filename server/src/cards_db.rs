@@ -111,6 +111,19 @@ pub enum DisciplineLogic {
     Only,
 }
 
+/// All/Any/Not composition used by VDB's library sect/title requirements.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum RequirementLogic {
+    /// Require every selected token (default).
+    #[default]
+    All,
+    /// Require at least one selected token.
+    Any,
+    /// Exclude cards matching any selected token.
+    None,
+}
+
 /// One discipline requirement used by exact and semantic structured search.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
 pub struct DisciplineRequirement {
@@ -368,6 +381,23 @@ pub struct LibrarySearchParams {
     /// cards have no clan requirement.
     #[serde(default)]
     pub clan: Option<String>,
+    /// Normalized sect requirement tokens from the official VEKN metadata.
+    /// REST accepts a comma-separated string; MCP accepts an array.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub sect_requirements: Vec<String>,
+    /// How selected sect requirements combine: all, any, or none (Not).
+    #[serde(default)]
+    pub sect_requirement_logic: RequirementLogic,
+    /// Treat cards with no recognized sect requirement as another selection.
+    #[serde(default)]
+    pub include_no_sect_requirement: bool,
+    /// Normalized title requirement tokens. `titled_specific` is the VDB
+    /// synthetic selection matching any specific title requirement.
+    #[serde(default, deserialize_with = "deserialize_disciplines")]
+    pub title_requirements: Vec<String>,
+    /// How selected title requirements combine: all, any, or none (Not).
+    #[serde(default)]
+    pub title_requirement_logic: RequirementLogic,
     /// Lowercase discipline codes (e.g. ["dom","for"]); combination is
     /// controlled by `discipline_logic`. REST accepts a comma-separated string.
     #[serde(default, deserialize_with = "deserialize_disciplines")]
@@ -595,6 +625,73 @@ fn push_library_discipline_filter(
             bound.push(Box::new(requirements.len() as i64));
         }
     }
+}
+
+fn requirement_token_expression(
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    requirement: &str,
+) -> String {
+    let index = bound.len() + 1;
+    bound.push(Box::new(requirement.to_lowercase()));
+    format!(
+        "EXISTS (SELECT 1 FROM card_requirements cre
+            WHERE cre.card_id = c.id AND cre.requirement = ?{index})"
+    )
+}
+
+fn requirement_family_absent_expression(
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    kind: &str,
+) -> String {
+    let index = bound.len() + 1;
+    bound.push(Box::new(kind.to_owned()));
+    format!(
+        "NOT EXISTS (SELECT 1 FROM card_requirements crn
+            WHERE crn.card_id = c.id AND crn.kind = ?{index})"
+    )
+}
+
+fn push_library_requirement_filter(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    requirements: &[String],
+    logic: RequirementLogic,
+    include_no_requirement: bool,
+    family_kind: &str,
+) {
+    if logic == RequirementLogic::All {
+        for requirement in requirements {
+            let expression = requirement_token_expression(bound, requirement);
+            sql.push_str(&format!(" AND {expression}"));
+        }
+        if include_no_requirement {
+            if requirements.is_empty() {
+                let expression = requirement_family_absent_expression(bound, family_kind);
+                sql.push_str(&format!(" AND {expression}"));
+            } else {
+                sql.push_str(" AND 0");
+            }
+        }
+        return;
+    }
+
+    let mut alternatives = requirements
+        .iter()
+        .map(|requirement| requirement_token_expression(bound, requirement))
+        .collect::<Vec<_>>();
+    if include_no_requirement {
+        alternatives.push(requirement_family_absent_expression(bound, family_kind));
+    }
+    if alternatives.is_empty() {
+        return;
+    }
+    if logic == RequirementLogic::None {
+        sql.push_str(" AND NOT (");
+    } else {
+        sql.push_str(" AND (");
+    }
+    sql.push_str(&alternatives.join(" OR "));
+    sql.push(')');
 }
 
 fn push_group_filter(
@@ -859,6 +956,22 @@ fn search_library_inner(
         Box::new(params.set_print.as_sql_value()),
     ];
     push_library_discipline_filter(&mut sql, &mut bound, params);
+    push_library_requirement_filter(
+        &mut sql,
+        &mut bound,
+        &params.sect_requirements,
+        params.sect_requirement_logic,
+        params.include_no_sect_requirement,
+        "sect",
+    );
+    push_library_requirement_filter(
+        &mut sql,
+        &mut bound,
+        &params.title_requirements,
+        params.title_requirement_logic,
+        false,
+        "title",
+    );
     if let Some(capacity) = params.capacity_requirement {
         let (column, operator) = match params.capacity_requirement_mode {
             CapacityRequirementMode::AtMost => ("max_capacity", "<="),
@@ -970,6 +1083,9 @@ mod tests {
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              CREATE TABLE card_capacity_requirements(
                card_id INT PRIMARY KEY, min_capacity INT, max_capacity INT);
+             CREATE TABLE card_requirements(
+               card_id INT, requirement TEXT, kind TEXT,
+               PRIMARY KEY(card_id, requirement));
              CREATE TABLE sets(id INT, name TEXT, release_date TEXT);
              CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
              CREATE TABLE artists(id INT, name TEXT);
@@ -1899,6 +2015,119 @@ mod tests {
             mcp.capacity_requirement_mode,
             CapacityRequirementMode::AtMost
         );
+    }
+
+    #[test]
+    fn library_sect_requirements_support_all_any_not_and_no_requirement() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        conn.execute_batch(
+            "INSERT INTO card_requirements VALUES
+               (4, 'sabbat', 'sect'),
+               (4, 'titled', 'other'),
+               (5, 'camarilla', 'sect'),
+               (5, 'prince', 'title'),
+               (5, 'titled_specific', 'other');",
+        )
+        .unwrap();
+
+        let all = LibrarySearchParams {
+            sect_requirements: vec!["camarilla".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &all).unwrap()[0].name,
+            "Arcane Library"
+        );
+
+        let any = LibrarySearchParams {
+            sect_requirements: vec!["camarilla".into(), "sabbat".into()],
+            sect_requirement_logic: RequirementLogic::Any,
+            ..Default::default()
+        };
+        assert_eq!(search_library(&conn, &any).unwrap().len(), 2);
+
+        let not = LibrarySearchParams {
+            sect_requirements: vec!["sabbat".into()],
+            sect_requirement_logic: RequirementLogic::None,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &not)
+                .unwrap()
+                .iter()
+                .map(|card| card.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Arcane Library", "Villein"]
+        );
+
+        let no_requirement = LibrarySearchParams {
+            include_no_sect_requirement: true,
+            sect_requirement_logic: RequirementLogic::Any,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &no_requirement)
+                .unwrap()
+                .iter()
+                .map(|card| card.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Villein"]
+        );
+    }
+
+    #[test]
+    fn library_title_requirements_support_exact_and_specific_titled() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        conn.execute_batch(
+            "INSERT INTO card_requirements VALUES
+               (4, 'sabbat', 'sect'),
+               (4, 'titled', 'other'),
+               (5, 'camarilla', 'sect'),
+               (5, 'prince', 'title'),
+               (5, 'titled_specific', 'other');",
+        )
+        .unwrap();
+
+        for requirement in ["prince", "titled_specific"] {
+            let params = LibrarySearchParams {
+                title_requirements: vec![requirement.into()],
+                ..Default::default()
+            };
+            assert_eq!(
+                search_library(&conn, &params).unwrap()[0].name,
+                "Arcane Library"
+            );
+        }
+        let generic = LibrarySearchParams {
+            title_requirements: vec!["titled".into()],
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &generic).unwrap()[0].name,
+            "Absolute Tyranny"
+        );
+    }
+
+    #[test]
+    fn library_requirement_filters_deserialize_for_rest_and_mcp() {
+        let rest: LibrarySearchParams = serde_urlencoded::from_str(
+            "sect_requirements=camarilla,sabbat&sect_requirement_logic=any&include_no_sect_requirement=true&title_requirements=prince,titled_specific&title_requirement_logic=none",
+        )
+        .unwrap();
+        assert_eq!(rest.sect_requirements, vec!["camarilla", "sabbat"]);
+        assert_eq!(rest.sect_requirement_logic, RequirementLogic::Any);
+        assert!(rest.include_no_sect_requirement);
+        assert_eq!(rest.title_requirements, vec!["prince", "titled_specific"]);
+        assert_eq!(rest.title_requirement_logic, RequirementLogic::None);
+
+        let mcp: LibrarySearchParams = serde_json::from_str(
+            r#"{"sect_requirements":["anarch"],"title_requirements":["baron"]}"#,
+        )
+        .unwrap();
+        assert_eq!(mcp.sect_requirements, vec!["anarch"]);
+        assert_eq!(mcp.title_requirements, vec!["baron"]);
     }
 
     #[test]

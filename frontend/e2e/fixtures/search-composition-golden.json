@@ -24,5 +24,11 @@
     "mode": "at_least",
     "value": 6,
     "expected_ids": [101717]
+  },
+  "library_requirements": {
+    "rest_query": "sect_requirements=anarch&title_requirements=baron",
+    "sect": "Anarch",
+    "title": "Baron",
+    "expected_ids": [102218, 102246, 101324, 102230, 101631]
   }
 }

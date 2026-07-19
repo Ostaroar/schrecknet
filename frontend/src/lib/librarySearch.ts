@@ -7,6 +7,7 @@ import {
   type LibraryDisciplineLogic,
 } from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
+import { appendLibraryRequirementFilter, type RequirementLogic } from './requirementFilter'
 
 export type TextMode = 'any' | 'name' | 'text'
 export type CostMode = 'at_most' | 'exact' | 'at_least'
@@ -18,6 +19,11 @@ export interface LibraryFilters {
   textRegex: boolean
   cardType: string | null
   clan: string | null
+  sectRequirements: string[]
+  sectRequirementLogic: RequirementLogic
+  includeNoSectRequirement: boolean
+  titleRequirements: string[]
+  titleRequirementLogic: RequirementLogic
   disciplines: string[]
   disciplinesSuperior: boolean
   disciplineLogic: LibraryDisciplineLogic
@@ -41,6 +47,11 @@ export const emptyLibraryFilters: LibraryFilters = {
   textRegex: false,
   cardType: null,
   clan: null,
+  sectRequirements: [],
+  sectRequirementLogic: 'all',
+  includeNoSectRequirement: false,
+  titleRequirements: [],
+  titleRequirementLogic: 'all',
   disciplines: [],
   disciplinesSuperior: false,
   disciplineLogic: 'all',
@@ -170,6 +181,22 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
     filters.includeNoDiscipline,
     filters.disciplinesSuperior,
   )
+  sql = appendLibraryRequirementFilter(
+    sql,
+    params,
+    filters.sectRequirements,
+    filters.sectRequirementLogic,
+    filters.includeNoSectRequirement,
+    'sect',
+  )
+  sql = appendLibraryRequirementFilter(
+    sql,
+    params,
+    filters.titleRequirements,
+    filters.titleRequirementLogic,
+    false,
+    'title',
+  )
   if (filters.capacityRequirement !== null) {
     params.push(filters.capacityRequirement)
     const placeholder = `?${params.length}`
@@ -214,6 +241,23 @@ export async function listLibraryDisciplines(): Promise<string[]> {
      JOIN cards c ON c.id = cd.card_id WHERE c.kind = 'library' ORDER BY cd.discipline`,
   )
   return rows.map((r) => r.discipline)
+}
+
+export async function listLibrarySectRequirements(): Promise<string[]> {
+  const rows = await query<{ requirement: string }>(
+    `SELECT DISTINCT requirement FROM card_requirements
+     WHERE kind = 'sect' ORDER BY requirement`,
+  )
+  return rows.map((row) => row.requirement)
+}
+
+export async function listLibraryTitleRequirements(): Promise<string[]> {
+  const rows = await query<{ requirement: string; kind: string }>(
+    `SELECT DISTINCT requirement, kind FROM card_requirements
+     WHERE kind = 'title' OR requirement IN ('titled', 'non-titled', 'titled_specific')
+     ORDER BY requirement`,
+  )
+  return rows.map((row) => row.requirement)
 }
 
 export async function listSets(): Promise<string[]> {
