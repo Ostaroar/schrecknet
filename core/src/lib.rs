@@ -8,6 +8,7 @@
 pub mod diff;
 pub mod dtext;
 pub mod legality;
+pub mod semantic;
 pub mod share;
 pub mod stats;
 

@@ -140,3 +140,54 @@ pub fn category_distribution(labels: Vec<String>, qtys: Vec<u16>) -> Result<Stri
         .collect::<Vec<_>>()
         .join("\n"))
 }
+
+/// Exact semantic ranking over row-major candidate embeddings.
+///
+/// Returns `card_id\tscore` rows. Query inference and SQLite reads stay in the
+/// browser adapter; validation, cosine scoring, and stable ordering stay here.
+#[wasm_bindgen]
+pub fn rank_semantic_cards(
+    query: Vec<f32>,
+    embeddings: Vec<f32>,
+    card_ids: Vec<u32>,
+    names: Vec<String>,
+    limit: usize,
+    min_score: f32,
+) -> Result<String, JsError> {
+    if query.is_empty() {
+        return Err(JsError::new("semantic query vector must not be empty"));
+    }
+    if card_ids.len() != names.len() {
+        return Err(JsError::new(
+            "mismatched semantic card id/name array lengths",
+        ));
+    }
+    let expected_values = card_ids
+        .len()
+        .checked_mul(query.len())
+        .ok_or_else(|| JsError::new("semantic embedding array length overflow"))?;
+    if embeddings.len() != expected_values {
+        return Err(JsError::new(
+            "candidate embeddings are not a complete row-major matrix",
+        ));
+    }
+
+    let candidates = card_ids
+        .iter()
+        .zip(&names)
+        .zip(embeddings.chunks_exact(query.len()))
+        .map(|((&card_id, name), embedding)| crate::semantic::Candidate {
+            card_id,
+            name,
+            embedding,
+        })
+        .collect::<Vec<_>>();
+    crate::semantic::rank(&query, &candidates, limit, Some(min_score))
+        .map(|hits| {
+            hits.iter()
+                .map(|hit| format!("{}\t{}", hit.card_id, hit.score))
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+        .map_err(|error| JsError::new(&error.to_string()))
+}

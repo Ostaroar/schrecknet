@@ -1,6 +1,6 @@
 # ADR 0006 — offline semantic card search
 
-**Status:** accepted, implementation pending · 2026-07-19
+**Status:** accepted, implementation in progress · 2026-07-19
 
 ## Context
 
@@ -104,8 +104,10 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
 
 ## Delivery sequence
 
-1. **Shared ranking:** add vector decoding, cosine/top-k ranking, deterministic ties,
-   and native/WASM golden tests to `core/`.
+1. **Shared ranking — complete:** `core/src/semantic.rs` owns little-endian BLOB
+   decoding, vector validation, exact cosine/top-k ranking, thresholds, and
+   deterministic ties. Native unit tests, strict Clippy, the WASM target, wasm-pack,
+   and the consuming frontend build pass.
 2. **Embedded corpus:** add the pinned model manifest and fetch/checksum step, generate
    deterministic card documents and vectors, extend SQLite/meta versions, and test all
    662 V5 cards have valid normalized embeddings.
