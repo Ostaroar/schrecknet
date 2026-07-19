@@ -153,7 +153,11 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       `core/src/share.rs`, `#/share/<token>` preview + import page
 - ☐ Missing cards vs. inventory ("what do I need to buy")
 - ☐ Precon decks browser (all official preconstructed decks)
-- ☐ Table Seating randomizer tool
+- ☑ Table Seating randomizer tool — live at `#/seating` (frontend/src/lib/
+      seating.ts + components/TableSeating.tsx): 4-6 named players, random
+      turn order via Fisher-Yates shuffle, each seat shows predator/prey
+      derived from turn order. Verified live: 4-player shuffle produced a
+      consistent closed predator/prey loop (Alice→Carol→Dave→Bob→Alice)
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
 
 ## Inventory (`/inventory`)

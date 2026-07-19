@@ -6,6 +6,7 @@ import DeckList from './components/DeckList'
 import DeckEditor from './components/DeckEditor'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
+import TableSeating from './components/TableSeating'
 import CommandPalette from './components/CommandPalette'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
@@ -21,7 +22,12 @@ export default function App() {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
 
-  const wide = route.page === 'deck' || route.page === 'decks' || route.page === 'share' || route.page === 'diff'
+  const wide =
+    route.page === 'deck' ||
+    route.page === 'decks' ||
+    route.page === 'share' ||
+    route.page === 'diff' ||
+    route.page === 'seating'
 
   return (
     <div className={'mx-auto flex min-h-screen flex-col px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
@@ -38,7 +44,11 @@ export default function App() {
         </span>
       </header>
 
-      {route.page !== 'card' && route.page !== 'deck' && route.page !== 'share' && route.page !== 'diff' && (
+      {route.page !== 'card' &&
+        route.page !== 'deck' &&
+        route.page !== 'share' &&
+        route.page !== 'diff' &&
+        route.page !== 'seating' && (
         <nav className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (
             <button
@@ -64,6 +74,8 @@ export default function App() {
           <SharedDeckPreview token={route.token} />
         ) : route.page === 'diff' ? (
           <DeckDiff />
+        ) : route.page === 'seating' ? (
+          <TableSeating />
         ) : route.page === 'help' ? (
           <HelpPage />
         ) : route.page === 'about' ? (
