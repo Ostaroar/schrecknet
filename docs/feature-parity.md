@@ -186,6 +186,13 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Login / logout, forgot-password flow (email reset)
 - ☐ Change password / email; delete account ✎
 
+## SchreckNet additions beyond VDB parity
+- ☐ Offline semantic card search — additive local concept retrieval, never a
+      tournament-data recommendation engine: pinned English ONNX model, vectors in
+      `cards.sqlite`, shared Rust cosine ranking, lazy browser download with offline
+      reuse, and identical browser/MCP/REST capability. Planned in ADR 0006; exact
+      and regex search remain available without loading the model
+
 ## Non-functional parity
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with
       update script (original updates via `misc/` scripts) — `schrecknet-data build`

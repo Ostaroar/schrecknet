@@ -14,6 +14,7 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | --- | --- |
 | `search_crypt` | **Live.** Text/name search (`text_mode` scope + `text_regex` regex mode), clan, title, group, capacity range, disciplines (superior/inferior), V5 set history, precon, artist (`server/src/cards_db.rs`). Set history accepts `set_age=exact\|or_newer\|or_older\|not_newer\|not_older` and `set_print=any\|only\|first\|reprint`. Remaining vdb filters (OR-discipline-groups, sect, votes, traits) land incrementally — see docs/feature-parity.md |
 | `search_library` | **Live.** Text scope + regex mode (`text_regex`), exact card type, clan/path and discipline requirements, independent blood/pool cost comparisons (`at_most`, `exact`, `at_least`), the same V5 set age/printing modes, precon, and artist. Remaining filters: capacity requirement, traits |
+| `semantic_search` | **Planned (ADR 0006).** Local semantic retrieval over canonical English V5 card documents, optional crypt/library kind and structured filters, bounded top-k and minimum score. REST mirror: `POST /api/v1/cards/semantic`; both call one service and return card summaries with cosine `score` + `model_id` |
 | `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`) |
 | `get_card_by_name` | **Live.** Exact case-insensitive canonical/ASCII name lookup; REST mirror: `GET /api/v1/cards/lookup?name=…` |
 | `list_precons` | **Live.** Every V5 precon grouped by (set, precon) with a distinct-card count; REST mirror: `GET /api/v1/precons`. Card quantities per precon aren't tracked by the data source |
@@ -42,6 +43,9 @@ allowed for read-only card tools.
 `GET /api/v1/crypt/search` is **live** (`server/src/api.rs`), mirroring the
 `search_crypt` MCP tool exactly. OpenAPI 3.1 generation (`utoipa`) and Swagger UI
 are not yet wired up — tracked for when the REST surface grows past one endpoint.
+The planned semantic endpoint is `POST /api/v1/cards/semantic`, because its
+structured filter object is not encoded as an unwieldy query string; it remains a
+read-only operation and mirrors `semantic_search` exactly.
 
 ## Design rule
 

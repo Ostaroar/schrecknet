@@ -44,6 +44,13 @@ from that pool.
    pipeline runs as a separate scheduled workflow that rebuilds `cards.sqlite` and opens
    a PR when upstream card data changes.
 
+7. **Semantic search stays local and optional.** A checksum-pinned ONNX sentence
+   model generates query embeddings in a browser worker or one lazy native server
+   instance; the data build stores normalized card vectors in `cards.sqlite`, and
+   shared Rust performs deterministic exact cosine ranking. Model assets load only
+   when semantic mode is requested, so exact/regex search keeps its current startup
+   and offline profile. See docs/adr/0006-offline-semantic-card-search.md.
+
 ## Repository layout
 
 ```
@@ -74,9 +81,11 @@ flowchart LR
     subgraph Browser [Browser — offline-first PWA]
         UI[React 19 UI]
         WASMCore[core.wasm<br/>deck engine]
+        EmbedWorker[Optional semantic worker<br/>local ONNX model]
         SQLW[(SQLite WASM<br/>cards.sqlite + user.sqlite<br/>in OPFS)]
         UI --> WASMCore
         UI --> SQLW
+        UI -. semantic query .-> EmbedWorker --> WASMCore
     end
 
     subgraph Server [server binary — axum]
@@ -84,9 +93,12 @@ flowchart LR
         REST[REST · OpenAPI 3.1]
         MCP[MCP · Streamable HTTP]
         NativeCore[core &#40;native&#41;]
+        NativeEmbed[Optional local<br/>ONNX embedder]
         DB[(cards.sqlite<br/>app.sqlite)]
         REST --> NativeCore --> DB
         MCP --> NativeCore
+        REST -. semantic query .-> NativeEmbed --> NativeCore
+        MCP -. semantic query .-> NativeEmbed
     end
 
     Browser -- "sync: accounts, decks,<br/>inventory" --> REST
@@ -103,6 +115,10 @@ The server is only needed for accounts, cross-device sync, and the machine APIs.
 - **Card search**: filter UI state → query builder (TS) → SQL against local SQLite →
   results. The same query builder runs server-side for the MCP `search_cards` tool
   (generated from one shared filter-schema definition in `core/`).
+- **Semantic card search (planned)**: structured filters select candidates → the
+  local platform adapter embeds the query with the pinned ONNX model → shared
+  native/WASM Rust ranks normalized vectors loaded from `cards.sqlite`. Browser and
+  server return the same ids/order within the documented numeric tolerance.
 - **Deck edit (logged in)**: optimistic local write (OPFS) → sync mutation to REST →
   conflict resolution by revision counter (decks carry a monotonically increasing rev;
   branches are first-class rows, mirroring vdb's branch feature).

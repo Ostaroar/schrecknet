@@ -37,6 +37,13 @@ docs/feature-parity.md's scope note).
 - ☑ Regex search mode (`text_regex`, all three surfaces) — first justified new
   dependency (the `regex` crate, server-side only; browser reuses native
   `RegExp`), documented in docs/adr/0005-regex-crate-for-search.md
+- ☐ Offline semantic card search (additive, not vdb parity): lazy local
+  all-MiniLM-L6-v2 ONNX inference, checksum-pinned build assets, ~1 MB of
+  precomputed vectors in `cards.sqlite`, exact cosine ranking in shared Rust,
+  explicit Semantic mode on Crypt + Library, and one `semantic_search` MCP
+  tool with a `POST /api/v1/cards/semantic` REST mirror. Delivery is split into
+  shared ranking → embedded corpus → machine APIs → offline browser → VTES
+  relevance gates; see docs/adr/0006-offline-semantic-card-search.md
 - ☐ Remaining crypt filters (sect, votes, traits, per-discipline level mixing,
   OR-groups) + remaining library filters (capacity requirement, traits,
   per-discipline level mixing)
