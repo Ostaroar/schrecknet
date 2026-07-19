@@ -152,7 +152,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Share deck via URL (deck-in-URL encoding for anonymous users) — live:
       `core/src/share.rs`, `#/share/<token>` preview + import page
 - ☐ Missing cards vs. inventory ("what do I need to buy")
-- ☐ Precon decks browser (all official preconstructed decks)
+- ☑ Precon decks browser — live at `#/precons`, all 32 official V5 precons
+      grouped by set (list_precons: MCP + REST + browser). ✎ known
+      limitation, not a bug: card *quantities* per precon deck aren't
+      tracked by the data source (KRCG's export records which printings
+      existed, not each deck's exact copy counts), so this shows each
+      precon's card pool rather than a ready-to-play decklist
 - ☑ Table Seating randomizer tool — live at `#/seating` (frontend/src/lib/
       seating.ts + components/TableSeating.tsx): 4-6 named players, random
       turn order via Fisher-Yates shuffle, each seat shows predator/prey

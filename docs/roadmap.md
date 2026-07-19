@@ -69,6 +69,18 @@ docs/feature-parity.md's scope note).
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
   comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL
+- 🐛 Fixed (found building the Phase 2 precon browser, data_version bumped to
+  3 to force OPFS re-download): `printings`/`sets` were storing a card's
+  *entire* print history, including classic-era sets explicitly out of scope
+  (`v5pool.rs::V5_SET_NAMES` deliberately excludes "Anarchs"/"Sabbat War" as
+  original-era KRCG names) — a V5-legal card with an old pre-V5 printing
+  leaked that non-V5 product name into card detail pages and precon
+  listings. `ingest.rs::insert_printings` now skips non-V5 sets entirely.
+  Also fixed: `search_crypt`/`search_library`'s `set`+`precon` filters used
+  two independent EXISTS clauses, so a card with printing A (matching set)
+  and a *different* printing B (matching precon) would wrongly match both
+  filters together even though no single printing satisfied them jointly —
+  now one EXISTS clause requiring both on the same printing row.
 
 ## Phase 2 — Deck builder
 - ☑ Local (anonymous) decks MVP, verified live in-browser: create/rename/delete,
@@ -120,7 +132,14 @@ docs/feature-parity.md's scope note).
 - ☑ Table seating tool — `#/seating`, 4-6 players, random turn order with
   derived predator/prey per seat; plain shuffle, not core/ domain logic
   (same tier as the draw simulator — no legal/illegal outcome to validate)
-- ☐ Proxy PDF generation; precon browser
+- ☑ Precon browser — `#/precons`, all 3 surfaces (`list_precons` in
+  cards_db.rs), 32 real V5 precons grouped by set (verified live: matches
+  the actual V5 product lineup — 7 Fifth Edition clan starters, 4 Anarch/
+  Companion, 5×New Blood I-III, 4 Sabbat V5 Paths). Building this surfaced
+  and fixed two pre-existing data-correctness bugs (see below); card
+  quantities per precon aren't tracked by the source data (✎ noted, not a
+  bug) — precon detail shows the deck's card pool, not exact copy counts
+- ☐ Proxy PDF generation
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync
 

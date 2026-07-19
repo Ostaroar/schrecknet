@@ -16,6 +16,7 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | `search_library` | **Live.** Text scope, exact card type, clan/path and discipline requirements, independent blood/pool cost comparisons (`at_most`, `exact`, `at_least`), set, precon, and artist. Remaining filters: capacity requirement, traits, and regex mode |
 | `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`) |
 | `get_card_by_name` | **Live.** Exact case-insensitive canonical/ASCII name lookup; REST mirror: `GET /api/v1/cards/lookup?name=…` |
+| `list_precons` | **Live.** Every V5 precon grouped by (set, precon) with a distinct-card count; REST mirror: `GET /api/v1/precons`. Card quantities per precon aren't tracked by the data source |
 | `list_decks` / `get_deck` | Authenticated user's decks (or a deck shared via deck-in-URL) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |
 | `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |

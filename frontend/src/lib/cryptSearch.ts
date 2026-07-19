@@ -90,10 +90,11 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
        AND (?6 IS NULL OR c.capacity >= ?6)
        AND (?7 IS NULL OR c.capacity <= ?7)
        AND (?8 IS NULL OR c.title = ?8)
-       AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-            WHERE p.card_id = c.id AND s.name = ?9))
-       AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p
-            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?10 || '%'))
+       AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
+            SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+            WHERE p.card_id = c.id
+              AND (?9 IS NULL OR s.name = ?9)
+              AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')))
        AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
             WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))`
   const params: (string | number | null)[] = [

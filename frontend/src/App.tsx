@@ -7,12 +7,13 @@ import DeckEditor from './components/DeckEditor'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
 import TableSeating from './components/TableSeating'
+import PreconBrowser from './components/PreconBrowser'
 import CommandPalette from './components/CommandPalette'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { useHashRoute, navigate } from './lib/route'
 
-const TABS = ['crypt', 'library', 'decks', 'help', 'about'] as const
+const TABS = ['crypt', 'library', 'decks', 'precons', 'help', 'about'] as const
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
@@ -27,7 +28,8 @@ export default function App() {
     route.page === 'decks' ||
     route.page === 'share' ||
     route.page === 'diff' ||
-    route.page === 'seating'
+    route.page === 'seating' ||
+    route.page === 'precons'
 
   return (
     <div className={'mx-auto flex min-h-screen flex-col px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
@@ -76,6 +78,8 @@ export default function App() {
           <DeckDiff />
         ) : route.page === 'seating' ? (
           <TableSeating />
+        ) : route.page === 'precons' ? (
+          <PreconBrowser />
         ) : route.page === 'help' ? (
           <HelpPage />
         ) : route.page === 'about' ? (

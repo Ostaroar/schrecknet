@@ -11,7 +11,7 @@
 use rusqlite::{params, Connection};
 use serde_json::Value;
 
-use crate::v5pool::is_in_v5_pool;
+use crate::v5pool::{is_in_v5_pool, V5_SET_NAMES};
 
 pub fn run(
     conn: &Connection,
@@ -144,6 +144,14 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
         return Ok(());
     };
     for (set_name, printings) in sets {
+        // A card can be V5-legal via one printing while also carrying
+        // classic-era printings from its original (pre-V5) release — this
+        // site is V5-only (v5pool.rs), so those don't belong in `printings`/
+        // `sets` at all, or a card detail page / precon browser would leak
+        // non-V5 product names (e.g. "Anarchs", "Sabbat War").
+        if !V5_SET_NAMES.contains(&set_name.as_str()) {
+            continue;
+        }
         let set_id = upsert_set(conn, set_name, printings.as_array().and_then(|a| a.first()))?;
         let Some(printings) = printings.as_array() else {
             continue;
@@ -274,5 +282,42 @@ mod tests {
     #[test]
     fn ascii_fold_strips_accents() {
         assert_eq!(ascii_fold("Théo Bell"), "Theo Bell");
+    }
+
+    #[test]
+    fn insert_printings_skips_non_v5_sets() {
+        // A card can be V5-legal via one printing while also carrying a
+        // classic-era printing (e.g. a vampire reprinted in Fifth Edition
+        // that was originally released in the pre-V5 "Anarchs" set). Only
+        // the V5-legal printing should land in the sets/printings tables —
+        // this site is V5-only (v5pool.rs::V5_SET_NAMES).
+        let card = json!({
+            "id": 1,
+            "sets": {
+                "Fifth Edition": [{"release_date": "2020-11-30", "precon": "Ventrue"}],
+                "Anarchs": [{"release_date": "1998-01-01", "precon": "Gangrel"}],
+            },
+        });
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);",
+        )
+        .unwrap();
+        insert_printings(&conn, &card).unwrap();
+
+        let set_names: Vec<String> = conn
+            .prepare("SELECT name FROM sets")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(set_names, vec!["Fifth Edition".to_string()]);
+
+        let printing_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM printings", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(printing_count, 1);
     }
 }

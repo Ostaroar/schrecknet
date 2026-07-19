@@ -206,6 +206,12 @@ pub fn search_crypt(
 ) -> rusqlite::Result<Vec<CryptCard>> {
     // The per-discipline EXISTS clauses are built dynamically (the count
     // varies) but every value is bound — no string interpolation of input.
+    // set + precon are ANDed inside ONE EXISTS on the same printing row, not
+    // two separate EXISTS clauses — a card can have printing A in set X with
+    // no precon and printing B in set Y with a precon, and two independent
+    // clauses would wrongly match set=X + precon=<B's precon> even though no
+    // single printing has both (found live via the precon browser, which
+    // was the first caller to combine the two).
     let mut sql = String::from(
         "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title,
                 GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
@@ -220,10 +226,11 @@ pub fn search_crypt(
            AND (?6 IS NULL OR c.capacity >= ?6)
            AND (?7 IS NULL OR c.capacity <= ?7)
            AND (?8 IS NULL OR c.title = ?8)
-           AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-                WHERE p.card_id = c.id AND s.name = ?9))
-           AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p
-                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?10 || '%'))
+           AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
+                SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+                WHERE p.card_id = c.id
+                  AND (?9 IS NULL OR s.name = ?9)
+                  AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')))
            AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
                 WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))",
     );
@@ -318,10 +325,11 @@ pub fn search_library(
                 ((?9 = 'at_most' AND CAST(c.pool_cost AS INTEGER) <= ?8) OR
                  (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
                  (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
-           AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-                WHERE p.card_id = c.id AND s.name = ?10))
-           AND (?11 IS NULL OR EXISTS (SELECT 1 FROM printings p
-                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?11 || '%'))
+           AND ((?10 IS NULL AND ?11 IS NULL) OR EXISTS (
+                SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+                WHERE p.card_id = c.id
+                  AND (?10 IS NULL OR s.name = ?10)
+                  AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')))
            AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
                 WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))",
     );
@@ -376,6 +384,40 @@ pub fn search_library(
         },
     )?;
 
+    rows.collect()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PreconSummary {
+    pub set: String,
+    pub precon: String,
+    pub card_count: i64,
+}
+
+/// Lists every (set, precon) pair with at least one printing, plus the
+/// number of distinct cards known to belong to it. Card *quantities* per
+/// precon deck are not tracked — KRCG's export records which printings
+/// existed, not each deck's exact copy counts (see docs/feature-parity.md's
+/// precon-browser note, same NULL-honesty policy as sect/votes/banned).
+/// To browse a precon's actual cards, call search_crypt/search_library with
+/// this pair's `set` + `precon` (both exact for this purpose — the two
+/// filters together are precise enough that reusing the search path avoids
+/// a second copy of the same query logic).
+pub fn list_precons(conn: &Connection) -> rusqlite::Result<Vec<PreconSummary>> {
+    let mut stmt = conn.prepare(
+        "SELECT s.name, p.precon, COUNT(DISTINCT p.card_id) AS card_count
+         FROM printings p JOIN sets s ON s.id = p.set_id
+         WHERE p.precon IS NOT NULL
+         GROUP BY s.name, p.precon
+         ORDER BY s.name, p.precon",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(PreconSummary {
+            set: row.get(0)?,
+            precon: row.get(1)?,
+            card_count: row.get(2)?,
+        })
+    })?;
     rows.collect()
 }
 
@@ -637,6 +679,61 @@ mod tests {
         let results = search_crypt(&conn, &params).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].name, "Abaddon");
+    }
+
+    #[test]
+    fn crypt_set_and_precon_together_require_the_same_printing() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Card 6 has TWO printings: one in "Fifth Edition" with no precon,
+        // and one in "Anarch Revolt" with precon "Anarch Precon" — neither
+        // single printing satisfies both filters at once, so combining
+        // set="Fifth Edition" + precon="Anarch" must match nothing, even
+        // though each filter alone would match this card via its other
+        // printing (the bug: two independent EXISTS clauses would wrongly
+        // match here).
+        conn.execute_batch(
+            "INSERT INTO cards VALUES
+               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL);
+             INSERT INTO printings VALUES (6,1,NULL,'C',1), (6,2,'Anarch Precon','U',0);",
+        )
+        .unwrap();
+
+        let params = CryptSearchParams {
+            set: Some("Fifth Edition".into()),
+            precon: Some("Anarch".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+
+        // Sanity: each filter alone still matches this card via its own printing.
+        let set_only = CryptSearchParams {
+            set: Some("Fifth Edition".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &set_only)
+            .unwrap()
+            .iter()
+            .any(|c| c.name == "Mixed Printings"));
+        let precon_only = CryptSearchParams {
+            precon: Some("Anarch".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &precon_only)
+            .unwrap()
+            .iter()
+            .any(|c| c.name == "Mixed Printings"));
+
+        // A precon that DOES share a printing with the matching set works.
+        let matching_pair = CryptSearchParams {
+            set: Some("Anarch Revolt".into()),
+            precon: Some("Anarch".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &matching_pair)
+            .unwrap()
+            .iter()
+            .any(|c| c.name == "Mixed Printings"));
     }
 
     #[test]
@@ -990,5 +1087,49 @@ mod tests {
             ..Default::default()
         };
         assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn list_precons_groups_by_set_and_precon_and_counts_distinct_cards() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // seed() has one precon printing: (Anarch Revolt, "Anarch Precon", card 2).
+        // Add a second card to the same precon, and one in a different set.
+        conn.execute_batch(
+            "INSERT INTO cards VALUES
+               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL);
+             INSERT INTO sets VALUES (3,'Camarilla Edition');
+             INSERT INTO printings VALUES
+               (6,2,'Anarch Precon','U',1),
+               (5,3,'Tremere','C',1);",
+        )
+        .unwrap();
+
+        let precons = list_precons(&conn).unwrap();
+        assert_eq!(
+            precons,
+            vec![
+                PreconSummary {
+                    set: "Anarch Revolt".into(),
+                    precon: "Anarch Precon".into(),
+                    card_count: 2,
+                },
+                PreconSummary {
+                    set: "Camarilla Edition".into(),
+                    precon: "Tremere".into(),
+                    card_count: 1,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn list_precons_ignores_printings_with_no_precon() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // Only card 2's printing has a precon set; cards 1 and 3 don't.
+        let precons = list_precons(&conn).unwrap();
+        assert_eq!(precons.len(), 1);
+        assert_eq!(precons[0].precon, "Anarch Precon");
     }
 }

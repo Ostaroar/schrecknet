@@ -23,6 +23,10 @@ pub async fn search_library(
     run(state, move |conn| cards_db::search_library(conn, &params)).await
 }
 
+pub async fn list_precons(State(state): State<AppState>) -> impl IntoResponse {
+    run(state, cards_db::list_precons).await
+}
+
 pub async fn get_card(State(state): State<AppState>, Path(id): Path<i64>) -> impl IntoResponse {
     let data_dir = state.data_dir.clone();
     let result = tokio::task::spawn_blocking(move || -> rusqlite::Result<_> {

@@ -82,10 +82,11 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
             ((?9 = 'at_most' AND CAST(c.pool_cost AS INTEGER) <= ?8) OR
              (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
              (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
-       AND (?10 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-            WHERE p.card_id = c.id AND s.name = ?10))
-       AND (?11 IS NULL OR EXISTS (SELECT 1 FROM printings p
-            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?11 || '%'))
+       AND ((?10 IS NULL AND ?11 IS NULL) OR EXISTS (
+            SELECT 1 FROM printings p LEFT JOIN sets s ON s.id = p.set_id
+            WHERE p.card_id = c.id
+              AND (?10 IS NULL OR s.name = ?10)
+              AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')))
        AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
             WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))`
   const params: (string | number | null)[] = [

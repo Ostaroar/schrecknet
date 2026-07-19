@@ -80,7 +80,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '3'), ('data_version', '2'), ('scope', 'v5'),
+         ('schema_version', '3'), ('data_version', '3'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2)",
         rusqlite::params![stats.crypt.to_string(), stats.library.to_string()],
     )?;
@@ -90,9 +90,12 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // schema_version bumps when the table/column layout changes (v2:
         // image_url added to cards; v3: dropped the never-populated twd_*
         // tables — tournament features are out of scope, see AGENTS.md);
-        // data_version when the same schema gets new content.
+        // data_version when the same schema gets new content (v3: printings/
+        // sets no longer carry a card's non-V5 print history — see
+        // ingest.rs::insert_printings — so OPFS caches on data_version 2
+        // must re-download to drop the stale classic-era rows).
         "schema_version": 3,
-        "data_version": 2,
+        "data_version": 3,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

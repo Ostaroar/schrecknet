@@ -82,6 +82,17 @@ impl SchreckNetMcp {
         json_result(card_detail::get_card_by_name(&conn, &params))
     }
 
+    #[tool(
+        description = "List every official V5 precon (starter deck), grouped by set, with the \
+        count of distinct cards known to belong to it. Card quantities per precon aren't \
+        tracked — use search_crypt/search_library with matching `set`+`precon` to browse a \
+        precon's actual cards."
+    )]
+    async fn list_precons(&self) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(cards_db::list_precons(&conn))
+    }
+
     fn open(&self) -> Result<rusqlite::Connection, rmcp::ErrorData> {
         cards_db::open(&self.data_dir)
             .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))
