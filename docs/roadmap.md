@@ -40,8 +40,16 @@ docs/feature-parity.md's scope note).
   sql.js — DB persists across reloads, downloads once per version bump (one
   cards.sqlite fetch vs. a meta.json probe per load, verified via network
   log); searches work offline after first visit. Unblocks Phase 2 local decks
-- ☐ PWA install manifest + service worker for the app shell (the DB is
-  offline-capable now; the HTML/JS/wasm assets still need the network)
+- ☑ PWA install manifest + service worker for the app shell (`frontend/public/
+  manifest.webmanifest`, `frontend/src/sw.ts` built as a separate Vite entry
+  at a fixed `/sw.js` path, hand-written stale-while-revalidate cache over
+  same-origin GET requests, `/api` and `/data` explicitly excluded so it
+  doesn't fight the OPFS-backed `dbWorker.ts` for `cards.sqlite`). Verified
+  live: built + served with `vite preview`, confirmed the SW registers and
+  populates the cache on first load, then killed the preview server and
+  reloaded — the app shell (HTML/JS/CSS/wasm) rendered fully offline. Icon is
+  a self-contained inline placeholder SVG (`frontend/public/icon.svg`), not a
+  real brand asset.
 - ☐ i18n UI using the `translations` table already populated by the pipeline
 - ☑ MCP `search_crypt` + `search_library` tools live (rmcp, Streamable HTTP at
   `/mcp`), verified with a real client handshake (initialize → tools/list →
