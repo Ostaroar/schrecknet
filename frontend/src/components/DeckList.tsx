@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listDecks, createDeck, deleteDeck, type DeckSummary } from '../lib/deckStore'
+import { listDecks, createDeck, deleteDeck, cloneDeck, type DeckSummary } from '../lib/deckStore'
 import { navigate } from '../lib/route'
 
 export default function DeckList() {
@@ -70,6 +70,15 @@ export default function DeckList() {
               <span className="text-xs text-ink-dim">
                 {new Date(d.updated_at).toLocaleDateString()}
               </span>
+              <button
+                onClick={async () => {
+                  await cloneDeck(d.id)
+                  refresh()
+                }}
+                className="text-xs text-ink-dim hover:text-ink-muted"
+              >
+                Clone
+              </button>
               <button
                 onClick={async () => {
                   if (confirm(`Delete "${d.name}"? This can't be undone.`)) {

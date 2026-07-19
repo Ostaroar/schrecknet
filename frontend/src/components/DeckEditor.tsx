@@ -5,11 +5,13 @@ import {
   setCardQty,
   renameDeck,
   deleteDeck,
+  cloneDeck,
   computeDeckStats,
   type DeckSummary,
   type DeckCardDetail,
   type DeckStats,
 } from '../lib/deckStore'
+import { drawHand, CRYPT_HAND_SIZE, LIBRARY_HAND_SIZE } from '../lib/drawHand'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
@@ -84,6 +86,53 @@ function AddCardBox({
               <span className="shrink-0 text-ink-dim">{r.sub}</span>
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetail[]; libraryCards: DeckCardDetail[] }) {
+  const [cryptHand, setCryptHand] = useState<DeckCardDetail[] | null>(null)
+  const [libraryHand, setLibraryHand] = useState<DeckCardDetail[] | null>(null)
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">Test hand</h2>
+        <button
+          onClick={() => setCryptHand(drawHand(cryptCards, CRYPT_HAND_SIZE))}
+          disabled={cryptCards.length === 0}
+          className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
+        >
+          Draw crypt ({CRYPT_HAND_SIZE})
+        </button>
+        <button
+          onClick={() => setLibraryHand(drawHand(libraryCards, LIBRARY_HAND_SIZE))}
+          disabled={libraryCards.length === 0}
+          className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
+        >
+          Draw library ({LIBRARY_HAND_SIZE})
+        </button>
+      </div>
+      {(cryptHand || libraryHand) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {cryptHand && (
+            <ul className="grid gap-1 text-xs text-ink-muted">
+              {cryptHand.map((c, i) => (
+                <li key={i}>
+                  {c.name} <span className="text-ink-dim">· cap {c.capacity}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {libraryHand && (
+            <ul className="grid gap-1 text-xs text-ink-muted">
+              {libraryHand.map((c, i) => (
+                <li key={i}>{c.name}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>
@@ -177,6 +226,12 @@ export default function DeckEditor({ id }: { id: number }) {
           onBlur={() => nameDraft.trim() && nameDraft !== deck.name && renameDeck(id, nameDraft.trim()).then(refresh)}
         />
         <button
+          onClick={async () => navigate({ page: 'deck', id: await cloneDeck(id) })}
+          className="text-xs text-ink-dim hover:text-ink-muted"
+        >
+          Clone
+        </button>
+        <button
           onClick={async () => {
             if (confirm(`Delete "${deck.name}"? This can't be undone.`)) {
               await deleteDeck(id)
@@ -206,6 +261,8 @@ export default function DeckEditor({ id }: { id: number }) {
           )}
         </div>
       )}
+
+      <TestHandPanel cryptCards={cryptCards} libraryCards={libraryCards} />
 
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="grid gap-2">

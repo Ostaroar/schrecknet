@@ -68,8 +68,14 @@ docs/feature-parity.md's scope note).
   reimplementation — verified the group-rule violation renders the exact
   string the Rust unit tests assert. `core.wasm` build wired into CI and the
   Dockerfile (was a manual-only step through Phase 1).
-- ☐ Tags (auto-derived + user); branches/revisions; clone
-- ☐ Import/export all formats; deck-in-URL sharing; diff; draw simulator
+- ☑ Clone deck (name + card quantities) — live in both the deck list and editor
+- ☑ Draw simulator — live (frontend/src/lib/drawHand.ts): draws a crypt hand
+  of 4 / library hand of 7 respecting each card's quantity in the deck,
+  redrawable. Plain shuffle-and-take, not core/ domain logic (a random draw
+  has no legal/illegal outcome to validate) — Math.random is fine here, no
+  need for seeded/crypto-grade RNG for a personal test-hand tool
+- ☐ Tags (auto-derived + user); branches/revisions
+- ☐ Import/export all formats; deck-in-URL sharing; diff
 - ☐ Proxy PDF generation; precon browser; table seating tool
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync

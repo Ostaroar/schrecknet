@@ -44,6 +44,22 @@ export async function deleteDeck(id: number): Promise<void> {
   await userRun('DELETE FROM decks WHERE id = ?1', [id])
 }
 
+/** Duplicates a deck (name + all card quantities) as a new, independent deck. */
+export async function cloneDeck(id: number): Promise<number> {
+  const source = await getDeck(id)
+  if (!source) throw new Error(`no deck with id ${id}`)
+  const newId = await createDeck(`${source.name} (copy)`)
+  const rows = await getDeckCardRows(id)
+  for (const row of rows) {
+    await userRun('INSERT INTO deck_cards (deck_id, card_id, qty) VALUES (?1, ?2, ?3)', [
+      newId,
+      row.card_id,
+      row.qty,
+    ])
+  }
+  return newId
+}
+
 interface DeckCardRow {
   card_id: number
   qty: number

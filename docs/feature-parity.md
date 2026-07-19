@@ -119,11 +119,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       (keep only if the V5 pool supports it) — V5 base-format legality is live
 - ☐ Deck tags (auto-derived archetype tags + user tags) ✎
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
-- ☐ Clone / copy deck
+- ☑ Clone / copy deck — live, from both the deck list and the editor
 - ☐ Import: paste text, Lackey `.txt`, JOL, Amaranth link ✎, file upload
 - ☐ Export: text, Lackey, JOL, XLSX ✎, clipboard, file download
 - ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎
-- ☐ Draw simulator / test hand (crypt draw 4, library draw 7, redraws) ✎
+- ☑ Draw simulator / test hand — live: crypt draw 4 / library draw 7,
+      redrawable, respects each card's quantity in the deck
 - ☐ Deck diff: compare two decks/revisions (`/diff`)
 - ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a deck
 - ☐ Share deck via public URL (deck-in-URL encoding for anonymous users) ✎
