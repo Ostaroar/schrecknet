@@ -192,17 +192,37 @@ try {
 
     const browserResult = await browserSearch(golden, nativeHits[0].id)
     const nativeParityHits = nativeHits.slice(0, fixture.parity_top_n)
+    const browserIds = browserResult.hits.map((hit) => hit.id)
+    const nativeIds = nativeParityHits.map((hit) => hit.id)
     assert.deepEqual(
-      browserResult.hits.map((hit) => hit.id),
-      nativeParityHits.map((hit) => hit.id),
-      `${golden.query}: browser/native order diverged`,
+      [...browserIds].sort((left, right) => left - right),
+      [...nativeIds].sort((left, right) => left - right),
+      `${golden.query}: browser/native top-${fixture.parity_top_n} membership diverged`,
     )
-    browserResult.hits.forEach((hit, hitIndex) => {
+    const nativeById = new Map(nativeParityHits.map((hit) => [hit.id, hit]))
+    browserResult.hits.forEach((hit) => {
+      const nativeHit = nativeById.get(hit.id)
+      assert.ok(nativeHit, `${golden.query}: browser returned unexpected card ${hit.id}`)
       assert.ok(
-        Math.abs(hit.score - nativeParityHits[hitIndex].score) <= fixture.score_tolerance,
+        Math.abs(hit.score - nativeHit.score) <= fixture.score_tolerance,
         `${golden.query}: card ${hit.id} score exceeded tolerance`,
       )
     })
+    // Each platform may move a score by up to the declared tolerance. Preserve
+    // order whenever the native gap is larger than both cards' combined error;
+    // genuinely near-tied cards may swap without changing retrieval quality.
+    const browserPosition = new Map(browserIds.map((cardId, position) => [cardId, position]))
+    for (let higher = 0; higher < nativeParityHits.length; higher += 1) {
+      for (let lower = higher + 1; lower < nativeParityHits.length; lower += 1) {
+        const scoreGap = nativeParityHits[higher].score - nativeParityHits[lower].score
+        if (scoreGap <= fixture.score_tolerance * 2) continue
+        assert.ok(
+          browserPosition.get(nativeParityHits[higher].id) <
+            browserPosition.get(nativeParityHits[lower].id),
+          `${golden.query}: materially separated cards changed order`,
+        )
+      }
+    }
 
     if (index === 0) coldQueryMs = browserResult.elapsedMs
     else warmQueryTimes.push(browserResult.elapsedMs)

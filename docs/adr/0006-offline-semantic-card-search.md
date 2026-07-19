@@ -72,7 +72,9 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
 - Golden tests use fixed vectors for ranking and a small set of VTES concept queries
   whose expected top-card sets are reviewed and checked in. Native and browser query
   embeddings must have equal dimensions and agree within a documented numeric
-  tolerance; ranked result ids must match.
+  tolerance. Top-k membership must match; pairs whose native score gap exceeds twice
+  that tolerance must retain their order, while numerically indistinguishable ties
+  may swap between ONNX runtimes.
 
 ### Runtime split
 
@@ -129,9 +131,10 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
    was stopped, the page was reloaded, and a fresh semantic query returned results
    from the PWA/OPFS/model caches with no browser warnings or errors.
 5. **Quality gate — complete:** five reviewed VTES-domain concepts cover crypt and
-   library retrieval. The checked-in Playwright smoke compares the browser and REST
-   top 10 ids exactly, permits at most 0.005 score drift, enforces reviewed relevance
-   windows, and kills the server before a full reload plus fresh query. The local
+   library retrieval. The checked-in Playwright smoke compares browser and REST top-10
+   membership plus materially separated ordering, permits at most 0.005 per-card score
+   drift, enforces reviewed relevance windows, and kills the server before a full
+   reload plus fresh query. The local
    reference run measured 46,193,713 first-use bytes, 1.65 s cold, and 0.36–0.41 s
    warm queries. CI rebuilds the real corpus/model/frontend and runs the same gate.
 

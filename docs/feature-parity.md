@@ -191,9 +191,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       tournament-data recommendation engine: pinned English ONNX model, vectors in
       `cards.sqlite`, shared Rust cosine ranking, lazy browser download with offline
       reuse, and identical browser/MCP/REST capability. Five reviewed crypt/library
-      concepts enforce browser/native top-10 parity and score tolerance in CI; the
-      smoke test also kills the server before reloading and querying again. See ADR
-      0006; exact and regex search remain available without loading the model
+      concepts enforce browser/native top-10 membership, material-order parity, and
+      score tolerance in CI; the smoke test also kills the server before reloading and
+      querying again. See ADR 0006; exact and regex search remain available without
+      loading the model
 
 ## Non-functional parity
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with

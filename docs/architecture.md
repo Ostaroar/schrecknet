@@ -50,8 +50,8 @@ from that pool.
    shared Rust performs deterministic exact cosine ranking. Model assets load only
    when semantic mode is requested, so exact/regex search keeps its current startup
    and offline profile. Browser, MCP, and REST adapters are live and a checked-in
-   Playwright gate enforces reviewed VTES relevance, native/browser top-10 parity,
-   size/latency budgets, and a true-offline reload. See
+   Playwright gate enforces reviewed VTES relevance, native/browser top-10 membership
+   and material-order parity, size/latency budgets, and a true-offline reload. See
    docs/adr/0006-offline-semantic-card-search.md.
 
 ## Repository layout
@@ -122,7 +122,8 @@ The server is only needed for accounts, cross-device sync, and the machine APIs.
 - **Semantic card search**: structured filters select candidates → the
   local platform adapter embeds the query with the pinned ONNX model → shared
   native/WASM Rust ranks normalized vectors loaded from `cards.sqlite`. Browser and
-  server return the same ids/order within the documented numeric tolerance.
+  server return the same top-k set and materially separated order within the
+  documented numeric tolerance.
 - **Deck edit (logged in)**: optimistic local write (OPFS) → sync mutation to REST →
   conflict resolution by revision counter (decks carry a monotonically increasing rev;
   branches are first-class rows, mirroring vdb's branch feature).
