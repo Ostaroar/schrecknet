@@ -112,6 +112,12 @@ cargo run -p schrecknet-data -- build --out dist
 cd frontend && npm install && npm run dev   # Vite dev server, proxies /api + /data to :8000
 npm run build                               # tsc --noEmit && vite build
 
+# semantic end-to-end quality gate — requires dist/ from the data command,
+# frontend/dist from npm run build, target/debug/schrecknet-server, and either
+# `npx playwright install chromium-headless-shell` or
+# SCHRECKNET_CHROME_CHANNEL=chrome. Spawns/stops its own test server.
+npm run test:semantic
+
 # full container
 docker build -t schrecknet . && docker run -p 8000:8000 schrecknet
 ```

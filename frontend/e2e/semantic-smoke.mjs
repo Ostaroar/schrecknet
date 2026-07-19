@@ -1,0 +1,261 @@
+import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { once } from 'node:events'
+import { readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { performance } from 'node:perf_hooks'
+import { chromium } from 'playwright'
+
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
+const fixturePath = fileURLToPath(new URL('./fixtures/semantic-golden.json', import.meta.url))
+const fixture = JSON.parse(await readFile(fixturePath, 'utf8'))
+const port = Number(process.env.SCHRECKNET_E2E_PORT ?? 18180)
+const baseUrl = `http://127.0.0.1:${port}`
+const serverBinary = path.resolve(
+  repoRoot,
+  process.env.SCHRECKNET_SERVER_BIN ?? 'target/debug/schrecknet-server',
+)
+const appDb = path.join(tmpdir(), `schrecknet-semantic-e2e-${process.pid}.sqlite`)
+
+const server = spawn(serverBinary, [], {
+  cwd: repoRoot,
+  env: {
+    ...process.env,
+    SCHRECKNET_BIND: `127.0.0.1:${port}`,
+    SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
+    SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
+    SCHRECKNET_MODEL_DIR: path.join(repoRoot, 'dist/models/semantic'),
+    SCHRECKNET_APP_DB: appDb,
+  },
+  stdio: ['ignore', 'pipe', 'pipe'],
+})
+
+let serverStopped = false
+const serverOutput = []
+for (const stream of [server.stdout, server.stderr]) {
+  stream.on('data', (chunk) => {
+    const line = chunk.toString()
+    serverOutput.push(line)
+    process.stdout.write(line)
+  })
+}
+
+async function waitForServer() {
+  const deadline = Date.now() + 30_000
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null) {
+      throw new Error(`server exited before readiness:\n${serverOutput.join('')}`)
+    }
+    try {
+      const response = await fetch(`${baseUrl}/healthz`)
+      if (response.ok) return
+    } catch {
+      // Still starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error('timed out waiting for semantic smoke server')
+}
+
+async function stopServer() {
+  if (serverStopped) return
+  serverStopped = true
+  if (server.exitCode === null && server.signalCode === null) {
+    server.kill('SIGTERM')
+    await Promise.race([
+      once(server, 'exit'),
+      new Promise((resolve) => setTimeout(resolve, 5_000)),
+    ])
+  }
+}
+
+async function restSearch(golden) {
+  const response = await fetch(`${baseUrl}/api/v1/cards/semantic`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query: golden.query, kind: golden.kind, limit: 20 }),
+  })
+  if (response.status !== 200) {
+    throw new Error(`semantic REST returned ${response.status}: ${await response.text()}`)
+  }
+  return response.json()
+}
+
+let browser
+try {
+  await waitForServer()
+  const chromeChannel = process.env.SCHRECKNET_CHROME_CHANNEL
+  browser = await chromium.launch({
+    ...(chromeChannel ? { channel: chromeChannel } : {}),
+    headless: true,
+  })
+  const context = await browser.newContext({ serviceWorkers: 'allow' })
+  const page = await context.newPage()
+  const pageErrors = []
+  const consoleErrors = []
+  const assetBytes = new Map()
+  const assetAccounting = []
+
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('response', (response) => {
+    const url = response.url()
+    const semanticAsset =
+      url.includes('/models/semantic/') ||
+      url.includes('semanticWorker-') ||
+      url.includes('ort-wasm-simd-threaded.jsep-')
+    if (!semanticAsset || assetBytes.has(url)) return
+    const accounting = response.allHeaders().then((headers) => {
+      const bytes = Number(headers['content-length'] ?? 0)
+      if (Number.isFinite(bytes) && bytes > 0) assetBytes.set(url, bytes)
+    })
+    assetAccounting.push(accounting)
+  })
+
+  await page.goto(`${baseUrl}/#/crypt`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('main')
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready
+  })
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+
+  // The service worker registers after the first page load. One controlled
+  // online reload fills the hashed shell cache before the true-offline check.
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('main')
+
+  let activeKind = null
+  async function showKind(kind) {
+    if (activeKind !== kind) {
+      await page.getByRole('button', { name: `${kind} search`, exact: true }).click()
+      await page.waitForFunction((expected) => location.hash === `#/${expected}`, kind)
+      await page.getByPlaceholder('Name / text').waitFor()
+      activeKind = kind
+    }
+    const semantic = page.getByRole('button', { name: '◇ Semantic', exact: true })
+    if ((await semantic.getAttribute('aria-pressed')) !== 'true') await semantic.click()
+    const conceptInput = page.getByPlaceholder('Describe a card concept (English)')
+    await conceptInput.waitFor()
+    return conceptInput
+  }
+
+  async function browserSearch(golden, expectedFirstId) {
+    const input = await showKind(golden.kind)
+    const started = performance.now()
+    await input.fill(golden.query)
+    await page.waitForFunction(
+      (cardId) =>
+        document.querySelector('main button[data-card-id]')?.getAttribute('data-card-id') ===
+        String(cardId),
+      expectedFirstId,
+      { timeout: 120_000 },
+    )
+    const elapsedMs = performance.now() - started
+    const rows = page.locator('main button[data-card-id]')
+    const count = Math.min(fixture.parity_top_n, await rows.count())
+    const hits = []
+    for (let index = 0; index < count; index += 1) {
+      const row = rows.nth(index)
+      hits.push({
+        id: Number(await row.getAttribute('data-card-id')),
+        score: Number(await row.getAttribute('data-semantic-score')),
+      })
+    }
+    return { elapsedMs, hits }
+  }
+
+  let coldQueryMs = 0
+  const warmQueryTimes = []
+  for (let index = 0; index < fixture.queries.length; index += 1) {
+    const golden = fixture.queries[index]
+    console.log(`semantic quality: ${golden.kind} · ${golden.query}`)
+    const nativeHits = await restSearch(golden)
+    assert.ok(nativeHits.length >= fixture.parity_top_n, `${golden.query}: too few native hits`)
+    assert.ok(
+      nativeHits.every((hit) => hit.model_id === fixture.model_id),
+      `${golden.query}: unexpected native model id`,
+    )
+
+    const relevanceWindow = nativeHits
+      .slice(0, golden.required_within)
+      .map((hit) => hit.id)
+    for (const cardId of golden.required_top_ids) {
+      assert.ok(
+        relevanceWindow.includes(cardId),
+        `${golden.query}: reviewed card ${cardId} missing from top ${golden.required_within}`,
+      )
+    }
+
+    const browserResult = await browserSearch(golden, nativeHits[0].id)
+    const nativeParityHits = nativeHits.slice(0, fixture.parity_top_n)
+    assert.deepEqual(
+      browserResult.hits.map((hit) => hit.id),
+      nativeParityHits.map((hit) => hit.id),
+      `${golden.query}: browser/native order diverged`,
+    )
+    browserResult.hits.forEach((hit, hitIndex) => {
+      assert.ok(
+        Math.abs(hit.score - nativeParityHits[hitIndex].score) <= fixture.score_tolerance,
+        `${golden.query}: card ${hit.id} score exceeded tolerance`,
+      )
+    })
+
+    if (index === 0) coldQueryMs = browserResult.elapsedMs
+    else warmQueryTimes.push(browserResult.elapsedMs)
+  }
+
+  assert.ok(pageErrors.length === 0, `browser page errors: ${pageErrors.join('; ')}`)
+  assert.ok(consoleErrors.length === 0, `browser console errors: ${consoleErrors.join('; ')}`)
+  assert.ok(
+    warmQueryTimes.every((elapsed) => elapsed <= fixture.warm_query_max_ms),
+    `warm query exceeded ${fixture.warm_query_max_ms} ms: ${warmQueryTimes.join(', ')}`,
+  )
+
+  await Promise.all(assetAccounting)
+  const firstUseBytes = [...assetBytes.values()].reduce((total, bytes) => total + bytes, 0)
+  assert.ok(firstUseBytes > 20_000_000, `first-use accounting too small: ${firstUseBytes}`)
+  assert.ok(
+    firstUseBytes <= fixture.first_use_max_bytes,
+    `first-use assets ${firstUseBytes} exceed ${fixture.first_use_max_bytes}`,
+  )
+
+  await stopServer()
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await page.waitForSelector('main')
+  activeKind = null
+  const offlineGolden = fixture.queries[0]
+  const offlineInput = await showKind(offlineGolden.kind)
+  await offlineInput.fill(offlineGolden.query)
+  await page.waitForFunction(
+    (cardId) =>
+      document.querySelector('main button[data-card-id]')?.getAttribute('data-card-id') ===
+      String(cardId),
+    offlineGolden.required_top_ids[0],
+    { timeout: 120_000 },
+  )
+  assert.ok(pageErrors.length === 0, `offline page errors: ${pageErrors.join('; ')}`)
+
+  console.log(
+    JSON.stringify(
+      {
+        model_id: fixture.model_id,
+        golden_queries: fixture.queries.length,
+        parity_top_n: fixture.parity_top_n,
+        first_use_bytes: firstUseBytes,
+        cold_query_ms: Math.round(coldQueryMs),
+        warm_query_ms: warmQueryTimes.map(Math.round),
+        offline_reload: 'passed',
+      },
+      null,
+      2,
+    ),
+  )
+} finally {
+  await browser?.close()
+  await stopServer()
+  await rm(appDb, { force: true })
+}

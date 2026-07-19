@@ -49,8 +49,9 @@ from that pool.
    instance; the data build stores normalized card vectors in `cards.sqlite`, and
    shared Rust performs deterministic exact cosine ranking. Model assets load only
    when semantic mode is requested, so exact/regex search keeps its current startup
-   and offline profile. Browser, MCP, and REST adapters are live; the remaining work
-   is the checked-in VTES relevance/parity quality gate. See
+   and offline profile. Browser, MCP, and REST adapters are live and a checked-in
+   Playwright gate enforces reviewed VTES relevance, native/browser top-10 parity,
+   size/latency budgets, and a true-offline reload. See
    docs/adr/0006-offline-semantic-card-search.md.
 
 ## Repository layout

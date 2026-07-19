@@ -1,6 +1,6 @@
 # ADR 0006 — offline semantic card search
 
-**Status:** accepted, quality gate in progress · 2026-07-19
+**Status:** accepted and implemented · 2026-07-19
 
 ## Context
 
@@ -128,11 +128,15 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
    and leave exact/regex search untouched. The built app was loaded once, its server
    was stopped, the page was reloaded, and a fresh semantic query returned results
    from the PWA/OPFS/model caches with no browser warnings or errors.
-5. **Quality gate:** record VTES-domain golden queries, compare browser/server ranking,
-   measure first-load size and warm-query latency, and document the English-only limit.
+5. **Quality gate — complete:** five reviewed VTES-domain concepts cover crypt and
+   library retrieval. The checked-in Playwright smoke compares the browser and REST
+   top 10 ids exactly, permits at most 0.005 score drift, enforces reviewed relevance
+   windows, and kills the server before a full reload plus fresh query. The local
+   reference run measured 46,193,713 first-use bytes, 1.65 s cold, and 0.36–0.41 s
+   warm queries. CI rebuilds the real corpus/model/frontend and runs the same gate.
 
-Each step is a separate reviewable milestone. Semantic mode is not marked complete
-until browser, MCP, REST, Docker, and offline tests all pass.
+Each step was delivered as a separate reviewable milestone. Browser, MCP, REST,
+Docker, reviewed relevance, parity, and true-offline behavior are now covered.
 
 ## Alternatives considered
 
@@ -165,7 +169,8 @@ until browser, MCP, REST, Docker, and offline tests all pass.
   unchanged.
 - `cards.sqlite` grows by roughly 1 MB plus table overhead.
 - Semantic relevance is model-dependent and English-only in version 1, so checked-in
-  domain benchmarks become part of the compatibility contract.
+  domain benchmarks in `frontend/e2e/fixtures/semantic-golden.json` are part of the
+  compatibility contract.
 - The exact scan keeps the architecture simple and deterministic; an ANN/vector
   extension remains an evidence-driven future optimization rather than a prerequisite.
 

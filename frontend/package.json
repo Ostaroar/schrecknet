@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && tsc -p tsconfig.sw.json && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:semantic": "node e2e/semantic-smoke.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -19,6 +20,7 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.5.0",
+    "playwright": "^1.61.1",
     "tailwindcss": "^4.1.0",
     "typescript": "~5.8.0",
     "vite": "^7.0.0"

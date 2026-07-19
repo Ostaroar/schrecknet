@@ -25,6 +25,15 @@ jobs:
         run: cargo build -p schrecknet-core --target wasm32-unknown-unknown
       - name: data pipeline builds cards.sqlite
         run: cargo run -p schrecknet-data -- build --out dist
+      - name: build semantic smoke server
+        run: cargo build -p schrecknet-server
+      - uses: actions/upload-artifact@v7
+        with:
+          name: semantic-runtime
+          path: |
+            dist
+            target/debug/schrecknet-server
+          retention-days: 1
 
   frontend:
     runs-on: ubuntu-latest
@@ -45,3 +54,36 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
+      - uses: actions/upload-artifact@v7
+        with:
+          name: semantic-frontend
+          path: frontend/dist
+          retention-days: 1
+
+  semantic-e2e:
+    needs: [rust, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: semantic-runtime
+          path: .
+      - uses: actions/download-artifact@v7
+        with:
+          name: semantic-frontend
+          path: frontend/dist
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - run: chmod +x target/debug/schrecknet-server
+      - name: browser/native semantic parity and true-offline smoke
+        run: npm run test:semantic
+        working-directory: frontend
+        env:
+          # ubuntu-latest includes Google Chrome; avoid downloading a duplicate.
+          SCHRECKNET_CHROME_CHANNEL: chrome

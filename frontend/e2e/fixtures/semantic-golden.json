@@ -1,0 +1,44 @@
+{
+  "model_id": "all-minilm-l6-v2-int8-751bff37",
+  "parity_top_n": 10,
+  "score_tolerance": 0.005,
+  "first_use_max_bytes": 52000000,
+  "warm_query_max_ms": 5000,
+  "queries": [
+    {
+      "kind": "library",
+      "query": "wake and block",
+      "required_top_ids": [102137, 100760],
+      "required_within": 3,
+      "reason": "Wake with Evening's Freshness and Forced Awakening both let a locked vampire react and attempt to block."
+    },
+    {
+      "kind": "library",
+      "query": "prevent damage in combat",
+      "required_top_ids": [100749, 100973],
+      "required_within": 3,
+      "reason": "Flesh of Marble and Indomitability explicitly prevent combat damage."
+    },
+    {
+      "kind": "crypt",
+      "query": "gets plus one bleed",
+      "required_top_ids": [201608],
+      "required_within": 1,
+      "reason": "Nonu Dis has the exact +1 bleed special."
+    },
+    {
+      "kind": "crypt",
+      "query": "gain blood after bleeding",
+      "required_top_ids": [201754],
+      "required_within": 1,
+      "reason": "Gostoso can gain 1 blood after a successful bleed."
+    },
+    {
+      "kind": "crypt",
+      "query": "can unlock another vampire",
+      "required_top_ids": [201725],
+      "required_within": 1,
+      "reason": "Mother Anja Giovanni can unlock another Hecata after its successful action."
+    }
+  ]
+}

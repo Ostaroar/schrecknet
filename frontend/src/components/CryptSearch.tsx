@@ -408,6 +408,10 @@ export default function CryptSearch() {
               <div key={c.id}>
                 <button
                   onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                  data-card-id={c.id}
+                  data-semantic-score={
+                    semanticMode && 'semanticScore' in c ? c.semanticScore : undefined
+                  }
                   className="grid w-full grid-cols-[26px_1fr_auto_auto] items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
                 >
                   <span className="grid size-[22px] place-items-center rounded-full bg-blood/20 font-mono text-[11.5px] font-semibold text-blood-hi">

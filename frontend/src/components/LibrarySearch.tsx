@@ -407,6 +407,10 @@ export default function LibrarySearch() {
               <div key={c.id}>
                 <button
                   onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                  data-card-id={c.id}
+                  data-semantic-score={
+                    semanticMode && 'semanticScore' in c ? c.semanticScore : undefined
+                  }
                   className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
                 >
                   <span className="min-w-0 truncate">
