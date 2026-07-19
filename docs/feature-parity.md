@@ -73,7 +73,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 
 ## Library Card Search (`/library`)
 - ☑ Name / text search — MVP live (frontend/src/components/LibrarySearch.tsx);
-      ☐ still missing "Only in Name"/"Only in Text" mode toggle and Regex mode
+      ☑ "Only in Name" / "Only in Text" mode toggle on browser, REST, and MCP;
+      ☐ Regex mode still missing
 - ☑ Type filter — MVP live, options derived from the V5 pool at query time
       (9 types present: Action, Action Modifier, Ally, Combat, Equipment,
       Master, Political Action, Reaction, Retainer — Event/Power/Conviction

@@ -110,6 +110,9 @@ pub struct LibrarySearchParams {
     /// Substring match against card name or card text.
     #[serde(default)]
     pub text: String,
+    /// Where `text` must match: card name, card text, or either (default).
+    #[serde(default)]
+    pub text_mode: TextMode,
     /// Exact card type, e.g. "Master", "Action", "Combat" (matches cards with
     /// this type among possibly several — see `types` on the result).
     #[serde(default)]
@@ -253,22 +256,26 @@ pub fn search_library(
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'library'
-           AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
-           AND (?2 IS NULL OR c.types LIKE ?2)
-           AND (?3 IS NULL OR c.clan LIKE '%' || ?3 || '%')
-           AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
-                AND CAST(c.blood_cost AS INTEGER) <= ?4))
-           AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
-                AND CAST(c.pool_cost AS INTEGER) <= ?5))
-           AND (?6 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-                WHERE p.card_id = c.id AND s.name = ?6))
-           AND (?7 IS NULL OR EXISTS (SELECT 1 FROM printings p
-                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?7 || '%'))
-           AND (?8 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?8 || '%'))",
+           AND (?1 = ''
+                OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
+                OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+           AND (?4 IS NULL OR c.types LIKE ?4)
+           AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
+           AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
+                AND CAST(c.blood_cost AS INTEGER) <= ?6))
+           AND (?7 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
+                AND CAST(c.pool_cost AS INTEGER) <= ?7))
+           AND (?8 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+                WHERE p.card_id = c.id AND s.name = ?8))
+           AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p
+                WHERE p.card_id = c.id AND p.precon LIKE '%' || ?9 || '%'))
+           AND (?10 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?10 || '%'))",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
+        Box::new(params.text_mode != TextMode::Text),
+        Box::new(params.text_mode != TextMode::Name),
         Box::new(type_pattern),
         Box::new(params.clan.clone()),
         Box::new(params.blood_cost_max),
@@ -606,6 +613,57 @@ mod tests {
             results.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
             vec!["Absolute Tyranny", "Arcane Library", "Villein"]
         );
+    }
+
+    #[test]
+    fn library_text_modes_limit_the_search_scope() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let name_only = LibrarySearchParams {
+            text: "villein".into(),
+            text_mode: TextMode::Name,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &name_only).unwrap()[0].name,
+            "Villein"
+        );
+
+        let excluded_from_name = LibrarySearchParams {
+            text: "bound".into(),
+            text_mode: TextMode::Name,
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &excluded_from_name)
+            .unwrap()
+            .is_empty());
+
+        let text_only = LibrarySearchParams {
+            text: "bound".into(),
+            text_mode: TextMode::Text,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &text_only).unwrap()[0].name,
+            "Villein"
+        );
+
+        let excluded_from_text = LibrarySearchParams {
+            text: "villein".into(),
+            text_mode: TextMode::Text,
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &excluded_from_text)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn library_text_mode_deserializes_for_rest_and_mcp() {
+        let rest: LibrarySearchParams = serde_urlencoded::from_str("text_mode=name").unwrap();
+        assert_eq!(rest.text_mode, TextMode::Name);
+        let mcp: LibrarySearchParams = serde_json::from_str(r#"{"text_mode":"text"}"#).unwrap();
+        assert_eq!(mcp.text_mode, TextMode::Text);
     }
 
     #[test]

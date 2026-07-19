@@ -8,6 +8,7 @@ import {
   listPrecons,
   emptyLibraryFilters,
   type LibraryCard,
+  type TextMode,
 } from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
 
@@ -26,6 +27,7 @@ function CostPill({ blood, pool }: { blood: string | null; pool: string | null }
 
 export default function LibrarySearch() {
   const [text, setText] = useState('')
+  const [textMode, setTextMode] = useState<TextMode>('any')
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
@@ -65,6 +67,7 @@ export default function LibrarySearch() {
     return {
       ...emptyLibraryFilters,
       text,
+      textMode,
       cardType,
       clan,
       bloodCostMax,
@@ -77,7 +80,7 @@ export default function LibrarySearch() {
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, cardType, clan, bloodCostMax, poolCostMax, set, precon, artist, discModes])
+  }, [text, textMode, cardType, clan, bloodCostMax, poolCostMax, set, precon, artist, discModes])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -115,6 +118,27 @@ export default function LibrarySearch() {
           onChange={(e) => setText(e.target.value)}
           disabled={status === 'loading'}
         />
+        <div className="flex overflow-hidden rounded-lg border border-line">
+          {(
+            [
+              ['any', 'All'],
+              ['name', 'Name'],
+              ['text', 'Text'],
+            ] as [TextMode, string][]
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => setTextMode(mode)}
+              title={`Search in ${mode === 'any' ? 'name or text' : mode === 'name' ? 'card name only' : 'card text only'}`}
+              className={
+                'px-2.5 py-2 text-xs ' +
+                (textMode === mode ? 'bg-blood text-white' : 'bg-surface text-ink-dim hover:text-ink-muted')
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={cardType ?? ''}

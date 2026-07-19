@@ -3,8 +3,11 @@
 
 import { query } from './db'
 
+export type TextMode = 'any' | 'name' | 'text'
+
 export interface LibraryFilters {
   text: string
+  textMode: TextMode
   cardType: string | null
   clan: string | null
   disciplines: string[]
@@ -18,6 +21,7 @@ export interface LibraryFilters {
 
 export const emptyLibraryFilters: LibraryFilters = {
   text: '',
+  textMode: 'any',
   cardType: null,
   clan: null,
   disciplines: [],
@@ -60,21 +64,25 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
      WHERE c.kind = 'library'
-       AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
-       AND (?2 IS NULL OR c.types LIKE ?2)
-       AND (?3 IS NULL OR c.clan LIKE '%' || ?3 || '%')
-       AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
-            AND CAST(c.blood_cost AS INTEGER) <= ?4))
-       AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
-            AND CAST(c.pool_cost AS INTEGER) <= ?5))
-       AND (?6 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-            WHERE p.card_id = c.id AND s.name = ?6))
-       AND (?7 IS NULL OR EXISTS (SELECT 1 FROM printings p
-            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?7 || '%'))
-       AND (?8 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?8 || '%'))`
+       AND (?1 = ''
+            OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
+            OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+       AND (?4 IS NULL OR c.types LIKE ?4)
+       AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
+       AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
+            AND CAST(c.blood_cost AS INTEGER) <= ?6))
+       AND (?7 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
+            AND CAST(c.pool_cost AS INTEGER) <= ?7))
+       AND (?8 IS NULL OR EXISTS (SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
+            WHERE p.card_id = c.id AND s.name = ?8))
+       AND (?9 IS NULL OR EXISTS (SELECT 1 FROM printings p
+            WHERE p.card_id = c.id AND p.precon LIKE '%' || ?9 || '%'))
+       AND (?10 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
+            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?10 || '%'))`
   const params: (string | number | null)[] = [
     filters.text.trim(),
+    filters.textMode !== 'text' ? 1 : 0,
+    filters.textMode !== 'name' ? 1 : 0,
     typePattern,
     filters.clan,
     filters.bloodCostMax,
