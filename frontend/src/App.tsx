@@ -7,10 +7,11 @@ import DeckEditor from './components/DeckEditor'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
 import CommandPalette from './components/CommandPalette'
+import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { useHashRoute, navigate } from './lib/route'
 
-const TABS = ['crypt', 'library', 'decks'] as const
+const TABS = ['crypt', 'library', 'decks', 'help', 'about'] as const
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
@@ -38,7 +39,7 @@ export default function App() {
       </header>
 
       {route.page !== 'card' && route.page !== 'deck' && route.page !== 'share' && route.page !== 'diff' && (
-        <nav className="mb-4 flex gap-1">
+        <nav className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (
             <button
               key={t}
@@ -48,7 +49,7 @@ export default function App() {
                 (route.page === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
               }
             >
-              {t === 'decks' ? 'Decks' : `${t} search`}
+              {t === 'crypt' || t === 'library' ? `${t} search` : t}
             </button>
           ))}
         </nav>
@@ -63,6 +64,10 @@ export default function App() {
           <SharedDeckPreview token={route.token} />
         ) : route.page === 'diff' ? (
           <DeckDiff />
+        ) : route.page === 'help' ? (
+          <HelpPage />
+        ) : route.page === 'about' ? (
+          <AboutPage />
         ) : route.page === 'decks' ? (
           <DeckList />
         ) : route.page === 'library' ? (
@@ -74,10 +79,15 @@ export default function App() {
 
       <CommandPalette />
 
-      <footer className="py-6 text-center text-xs text-ink-dim">
-        Portions of the materials are the copyrights and trademarks of Paradox
-        Interactive AB, and are used with permission under the Dark Pack agreement.
-        All rights reserved.
+      <footer className="grid gap-2 py-6 text-center text-xs text-ink-dim">
+        <span>
+          Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with
+          permission under the Dark Pack agreement. All rights reserved.
+        </span>
+        <span className="flex justify-center gap-3">
+          <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">Help</button>
+          <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">About</button>
+        </span>
       </footer>
     </div>
   )

@@ -23,7 +23,8 @@ checks are replaced by V5 deck-construction rules.
 Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during implementation
 
 ## Navigation / Shell
-- ☐ Top navigation: Account/Login, About, Inventory, Decks, Crypt, Library
+- ☐ Top navigation: Account/Login, About, Inventory, Decks, Crypt, Library —
+      About/Decks/Crypt/Library live; Account and Inventory follow their features
 - ☑ Quick card search by name — ⌘K/Ctrl+K command palette, prefix-ranked,
       across both kinds, keyboard-driven (↑↓/Enter/Esc), jumps to the card page
 - ☐ Language switcher for card texts (EN/ES/FR/PT-BR) ✎
@@ -32,8 +33,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       worker; offline card search itself is handled separately by the
       OPFS-backed dbWorker.ts)
 - ☐ Changelog page
-- ☐ Documentation / Help page
-- ☐ About page (credits, Dark Pack notice, related projects, donations/contacts)
+- ☑ Documentation / Help page — search, decks, offline storage, and API quick start
+- ☑ About page — V5 scope, architecture summary, credits, and Dark Pack notice;
+      donations/contacts intentionally omitted until the project has official ones
 
 ## Crypt Card Search (`/crypt`)
 - ☑ Name / text search — MVP live (frontend/src/components/CryptSearch.tsx);
