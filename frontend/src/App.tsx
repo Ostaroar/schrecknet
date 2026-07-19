@@ -7,7 +7,6 @@ import DeckEditor from './components/DeckEditor'
 import ProxySheet from './components/ProxySheet'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
-import TableSeating from './components/TableSeating'
 import PreconBrowser from './components/PreconBrowser'
 import CommandPalette from './components/CommandPalette'
 import { AboutPage, HelpPage } from './components/InfoPages'
@@ -30,7 +29,6 @@ export default function App() {
     route.page === 'proxy' ||
     route.page === 'share' ||
     route.page === 'diff' ||
-    route.page === 'seating' ||
     route.page === 'precons'
 
   return (
@@ -52,8 +50,7 @@ export default function App() {
         route.page !== 'deck' &&
         route.page !== 'proxy' &&
         route.page !== 'share' &&
-        route.page !== 'diff' &&
-        route.page !== 'seating' && (
+        route.page !== 'diff' && (
         <nav className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (
             <button
@@ -81,8 +78,6 @@ export default function App() {
           <SharedDeckPreview token={route.token} />
         ) : route.page === 'diff' ? (
           <DeckDiff />
-        ) : route.page === 'seating' ? (
-          <TableSeating />
         ) : route.page === 'precons' ? (
           <PreconBrowser />
         ) : route.page === 'help' ? (

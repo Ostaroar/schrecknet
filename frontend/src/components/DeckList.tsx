@@ -51,16 +51,11 @@ export default function DeckList() {
         </button>
       </div>
 
-      <div className="flex gap-4">
-        {decks.length >= 2 && (
-          <button onClick={() => navigate({ page: 'diff' })} className="text-sm text-blood-hi hover:underline">
-            Compare two decks →
-          </button>
-        )}
-        <button onClick={() => navigate({ page: 'seating' })} className="text-sm text-blood-hi hover:underline">
-          Table seating →
+      {decks.length >= 2 && (
+        <button onClick={() => navigate({ page: 'diff' })} className="justify-self-start text-sm text-blood-hi hover:underline">
+          Compare two decks →
         </button>
-      </div>
+      )}
 
       {status === 'loading' ? (
         <p className="text-sm text-ink-dim">Loading decks…</p>

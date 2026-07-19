@@ -12,7 +12,7 @@ from that pool.
 
 1. **One Rust core, two targets.** All domain logic lives in the `core/` Rust crate:
    deck parsing/serialization (deck-in-URL, Lackey, JOL), format legality
-   validation, draw simulation, deck diff, seating algorithm, proxy layout. It compiles
+   validation, draw simulation, deck diff, and proxy layout. It compiles
    to **WebAssembly** for the browser and links natively into the server. One
    implementation, zero drift between client and server behavior.
 

@@ -7,11 +7,11 @@ checked off (or explicitly descoped with a note) before v1.0.
 **Scope note (2026-07-19):** SchreckNet is card search/research + deck building only —
 no tournament/community-data features. Explicitly out of scope and removed from this
 list: TWD (Tournament Winning Decks) browser, TDA (Tournament Decks Archive), PDA
-(Public Deck Archive), the playtest program, Hall of Fame, and any recommendation
-engine built on tournament co-occurrence data. Deck import/export still supports
-common plaintext deck-list formats (Lackey, JOL, etc.) since that's interop, not a
-tournament feature; deck-in-URL sharing (for a deck you built) also stays — publishing
-to a public community archive does not.
+(Public Deck Archive), the playtest program, Hall of Fame, table seating utilities,
+and any recommendation engine built on tournament co-occurrence data. Deck
+import/export still supports common plaintext deck-list formats (Lackey, JOL, etc.)
+since that's interop, not a tournament feature; deck-in-URL sharing (for a deck you
+built) also stays — publishing to a public community archive does not.
 
 **V5 scope (2026-07-18):** the site hosts only the V5 format. Read every item below
 against the V5 card pool: filter *capabilities* are kept 1:1, but their option lists
@@ -166,11 +166,6 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       tracked by the data source (KRCG's export records which printings
       existed, not each deck's exact copy counts), so this shows each
       precon's card pool rather than a ready-to-play decklist
-- ☑ Table Seating randomizer tool — live at `#/seating` (frontend/src/lib/
-      seating.ts + components/TableSeating.tsx): 4-6 named players, random
-      turn order via Fisher-Yates shuffle, each seat shows predator/prey
-      derived from turn order. Verified live: 4-player shuffle produced a
-      consistent closed predator/prey loop (Alice→Carol→Dave→Bob→Alice)
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
 
 ## Inventory (`/inventory`)

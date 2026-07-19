@@ -132,9 +132,6 @@ docs/feature-parity.md's scope note).
   round-tripped exactly. ☐ still missing: JOL-specific format, XLSX
 - ☑ Deck diff — compare any two saved local decks at `#/diff`; shared Rust
   core classifies additions, removals, quantity changes, and unchanged cards
-- ☑ Table seating tool — `#/seating`, 4-6 players, random turn order with
-  derived predator/prey per seat; plain shuffle, not core/ domain logic
-  (same tier as the draw simulator — no legal/illegal outcome to validate)
 - ☑ Precon browser — `#/precons`, all 3 surfaces (`list_precons` in
   cards_db.rs), 32 real V5 precons grouped by set (verified live: matches
   the actual V5 product lineup — 7 Fifth Edition clan starters, 4 Anarch/

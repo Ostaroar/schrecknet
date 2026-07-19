@@ -30,8 +30,8 @@ what you need to implement the app correctly — consult KRCG rulings for edge c
   **MMPA** — multi-master pool acceleration archetype; **swarm** — many small vampires;
   **star vampire** — deck built around one key vampire.
 - **Precon** — preconstructed starter deck (a printing source, like a set).
-- **Seating** — VTES tables seat 4–5 players; seating order matters (predator/prey),
-  hence the seating randomizer tool.
+- **Seating** — VTES tables seat 4–5 players; seating order matters (predator/prey).
+  Gameplay/tournament seating utilities are outside SchreckNet's scope.
 - **Proxy** — print-at-home stand-in card, permitted in most casual/tournament play
   since 2023 (hence the proxy PDF feature).
 

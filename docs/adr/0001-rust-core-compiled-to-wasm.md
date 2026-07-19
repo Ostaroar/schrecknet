@@ -9,7 +9,7 @@ and server.
 
 ## Decision
 All domain logic (deck parse/serialize for every format, legality validation, draw
-simulation, diff, seating, proxy layout, deck-URL codec, shared filter schema) lives
+simulation, diff, proxy layout, deck-URL codec, shared filter schema) lives
 in one Rust crate `core/`, compiled with wasm-bindgen/wasm-pack for the browser and
 linked natively into the axum server.
 
