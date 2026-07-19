@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCard, type CardDetail } from '../lib/cardDetail'
+import RulingRefs from './RulingRefs'
 import { navigate } from '../lib/route'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
@@ -128,7 +129,10 @@ export default function CardPage({ id }: { id: number }) {
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">Rulings</h2>
           <ul className="grid gap-2 text-ink-muted">
             {card.rulings.map((r, i) => (
-              <li key={i}>{r.text}</li>
+              <li key={i}>
+                <span>{r.text}</span>
+                <RulingRefs refs={r.refs} />
+              </li>
             ))}
           </ul>
         </section>

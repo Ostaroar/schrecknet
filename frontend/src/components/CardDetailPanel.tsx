@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCard, type CardDetail } from '../lib/cardDetail'
+import RulingRefs from './RulingRefs'
 import { routeTo } from '../lib/route'
 
 export default function CardDetailPanel({ id }: { id: number }) {
@@ -41,7 +42,10 @@ export default function CardDetailPanel({ id }: { id: number }) {
           <span className="text-xs uppercase tracking-wide text-ink-dim">Rulings</span>
           <ul className="grid gap-1 text-xs text-ink-muted">
             {card.rulings.map((r, i) => (
-              <li key={i}>{r.text}</li>
+              <li key={i}>
+                <span>{r.text}</span>
+                <RulingRefs refs={r.refs} />
+              </li>
             ))}
           </ul>
         </div>

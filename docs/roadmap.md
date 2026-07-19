@@ -39,7 +39,7 @@ docs/feature-parity.md's scope note).
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
-- ☐ Card images; rulings source links
+- ☑ Card images and rulings source links
 - ☑ Official SQLite WASM + OPFS (opfs-sahpool VFS, worker-hosted) replacing
   sql.js — DB persists across reloads, downloads once per version bump (one
   cards.sqlite fetch vs. a meta.json probe per load, verified via network

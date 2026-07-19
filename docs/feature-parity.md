@@ -108,7 +108,7 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       scans still pending ✎
 - ☐ Icon inline rendering within card text (disciplines, clans, costs)
 - ☑ Sets & printings list (incl. precons) — live
-- ☑ Rulings (KRCG rulings database) — text live; ☐ links to source not rendered yet
+- ☑ Rulings (KRCG rulings database) — text and authoritative source links live
 - ☑ Artist credit(s) — live
 - ☑ Card text translations — full translated name + text on the card page
 - ☑ Shareable deep link per card — `#/cards/{id}` hash routes (tiny hand-rolled

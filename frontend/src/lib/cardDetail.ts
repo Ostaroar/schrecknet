@@ -18,7 +18,13 @@ export interface Printing {
 
 export interface Ruling {
   text: string
-  refs: unknown
+  refs: RulingRef[]
+}
+
+export interface RulingRef {
+  label: string
+  text?: string
+  url?: string
 }
 
 export interface Translation {
@@ -108,7 +114,7 @@ export async function getCard(id: number): Promise<CardDetail | null> {
       first_print: p.first_print === 1,
     })),
     artists: artists.map((a) => a.name),
-    rulings: rulings.map((r) => ({ text: r.text, refs: JSON.parse(r.refs) })),
+    rulings: rulings.map((r) => ({ text: r.text, refs: JSON.parse(r.refs) as RulingRef[] })),
     translations,
   }
 }
