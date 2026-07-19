@@ -12,8 +12,8 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 
 | Tool | Description |
 | --- | --- |
-| `search_crypt` | **Live.** MVP filters: text/name search, clan, group (`server/src/cards_db.rs`). Remaining vdb filters (disciplines incl. superior/inferior + OR-groups, capacity range, sect, votes, titles, traits, set/precon/artist, regex mode) land incrementally — see docs/feature-parity.md |
-| `search_library` | **Live.** Text scope, exact card type, clan/path and discipline requirements, independent blood/pool cost comparisons (`at_most`, `exact`, `at_least`), set, precon, and artist. Remaining filters: capacity requirement, traits, and regex mode |
+| `search_crypt` | **Live.** Text/name search (`text_mode` scope + `text_regex` regex mode), clan, title, group, capacity range, disciplines (superior/inferior), set, precon, artist (`server/src/cards_db.rs`). Remaining vdb filters (OR-discipline-groups, sect, votes, traits) land incrementally — see docs/feature-parity.md |
+| `search_library` | **Live.** Text scope + regex mode (`text_regex`), exact card type, clan/path and discipline requirements, independent blood/pool cost comparisons (`at_most`, `exact`, `at_least`), set, precon, and artist. Remaining filters: capacity requirement, traits |
 | `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`) |
 | `get_card_by_name` | **Live.** Exact case-insensitive canonical/ASCII name lookup; REST mirror: `GET /api/v1/cards/lookup?name=…` |
 | `list_precons` | **Live.** Every V5 precon grouped by (set, precon) with a distinct-card count; REST mirror: `GET /api/v1/precons`. Card quantities per precon aren't tracked by the data source |

@@ -5,6 +5,10 @@
 //! result shape — so client and server agree on what "crypt search" means.
 //! Phase 1 MVP: text/name search, clan, group. See docs/feature-parity.md.
 
+use std::sync::Arc;
+
+use regex::Regex;
+use rusqlite::functions::FunctionFlags;
 use rusqlite::Connection;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,6 +21,11 @@ pub struct CryptSearchParams {
     /// Where `text` must match: card name, card text, or either (default).
     #[serde(default)]
     pub text_mode: TextMode,
+    /// If true, `text` is a regex pattern (standard syntax: `.`, `*`, `+`,
+    /// `?`, `{m,n}`, `[...]`, `(...)`, `|`, anchors) matched against
+    /// whichever field(s) `text_mode` selects, instead of a substring.
+    #[serde(default)]
+    pub text_regex: bool,
     /// Exact-ish clan filter (substring match, e.g. "Ventrue").
     #[serde(default)]
     pub clan: Option<String>,
@@ -136,6 +145,11 @@ pub struct LibrarySearchParams {
     /// Where `text` must match: card name, card text, or either (default).
     #[serde(default)]
     pub text_mode: TextMode,
+    /// If true, `text` is a regex pattern matched against whichever
+    /// field(s) `text_mode` selects, instead of a substring — see
+    /// CryptSearchParams::text_regex.
+    #[serde(default)]
+    pub text_regex: bool,
     /// Exact card type, e.g. "Master", "Action", "Combat" (matches cards with
     /// this type among possibly several — see `types` on the result).
     #[serde(default)]
@@ -197,7 +211,36 @@ pub struct LibraryCard {
 }
 
 pub fn open(data_dir: &str) -> rusqlite::Result<Connection> {
-    Connection::open(format!("{data_dir}/cards.sqlite"))
+    let conn = Connection::open(format!("{data_dir}/cards.sqlite"))?;
+    register_regexp(&conn)?;
+    Ok(conn)
+}
+
+/// Registers `regexp_match(pattern, text) -> bool` as a SQL scalar function
+/// (docs/adr/0005-regex-crate-for-search.md). The compiled pattern is cached
+/// per-argument-value via rusqlite's `get_or_create_aux`, so a query scanning
+/// many rows compiles the regex once, not once per row. Case-insensitive,
+/// matching `LIKE`'s existing case-insensitive-ASCII behavior — otherwise
+/// switching a search from substring to regex mode would silently start
+/// missing matches purely due to letter casing. An invalid pattern surfaces
+/// as a normal SQLite error (caught by the caller as a search error), never
+/// a panic.
+fn register_regexp(conn: &Connection) -> rusqlite::Result<()> {
+    conn.create_scalar_function(
+        "regexp_match",
+        2,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            let pattern: Arc<Regex> = ctx.get_or_create_aux(0, |value| {
+                regex::RegexBuilder::new(value.as_str()?)
+                    .case_insensitive(true)
+                    .build()
+                    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })
+            })?;
+            let text = ctx.get_raw(1).as_str()?;
+            Ok(pattern.is_match(text))
+        },
+    )
 }
 
 pub fn search_crypt(
@@ -219,8 +262,10 @@ pub fn search_crypt(
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'crypt'
            AND (?1 = ''
-                OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
-                OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+                OR (?2 AND (CASE WHEN ?12 THEN regexp_match(?1, c.name_ascii)
+                                 ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
+                OR (?3 AND (CASE WHEN ?12 THEN regexp_match(?1, c.card_text)
+                                 ELSE c.card_text LIKE '%' || ?1 || '%' END)))
            AND (?4 IS NULL OR c.clan LIKE '%' || ?4 || '%')
            AND (?5 IS NULL OR c.grp = ?5)
            AND (?6 IS NULL OR c.capacity >= ?6)
@@ -246,6 +291,7 @@ pub fn search_crypt(
         Box::new(params.set.clone()),
         Box::new(params.precon.clone()),
         Box::new(params.artist.clone()),
+        Box::new(params.text_regex as i64),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -313,8 +359,10 @@ pub fn search_library(
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'library'
            AND (?1 = ''
-                OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
-                OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+                OR (?2 AND (CASE WHEN ?13 THEN regexp_match(?1, c.name_ascii)
+                                 ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
+                OR (?3 AND (CASE WHEN ?13 THEN regexp_match(?1, c.card_text)
+                                 ELSE c.card_text LIKE '%' || ?1 || '%' END)))
            AND (?4 IS NULL OR c.types LIKE ?4)
            AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
            AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X' AND
@@ -346,6 +394,7 @@ pub fn search_library(
         Box::new(params.set.clone()),
         Box::new(params.precon.clone()),
         Box::new(params.artist.clone()),
+        Box::new(params.text_regex as i64),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -443,6 +492,12 @@ mod tests {
     use super::*;
 
     fn seed(conn: &Connection) {
+        // regexp_match is referenced unconditionally in search_crypt/
+        // search_library's SQL text (inside a CASE WHEN gated by
+        // text_regex) — SQLite resolves function references at prepare()
+        // time regardless of which branch runs, so every test connection
+        // needs it registered even when a test never uses regex mode.
+        register_regexp(conn).unwrap();
         conn.execute_batch(
             "CREATE TABLE cards(id INT, kind TEXT, name TEXT, name_ascii TEXT, card_text TEXT,
                clan TEXT, capacity INT, grp INT, title TEXT,
@@ -648,6 +703,58 @@ mod tests {
     }
 
     #[test]
+    fn crypt_text_regex_matches_alternation_and_anchors() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn); // registers regexp_match too
+                     // "^Aa" anchors to the start of the name; only Aaradhya qualifies.
+        let params = CryptSearchParams {
+            text: "^Aa".into(),
+            text_mode: TextMode::Name,
+            text_regex: true,
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+        // Alternation matches either card by name.
+        let params = CryptSearchParams {
+            text: "Aaradhya|Abaddon".into(),
+            text_mode: TextMode::Name,
+            text_regex: true,
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &params).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn crypt_text_regex_off_treats_pattern_chars_literally() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn); // registers regexp_match too
+                     // With text_regex left at its default (false), "^Aa" is a literal
+                     // substring — no card's name literally contains "^Aa" — so this
+                     // must NOT be misinterpreted as a regex anchor.
+        let params = CryptSearchParams {
+            text: "^Aa".into(),
+            text_mode: TextMode::Name,
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn crypt_text_regex_invalid_pattern_is_a_search_error_not_a_panic() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn); // registers regexp_match too
+        let params = CryptSearchParams {
+            text: "(unclosed".into(),
+            text_mode: TextMode::Name,
+            text_regex: true,
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).is_err());
+    }
+
+    #[test]
     fn crypt_set_filter_matches_exact_set_name() {
         let conn = Connection::open_in_memory().unwrap();
         seed(&conn);
@@ -816,6 +923,31 @@ mod tests {
         assert_eq!(rest.text_mode, TextMode::Name);
         let mcp: LibrarySearchParams = serde_json::from_str(r#"{"text_mode":"text"}"#).unwrap();
         assert_eq!(mcp.text_mode, TextMode::Text);
+    }
+
+    #[test]
+    fn library_text_regex_matches_and_off_is_literal() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn); // registers regexp_match too
+                     // "^A" anchors the start of the name — Absolute Tyranny and Arcane
+                     // Library qualify, Villein does not.
+        let params = LibrarySearchParams {
+            text: "^A".into(),
+            text_mode: TextMode::Name,
+            text_regex: true,
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|c| c.name.starts_with('A')));
+        // Same pattern with regex off is a literal substring — no library
+        // card's name contains the literal text "^A", so nothing matches.
+        let params = LibrarySearchParams {
+            text: "^A".into(),
+            text_mode: TextMode::Name,
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &params).unwrap().is_empty());
     }
 
     #[test]

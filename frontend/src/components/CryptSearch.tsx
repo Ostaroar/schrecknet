@@ -32,6 +32,7 @@ type DisciplineMode = 'off' | 'any' | 'superior'
 export default function CryptSearch() {
   const [text, setText] = useState('')
   const [textMode, setTextMode] = useState<TextMode>('any')
+  const [textRegex, setTextRegex] = useState(false)
   const [clan, setClan] = useState<string | null>(null)
   const [title, setTitle] = useState<string | null>(null)
   const [group, setGroup] = useState<number | null>(null)
@@ -50,6 +51,10 @@ export default function CryptSearch() {
   const [results, setResults] = useState<CryptCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  // A live regex-mode search can fail purely because the user hasn't finished
+  // typing a valid pattern — that's a soft, recoverable state (empty results
+  // + a hint), not the fatal "couldn't load the DB" error path.
+  const [searchError, setSearchError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
@@ -75,6 +80,7 @@ export default function CryptSearch() {
       ...emptyCryptFilters,
       text,
       textMode,
+      textRegex,
       clan,
       title,
       group,
@@ -88,15 +94,25 @@ export default function CryptSearch() {
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, textMode, clan, title, group, capacityMin, capacityMax, set, precon, artist, discModes])
+  }, [text, textMode, textRegex, clan, title, group, capacityMin, capacityMax, set, precon, artist, discModes])
 
   useEffect(() => {
     if (status !== 'ready') return
     searchCrypt(filters)
-      .then(setResults)
+      .then((rows) => {
+        setResults(rows)
+        setSearchError('')
+      })
       .catch((e: Error) => {
-        setError(e.message)
-        setStatus('error')
+        // In regex mode an in-progress/invalid pattern is expected; show it
+        // as a soft hint. Any other failure is a real DB error.
+        if (filters.textRegex) {
+          setResults([])
+          setSearchError('Invalid regex pattern — keep typing, or check the syntax.')
+        } else {
+          setError(e.message)
+          setStatus('error')
+        }
       })
   }, [filters, status])
 
@@ -149,6 +165,16 @@ export default function CryptSearch() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setTextRegex((r) => !r)}
+          title="Treat the search text as a regex pattern (standard syntax: . * + ? {m,n} [...] (...) | ^ $), case-insensitive"
+          className={
+            'rounded-lg border px-2.5 py-2 text-xs ' +
+            (textRegex ? 'border-blood bg-blood text-white' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+          }
+        >
+          .*Regex
+        </button>
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={clan ?? ''}
@@ -280,7 +306,9 @@ export default function CryptSearch() {
         <p className="text-sm text-ink-dim">Loading card database…</p>
       ) : (
         <>
-          <p className="text-xs text-ink-dim">{results.length} crypt cards</p>
+          <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
+            {searchError || `${results.length} crypt cards`}
+          </p>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {results.map((c) => (
               <div key={c.id}>

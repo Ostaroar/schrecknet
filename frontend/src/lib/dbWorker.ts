@@ -21,7 +21,22 @@ type InMsg = OpenMsg | QueryMsg
 const DB_NAME = '/cards.sqlite'
 const VERSION_KEY = 'schrecknet-cards-version'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null
+
+// Companion to server/src/cards_db.rs::register_regexp — same case-
+// insensitive semantics (docs/adr/0005-regex-crate-for-search.md), but no
+// new dependency: JS's native RegExp is a full regex engine already present
+// in every browser. An invalid pattern throws, which sqlite-wasm turns into
+// a normal query error for the caller, same as the server side.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function registerRegexp(database: any) {
+  database.createFunction({
+    name: 'regexp_match',
+    arity: 2,
+    xFunc: (_ctx: unknown, pattern: string, text: string) => (new RegExp(pattern, 'i').test(text) ? 1 : 0),
+  })
+}
 
 function versionOf(meta: { schema_version: number; data_version: number }): string {
   return `${meta.schema_version}.${meta.data_version}`
@@ -45,6 +60,7 @@ async function open(): Promise<Record<string, unknown>> {
 
   if (haveLocal && (wantVersion === null || wantVersion === localVersion)) {
     db = new pool.OpfsSAHPoolDb(DB_NAME)
+    registerRegexp(db)
     return { source: 'opfs', version: localVersion }
   }
 
@@ -58,6 +74,7 @@ async function open(): Promise<Record<string, unknown>> {
   await pool.importDb(DB_NAME, bytes)
   await setStoredVersion(wantVersion ?? 'unknown')
   db = new pool.OpfsSAHPoolDb(DB_NAME)
+  registerRegexp(db)
   return { source: 'network', version: wantVersion ?? 'unknown', bytes: bytes.length }
 }
 

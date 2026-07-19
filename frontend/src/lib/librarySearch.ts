@@ -9,6 +9,7 @@ export type CostMode = 'at_most' | 'exact' | 'at_least'
 export interface LibraryFilters {
   text: string
   textMode: TextMode
+  textRegex: boolean
   cardType: string | null
   clan: string | null
   disciplines: string[]
@@ -25,6 +26,7 @@ export interface LibraryFilters {
 export const emptyLibraryFilters: LibraryFilters = {
   text: '',
   textMode: 'any',
+  textRegex: false,
   cardType: null,
   clan: null,
   disciplines: [],
@@ -70,8 +72,10 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
      WHERE c.kind = 'library'
        AND (?1 = ''
-            OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
-            OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+            OR (?2 AND (CASE WHEN ?13 THEN regexp_match(?1, c.name_ascii)
+                             ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
+            OR (?3 AND (CASE WHEN ?13 THEN regexp_match(?1, c.card_text)
+                             ELSE c.card_text LIKE '%' || ?1 || '%' END)))
        AND (?4 IS NULL OR c.types LIKE ?4)
        AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
        AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X' AND
@@ -102,6 +106,7 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
     filters.set,
     filters.precon,
     filters.artist,
+    filters.textRegex ? 1 : 0,
   ]
   for (const code of filters.disciplines) {
     sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx

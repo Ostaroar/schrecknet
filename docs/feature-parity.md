@@ -40,7 +40,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 ## Crypt Card Search (`/crypt`)
 - ☑ Name / text search — MVP live (frontend/src/components/CryptSearch.tsx);
       ☑ "Only in Name" / "Only in Text" mode toggle (All/Name/Text segmented
-      control; `text_mode` param on all three surfaces); ☐ Regex mode still missing
+      control; `text_mode` param on all three surfaces); ☑ Regex mode
+      (`text_regex` param, case-insensitive, orthogonal to the mode toggle —
+      server via the `regex` crate as a rusqlite scalar function, browser via
+      native `RegExp` as a sqlite-wasm scalar function; see ADR 0005)
 - ☑ Discipline filter MVP: per-discipline three-state toggle (off → required
       any level → superior only), require-ALL semantics, verified on real data
       (superior mode correctly excludes inferior matches). ☐ still missing:
@@ -76,7 +79,7 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 ## Library Card Search (`/library`)
 - ☑ Name / text search — MVP live (frontend/src/components/LibrarySearch.tsx);
       ☑ "Only in Name" / "Only in Text" mode toggle on browser, REST, and MCP;
-      ☐ Regex mode still missing
+      ☑ Regex mode (`text_regex`, same engine split as crypt — see ADR 0005)
 - ☑ Type filter — MVP live, options derived from the V5 pool at query time
       (9 types present: Action, Action Modifier, Ally, Combat, Equipment,
       Master, Political Action, Reaction, Retainer — Event/Power/Conviction

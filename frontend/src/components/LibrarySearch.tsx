@@ -29,6 +29,7 @@ function CostPill({ blood, pool }: { blood: string | null; pool: string | null }
 export default function LibrarySearch() {
   const [text, setText] = useState('')
   const [textMode, setTextMode] = useState<TextMode>('any')
+  const [textRegex, setTextRegex] = useState(false)
   const [cardType, setCardType] = useState<string | null>(null)
   const [clan, setClan] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
@@ -47,6 +48,8 @@ export default function LibrarySearch() {
   const [results, setResults] = useState<LibraryCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  // See CryptSearch: a live invalid regex is a soft, recoverable state.
+  const [searchError, setSearchError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
@@ -71,6 +74,7 @@ export default function LibrarySearch() {
       ...emptyLibraryFilters,
       text,
       textMode,
+      textRegex,
       cardType,
       clan,
       bloodCost,
@@ -85,7 +89,21 @@ export default function LibrarySearch() {
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, textMode, cardType, clan, bloodCost, bloodCostMode, poolCost, poolCostMode, set, precon, artist, discModes])
+  }, [
+    text,
+    textMode,
+    textRegex,
+    cardType,
+    clan,
+    bloodCost,
+    bloodCostMode,
+    poolCost,
+    poolCostMode,
+    set,
+    precon,
+    artist,
+    discModes,
+  ])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -98,10 +116,18 @@ export default function LibrarySearch() {
   useEffect(() => {
     if (status !== 'ready') return
     searchLibrary(filters)
-      .then(setResults)
+      .then((rows) => {
+        setResults(rows)
+        setSearchError('')
+      })
       .catch((e: Error) => {
-        setError(e.message)
-        setStatus('error')
+        if (filters.textRegex) {
+          setResults([])
+          setSearchError('Invalid regex pattern — keep typing, or check the syntax.')
+        } else {
+          setError(e.message)
+          setStatus('error')
+        }
       })
   }, [filters, status])
 
@@ -144,6 +170,16 @@ export default function LibrarySearch() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setTextRegex((r) => !r)}
+          title="Treat the search text as a regex pattern (standard syntax: . * + ? {m,n} [...] (...) | ^ $), case-insensitive"
+          className={
+            'rounded-lg border px-2.5 py-2 text-xs ' +
+            (textRegex ? 'border-blood bg-blood text-white' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+          }
+        >
+          .*Regex
+        </button>
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={cardType ?? ''}
@@ -282,7 +318,9 @@ export default function LibrarySearch() {
         <p className="text-sm text-ink-dim">Loading card database…</p>
       ) : (
         <>
-          <p className="text-xs text-ink-dim">{results.length} library cards</p>
+          <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
+            {searchError || `${results.length} library cards`}
+          </p>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {results.map((c) => (
               <div key={c.id}>

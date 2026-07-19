@@ -14,7 +14,8 @@ schrecknet-core = { path = "../core" }
 rmcp = { version = "2.2.0", features = ["server", "transport-streamable-http-server", "transport-io"] }
 serde = { workspace = true, features = ["derive"] }
 schemars = "1.2.1"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "functions"] }
+regex = "1.13.1"
 
 [dev-dependencies]
 serde_urlencoded = "0.7.1"

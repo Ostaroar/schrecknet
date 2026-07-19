@@ -12,6 +12,7 @@ export type TextMode = 'any' | 'name' | 'text'
 export interface CryptFilters {
   text: string
   textMode: TextMode
+  textRegex: boolean
   clan: string | null
   title: string | null
   group: number | null
@@ -27,6 +28,7 @@ export interface CryptFilters {
 export const emptyCryptFilters: CryptFilters = {
   text: '',
   textMode: 'any',
+  textRegex: false,
   clan: null,
   title: null,
   group: null,
@@ -83,8 +85,10 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
      WHERE c.kind = 'crypt'
        AND (?1 = ''
-            OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
-            OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+            OR (?2 AND (CASE WHEN ?12 THEN regexp_match(?1, c.name_ascii)
+                             ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
+            OR (?3 AND (CASE WHEN ?12 THEN regexp_match(?1, c.card_text)
+                             ELSE c.card_text LIKE '%' || ?1 || '%' END)))
        AND (?4 IS NULL OR c.clan LIKE '%' || ?4 || '%')
        AND (?5 IS NULL OR c.grp = ?5)
        AND (?6 IS NULL OR c.capacity >= ?6)
@@ -109,6 +113,7 @@ export async function searchCrypt(filters: CryptFilters): Promise<CryptCard[]> {
     filters.set,
     filters.precon,
     filters.artist,
+    filters.textRegex ? 1 : 0,
   ]
   for (const code of filters.disciplines) {
     sql += ` AND EXISTS (SELECT 1 FROM card_disciplines cdx
