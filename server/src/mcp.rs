@@ -52,8 +52,8 @@ impl SchreckNetMcp {
 
     #[tool(
         description = "Search VTES V5 library cards by text, type, discipline requirements \
-        (all/any/none/only, including no requirement), clan requirements, costs, and V5 \
-        set/printing history. Returns cards sorted by name."
+        (all/any/none/only, including no requirement), clan and vampire-capacity \
+        requirements, costs, and V5 set/printing history. Returns cards sorted by name."
     )]
     async fn search_library(
         &self,

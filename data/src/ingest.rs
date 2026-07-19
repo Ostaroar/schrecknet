@@ -5,10 +5,12 @@
 //! docs/feature-parity.md, marked ✎ for verification):
 //! - `sect`: KRCG's export doesn't carry clan→sect mapping directly and we'd
 //!   rather ship NULL than a wrong Camarilla/Sabbat/Independent guess.
-//! - `votes`, `banned`, `requirement_*`, `burn_option`: not reliably present
-//!   in this data source at Phase 1; revisit against VEKN's rulebook data.
+//! - `votes`, `banned`, `requirement_clan`, `requirement_title`,
+//!   `requirement_sect`, `burn_option`: not reliably present in this data
+//!   source at Phase 1; revisit against VEKN's rulebook data.
 
 use rusqlite::{params, Connection};
+use schrecknet_core::capacity::parse_capacity_requirement;
 use serde_json::Value;
 
 use crate::v5pool::{is_in_v5_pool, V5_SET_NAMES};
@@ -24,6 +26,7 @@ pub fn run(
         let kind = if is_crypt(card) { "crypt" } else { "library" };
         insert_card(conn, card, kind)?;
         insert_disciplines(conn, card)?;
+        insert_capacity_requirement(conn, card, kind)?;
         insert_printings(conn, card)?;
         insert_artists(conn, card)?;
         insert_rulings(conn, card)?;
@@ -84,11 +87,11 @@ fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<
         "INSERT OR REPLACE INTO cards
          (id, kind, name, name_ascii, aka, card_text, clan, sect, capacity, grp, title,
           votes, adv, banned, types, blood_cost, pool_cost, burn_option,
-          requirement_clan, requirement_capacity, requirement_title, requirement_sect,
+          requirement_clan, requirement_title, requirement_sect,
           image_url)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, ?8, ?9, ?10,
                  NULL, 0, NULL, ?11, ?12, ?13, NULL,
-                 NULL, NULL, NULL, NULL, ?14)",
+                 NULL, NULL, NULL, ?14)",
         params![
             id,
             kind,
@@ -107,6 +110,30 @@ fn insert_card(conn: &Connection, card: &Value, kind: &str) -> rusqlite::Result<
             str_field(card, "pool_cost"),
             str_field(card, "url"),
         ],
+    )?;
+    Ok(())
+}
+
+fn insert_capacity_requirement(
+    conn: &Connection,
+    card: &Value,
+    kind: &str,
+) -> rusqlite::Result<()> {
+    if kind != "library" {
+        return Ok(());
+    }
+    let requirement = parse_capacity_requirement(str_field(card, "card_text").unwrap_or_default());
+    if requirement.min.is_none() && requirement.max.is_none() {
+        return Ok(());
+    }
+    let id = card
+        .get("id")
+        .and_then(|value| value.as_i64())
+        .unwrap_or_default();
+    conn.execute(
+        "INSERT INTO card_capacity_requirements (card_id, min_capacity, max_capacity)
+         VALUES (?1, ?2, ?3)",
+        params![id, requirement.min, requirement.max],
     )?;
     Ok(())
 }
@@ -282,6 +309,44 @@ mod tests {
     #[test]
     fn ascii_fold_strips_accents() {
         assert_eq!(ascii_fold("Théo Bell"), "Theo Bell");
+    }
+
+    #[test]
+    fn capacity_requirements_are_derived_only_for_library_cards() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE card_capacity_requirements(
+               card_id INT PRIMARY KEY, min_capacity INT, max_capacity INT);",
+        )
+        .unwrap();
+        let card = json!({
+            "id": 42,
+            "card_text": "Requires an Anarch vampire with capacity 5 or more."
+        });
+        insert_capacity_requirement(&conn, &card, "library").unwrap();
+        assert_eq!(
+            conn.query_row(
+                "SELECT min_capacity, max_capacity FROM card_capacity_requirements WHERE card_id=42",
+                [],
+                |row| Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, Option<i64>>(1)?)),
+            )
+            .unwrap(),
+            (Some(5), None)
+        );
+
+        let crypt = json!({
+            "id": 43,
+            "card_text": "Requires a vampire with capacity 7 or more."
+        });
+        insert_capacity_requirement(&conn, &crypt, "crypt").unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM card_capacity_requirements",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
     }
 
     #[test]

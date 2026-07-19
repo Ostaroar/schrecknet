@@ -202,6 +202,26 @@ try {
     .click()
   await waitForExactIds(searchFixture.library.expected_ids)
 
+  // VDB's capacity-requirement filter recognizes only same-line
+  // "Requires ... (of|with) capacity ..." clauses. The real V5 fixture
+  // guards both that derived parser and browser/server query parity.
+  const capacityFixture = searchFixture.library_capacity_requirement
+  const capacityRest = await exactRestSearch('library', capacityFixture.rest_query)
+  assert.deepEqual(
+    capacityRest.map((card) => card.id),
+    capacityFixture.expected_ids,
+    'library capacity-requirement REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  await page
+    .getByLabel('Capacity requirement comparison', { exact: true })
+    .selectOption(capacityFixture.mode)
+  await page
+    .getByLabel('Capacity requirement', { exact: true })
+    .fill(String(capacityFixture.value))
+  await waitForExactIds(capacityFixture.expected_ids)
+
   // The semantic golden queries intentionally start with no structured
   // filters. Reload to discard the exact-search component state above while
   // keeping the service worker/model caches warm.

@@ -102,7 +102,11 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Blood cost / Pool cost filters (`<=`, `>=`, `=`) — live independently for
       both costs on browser, REST, and MCP; cards with no numeric cost and
       variable `X` costs never match a numeric cost filter
-- ☐ Capacity requirement filter
+- ☑ Capacity requirement filter — `capacity_requirement` plus ≤/≥ mode on
+      browser, REST, MCP, and semantic candidate filtering. Shared Rust
+      ingestion matches vdb's four same-line forms (`less than N`, `N or less`,
+      `N or more`, `above N`) and stores inclusive min/max bounds; a real-V5
+      golden rejects cross-line false positives ✎
 - ☐ Traits: +Intercept/-Stealth, +Stealth/-Intercept, +Bleed, +Votes/Title, +Strength,
       Block Denial, Dodge, Maneuver, Additional Strike, Aggravated, Prevent, Press,
       Combat Ends, Multi-Type, Multi-Discipline, Enter Combat, Create Vampire,

@@ -18,5 +18,11 @@
     "disciplines": ["pot", "pre"],
     "logic": "Only",
     "expected_ids": [102308, 102316, 101008, 101772, 102346]
+  },
+  "library_capacity_requirement": {
+    "rest_query": "capacity_requirement=6&capacity_requirement_mode=at_least",
+    "mode": "at_least",
+    "value": 6,
+    "expected_ids": [101717]
   }
 }

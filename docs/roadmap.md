@@ -48,8 +48,11 @@ docs/feature-parity.md's scope note).
   independently leveled AND requirements, two-alternative VDB `+OR DIS` rows;
   library All/Any/Not/Only discipline-set logic plus No Requirement. Browser,
   REST, MCP, semantic candidate filtering, and real-V5 golden coverage agree
+- ☑ Library vampire-capacity requirement filter: shared Rust ingestion derives
+  VDB's four same-line `Requires … capacity …` forms into inclusive min/max
+  bounds; browser, REST, MCP, semantic filtering, and a real-V5 golden agree
 - ☐ Remaining crypt filters (sect, votes, traits) + remaining library filters
-  (capacity requirement, sect/title requirements, traits)
+  (sect/title requirements, traits)
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
@@ -87,7 +90,9 @@ docs/feature-parity.md's scope note).
   detail page with shareable deep links is also live
 - ✎ Known gap to close before Phase 1 is "done": `sect` is NULL (no reliable
   clan→sect source found yet in KRCG's export — see `data/src/ingest.rs` doc
-  comment); `votes`/`banned`/`requirement_*`/`burn_option` also NULL
+  comment); `votes`/`banned`/`requirement_clan`/`requirement_title`/
+  `requirement_sect`/`burn_option` also NULL. Capacity requirements are now
+  derived from canonical card text into `card_capacity_requirements`
 - 🐛 Fixed (found building the Phase 2 precon browser, data_version bumped to
   3 to force OPFS re-download): `printings`/`sets` were storing a card's
   *entire* print history, including classic-era sets explicitly out of scope

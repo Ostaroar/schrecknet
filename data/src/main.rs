@@ -24,11 +24,15 @@ CREATE TABLE cards(
   adv INT, banned TEXT,
   types TEXT,
   blood_cost TEXT, pool_cost TEXT, burn_option INT,
-  requirement_clan TEXT, requirement_capacity TEXT, requirement_title TEXT,
-  requirement_sect TEXT,
+  requirement_clan TEXT, requirement_title TEXT, requirement_sect TEXT,
   image_url TEXT
 );
 CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
+CREATE TABLE card_capacity_requirements(
+  card_id INT PRIMARY KEY,
+  min_capacity INT,
+  max_capacity INT
+);
 CREATE TABLE card_traits(card_id INT, trait TEXT);
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
 CREATE TABLE card_artists(card_id INT, artist_id INT);
@@ -91,7 +95,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '4'), ('data_version', '4'), ('scope', 'v5'),
+         ('schema_version', '5'), ('data_version', '5'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -108,11 +112,12 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let meta = serde_json::json!({
         // schema_version bumps when the table/column layout changes (v2:
         // image_url added to cards; v3: dropped the never-populated twd_*
-        // tables; v4: added card_embeddings for local semantic search).
-        // data_version changes whenever the emitted content changes (v4 adds
-        // the deterministic document-v1 all-MiniLM embedding corpus).
-        "schema_version": 4,
-        "data_version": 4,
+        // tables; v4: added card_embeddings for local semantic search; v5:
+        // normalized derived library capacity requirements into their own table).
+        // data_version changes whenever the emitted content changes (v5 adds
+        // VDB-compatible capacity requirement bounds for library cards).
+        "schema_version": 5,
+        "data_version": 5,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

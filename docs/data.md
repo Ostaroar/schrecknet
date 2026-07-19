@@ -51,12 +51,16 @@ CREATE TABLE cards(
   -- library
   types TEXT,                      -- JSON array (multi-type)
   blood_cost TEXT, pool_cost TEXT, burn_option BOOLEAN,
-  requirement_clan TEXT, requirement_capacity TEXT, requirement_title TEXT,
-  requirement_sect TEXT,
+  requirement_clan TEXT, requirement_title TEXT, requirement_sect TEXT,
   image_url TEXT                   -- KRCG-hosted scan, hotlinked (Dark Pack:
                                    -- URLs only, never image files) [schema v2]
 );
 CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior BOOLEAN);
+CREATE TABLE card_capacity_requirements(
+  card_id INT PRIMARY KEY,
+  min_capacity INT,                -- “N or more” / “above N” normalized bound
+  max_capacity INT                 -- “N or less” / “less than N” normalized bound
+);                                 -- schema v5
 CREATE TABLE card_traits(card_id INT, trait TEXT);         -- precomputed trait flags
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
                        first_print BOOLEAN);
@@ -72,6 +76,12 @@ CREATE TABLE card_embeddings(
 ) WITHOUT ROWID;                   -- schema v4; ~1 MB for the 662-card V5 pool
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards);
 ```
+
+Library capacity requirements are derived from canonical English card text at build
+time by shared Rust code in `core/src/capacity.rs`. It deliberately matches vdb's
+same-line `Requires … of/with capacity …` grammar and normalizes strict forms
+(`less than N`, `above N`) to inclusive bounds. Text merely mentioning another
+card's capacity is not treated as a requirement.
 
 The model is not fetched at query time and its binary is not committed. The lock
 records one immutable Hugging Face revision plus checksums; the data build caches it

@@ -134,6 +134,17 @@ pub enum CostMode {
     AtLeast,
 }
 
+/// Direction of a library card's vampire-capacity requirement filter.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CapacityRequirementMode {
+    /// Requirement allows a vampire at or below the supplied capacity.
+    #[default]
+    AtMost,
+    /// Requirement needs a vampire at or above the supplied capacity.
+    AtLeast,
+}
+
 impl CostMode {
     fn as_sql_value(self) -> &'static str {
         match self {
@@ -371,6 +382,13 @@ pub struct LibrarySearchParams {
     /// Treat “no discipline requirement” as an additional selected option.
     #[serde(default)]
     pub include_no_discipline: bool,
+    /// Filter by the numeric boundary in a library card's “Requires ...
+    /// capacity ...” clause. Cards without such a requirement never match.
+    #[serde(default)]
+    pub capacity_requirement: Option<i64>,
+    /// Compare capacity requirements as at_most (≤) or at_least (≥).
+    #[serde(default)]
+    pub capacity_requirement_mode: CapacityRequirementMode,
     /// Maximum blood cost (inclusive); backwards-compatible alias for
     /// `blood_cost` with `blood_cost_mode=at_most`.
     #[serde(default)]
@@ -841,6 +859,19 @@ fn search_library_inner(
         Box::new(params.set_print.as_sql_value()),
     ];
     push_library_discipline_filter(&mut sql, &mut bound, params);
+    if let Some(capacity) = params.capacity_requirement {
+        let (column, operator) = match params.capacity_requirement_mode {
+            CapacityRequirementMode::AtMost => ("max_capacity", "<="),
+            CapacityRequirementMode::AtLeast => ("min_capacity", ">="),
+        };
+        sql.push_str(&format!(
+            " AND EXISTS (SELECT 1 FROM card_capacity_requirements ccr
+                WHERE ccr.card_id = c.id AND ccr.{column} IS NOT NULL
+                  AND ccr.{column} {operator} ?{})",
+            bound.len() + 1
+        ));
+        bound.push(Box::new(capacity));
+    }
     sql.push_str(" GROUP BY c.id ORDER BY c.name ASC");
     if limited {
         sql.push_str(" LIMIT 200");
@@ -937,6 +968,8 @@ mod tests {
                clan TEXT, capacity INT, grp INT, title TEXT,
                types TEXT, blood_cost TEXT, pool_cost TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
+             CREATE TABLE card_capacity_requirements(
+               card_id INT PRIMARY KEY, min_capacity INT, max_capacity INT);
              CREATE TABLE sets(id INT, name TEXT, release_date TEXT);
              CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
              CREATE TABLE artists(id INT, name TEXT);
@@ -1806,6 +1839,66 @@ mod tests {
         .unwrap();
         assert_eq!(mcp.discipline_logic, DisciplineLogic::None);
         assert!(mcp.include_no_discipline);
+    }
+
+    #[test]
+    fn library_capacity_requirement_filters_derived_bounds() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        conn.execute_batch(
+            "INSERT INTO card_capacity_requirements VALUES
+               (4, 7, NULL),
+               (5, NULL, 5);",
+        )
+        .unwrap();
+
+        let at_least = LibrarySearchParams {
+            capacity_requirement: Some(6),
+            capacity_requirement_mode: CapacityRequirementMode::AtLeast,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &at_least).unwrap()[0].name,
+            "Absolute Tyranny"
+        );
+        let too_high = LibrarySearchParams {
+            capacity_requirement: Some(8),
+            capacity_requirement_mode: CapacityRequirementMode::AtLeast,
+            ..Default::default()
+        };
+        assert!(search_library(&conn, &too_high).unwrap().is_empty());
+
+        let at_most = LibrarySearchParams {
+            capacity_requirement: Some(5),
+            capacity_requirement_mode: CapacityRequirementMode::AtMost,
+            ..Default::default()
+        };
+        assert_eq!(
+            search_library(&conn, &at_most).unwrap()[0].name,
+            "Arcane Library"
+        );
+    }
+
+    #[test]
+    fn library_capacity_requirement_deserializes_for_rest_and_mcp() {
+        let rest: LibrarySearchParams =
+            serde_urlencoded::from_str("capacity_requirement=6&capacity_requirement_mode=at_least")
+                .unwrap();
+        assert_eq!(rest.capacity_requirement, Some(6));
+        assert_eq!(
+            rest.capacity_requirement_mode,
+            CapacityRequirementMode::AtLeast
+        );
+
+        let mcp: LibrarySearchParams = serde_json::from_str(
+            r#"{"capacity_requirement":5,"capacity_requirement_mode":"at_most"}"#,
+        )
+        .unwrap();
+        assert_eq!(mcp.capacity_requirement, Some(5));
+        assert_eq!(
+            mcp.capacity_requirement_mode,
+            CapacityRequirementMode::AtMost
+        );
     }
 
     #[test]

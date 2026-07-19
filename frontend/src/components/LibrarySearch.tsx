@@ -10,6 +10,7 @@ import {
   type LibraryCard,
   type TextMode,
   type CostMode,
+  type CapacityRequirementMode,
 } from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
 import SemanticModeControl from './SemanticModeControl'
@@ -52,6 +53,9 @@ export default function LibrarySearch() {
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
   const [disciplineLogic, setDisciplineLogic] = useState<LibraryDisciplineLogic>('all')
   const [includeNoDiscipline, setIncludeNoDiscipline] = useState(false)
+  const [capacityRequirement, setCapacityRequirement] = useState<number | null>(null)
+  const [capacityRequirementMode, setCapacityRequirementMode] =
+    useState<CapacityRequirementMode>('at_most')
   const [bloodCost, setBloodCost] = useState<number | null>(null)
   const [bloodCostMode, setBloodCostMode] = useState<CostMode>('at_most')
   const [poolCost, setPoolCost] = useState<number | null>(null)
@@ -98,6 +102,8 @@ export default function LibrarySearch() {
       textRegex,
       cardType,
       clan,
+      capacityRequirement,
+      capacityRequirementMode,
       bloodCost,
       bloodCostMode,
       poolCost,
@@ -117,6 +123,8 @@ export default function LibrarySearch() {
     textRegex,
     cardType,
     clan,
+    capacityRequirement,
+    capacityRequirementMode,
     bloodCost,
     bloodCostMode,
     poolCost,
@@ -292,6 +300,31 @@ export default function LibrarySearch() {
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-1 text-sm text-ink-dim">
+          <span>requires cap</span>
+          <select
+            aria-label="Capacity requirement comparison"
+            value={capacityRequirementMode}
+            onChange={(e) =>
+              setCapacityRequirementMode(e.target.value as CapacityRequirementMode)
+            }
+            className="rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+          >
+            <option value="at_most">≤</option>
+            <option value="at_least">≥</option>
+          </select>
+          <input
+            type="number"
+            min={1}
+            max={11}
+            className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+            aria-label="Capacity requirement"
+            value={capacityRequirement ?? ''}
+            onChange={(e) =>
+              setCapacityRequirement(e.target.value ? Number(e.target.value) : null)
+            }
+          />
+        </div>
         <div className="flex items-center gap-1 text-sm text-ink-dim">
           <span>blood</span>
           <select

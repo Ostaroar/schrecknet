@@ -10,6 +10,7 @@ import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } fr
 
 export type TextMode = 'any' | 'name' | 'text'
 export type CostMode = 'at_most' | 'exact' | 'at_least'
+export type CapacityRequirementMode = 'at_most' | 'at_least'
 
 export interface LibraryFilters {
   text: string
@@ -21,6 +22,8 @@ export interface LibraryFilters {
   disciplinesSuperior: boolean
   disciplineLogic: LibraryDisciplineLogic
   includeNoDiscipline: boolean
+  capacityRequirement: number | null
+  capacityRequirementMode: CapacityRequirementMode
   bloodCost: number | null
   bloodCostMode: CostMode
   poolCost: number | null
@@ -42,6 +45,8 @@ export const emptyLibraryFilters: LibraryFilters = {
   disciplinesSuperior: false,
   disciplineLogic: 'all',
   includeNoDiscipline: false,
+  capacityRequirement: null,
+  capacityRequirementMode: 'at_most',
   bloodCost: null,
   bloodCostMode: 'at_most',
   poolCost: null,
@@ -165,6 +170,16 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
     filters.includeNoDiscipline,
     filters.disciplinesSuperior,
   )
+  if (filters.capacityRequirement !== null) {
+    params.push(filters.capacityRequirement)
+    const placeholder = `?${params.length}`
+    const column =
+      filters.capacityRequirementMode === 'at_most' ? 'max_capacity' : 'min_capacity'
+    const operator = filters.capacityRequirementMode === 'at_most' ? '<=' : '>='
+    sql += ` AND EXISTS (SELECT 1 FROM card_capacity_requirements ccr
+              WHERE ccr.card_id = c.id AND ccr.${column} IS NOT NULL
+                AND ccr.${column} ${operator} ${placeholder})`
+  }
   sql += ` GROUP BY c.id ORDER BY c.name ASC`
   if (limited) sql += ` LIMIT 200`
 
