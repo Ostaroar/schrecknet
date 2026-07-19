@@ -56,6 +56,7 @@ async fn main() {
         .route("/api/v1/meta", get(meta))
         .route("/api/v1/crypt/search", get(api::search_crypt))
         .route("/api/v1/library/search", get(api::search_library))
+        .route("/api/v1/cards/lookup", get(api::get_card_by_name))
         .route("/api/v1/cards/{id}", get(api::get_card))
         .with_state(state)
         // cards.sqlite + cards.meta.json for the browser's sql.js loader

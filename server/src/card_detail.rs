@@ -12,6 +12,12 @@ pub struct GetCardParams {
     pub id: i64,
 }
 
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct GetCardByNameParams {
+    /// Exact canonical or ASCII-folded card name (case-insensitive).
+    pub name: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Discipline {
     pub code: String,
@@ -135,6 +141,30 @@ pub fn get_card(conn: &Connection, params: &GetCardParams) -> rusqlite::Result<O
     }))
 }
 
+pub fn get_card_by_name(
+    conn: &Connection,
+    params: &GetCardByNameParams,
+) -> rusqlite::Result<Option<CardDetail>> {
+    let name = params.name.trim();
+    if name.is_empty() {
+        return Ok(None);
+    }
+    let id = conn
+        .query_row(
+            "SELECT id FROM cards
+             WHERE name = ?1 COLLATE NOCASE OR name_ascii = ?1 COLLATE NOCASE
+             ORDER BY CASE WHEN name = ?1 COLLATE NOCASE THEN 0 ELSE 1 END, id
+             LIMIT 1",
+            [name],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match id {
+        Some(id) => get_card(conn, &GetCardParams { id }),
+        None => Ok(None),
+    }
+}
+
 fn disciplines_for(conn: &Connection, id: i64) -> rusqlite::Result<Vec<Discipline>> {
     let mut stmt = conn.prepare(
         "SELECT discipline, superior FROM card_disciplines WHERE card_id = ?1 ORDER BY superior DESC, discipline",
@@ -237,6 +267,31 @@ mod tests {
         assert!(get_card(&conn, &GetCardParams { id: 999 })
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn looks_up_card_by_exact_name_case_insensitively() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let card = get_card_by_name(
+            &conn,
+            &GetCardByNameParams {
+                name: "  AARADHYA  ".into(),
+            },
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(card.id, 1);
+        assert_eq!(card.name, "Aaradhya");
+
+        assert!(get_card_by_name(
+            &conn,
+            &GetCardByNameParams {
+                name: "unknown card".into(),
+            }
+        )
+        .unwrap()
+        .is_none());
     }
 
     #[test]

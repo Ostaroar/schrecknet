@@ -14,7 +14,8 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | --- | --- |
 | `search_crypt` | **Live.** MVP filters: text/name search, clan, group (`server/src/cards_db.rs`). Remaining vdb filters (disciplines incl. superior/inferior + OR-groups, capacity range, sect, votes, titles, traits, set/precon/artist, regex mode) land incrementally — see docs/feature-parity.md |
 | `search_library` | **Live.** Text scope, exact card type, clan/path and discipline requirements, independent blood/pool cost comparisons (`at_most`, `exact`, `at_least`), set, precon, and artist. Remaining filters: capacity requirement, traits, and regex mode |
-| `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`). ☐ lookup by name |
+| `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`) |
+| `get_card_by_name` | **Live.** Exact case-insensitive canonical/ASCII name lookup; REST mirror: `GET /api/v1/cards/lookup?name=…` |
 | `list_decks` / `get_deck` | Authenticated user's decks (or a deck shared via deck-in-URL) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |
 | `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |

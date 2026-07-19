@@ -13,7 +13,7 @@ use rmcp::model::{
 use rmcp::service::RequestContext;
 use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 
-use crate::card_detail::{self, GetCardParams};
+use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 
 #[derive(Clone)]
@@ -68,6 +68,18 @@ impl SchreckNetMcp {
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open()?;
         json_result(card_detail::get_card(&conn, &params))
+    }
+
+    #[tool(
+        description = "Get full detail for one VTES V5 card by exact name (case-insensitive; \
+        accepts canonical or ASCII-folded spelling). Returns null when no V5 card matches."
+    )]
+    async fn get_card_by_name(
+        &self,
+        Parameters(params): Parameters<GetCardByNameParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(card_detail::get_card_by_name(&conn, &params))
     }
 
     fn open(&self) -> Result<rusqlite::Connection, rmcp::ErrorData> {
