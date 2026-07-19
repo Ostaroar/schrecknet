@@ -4,6 +4,8 @@ import {
   listLibraryTypes,
   listLibraryClans,
   listLibraryDisciplines,
+  listSets,
+  listPrecons,
   emptyLibraryFilters,
   type LibraryCard,
 } from '../lib/librarySearch'
@@ -29,8 +31,13 @@ export default function LibrarySearch() {
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
   const [bloodCostMax, setBloodCostMax] = useState<number | null>(null)
   const [poolCostMax, setPoolCostMax] = useState<number | null>(null)
+  const [set, setSet] = useState<string | null>(null)
+  const [precon, setPrecon] = useState<string | null>(null)
+  const [artist, setArtist] = useState<string | null>(null)
   const [types, setTypes] = useState<string[]>([])
   const [clans, setClans] = useState<string[]>([])
+  const [sets, setSets] = useState<string[]>([])
+  const [precons, setPrecons] = useState<string[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [results, setResults] = useState<LibraryCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -38,11 +45,13 @@ export default function LibrarySearch() {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([listLibraryTypes(), listLibraryClans(), listLibraryDisciplines()])
-      .then(([t, c, d]) => {
+    Promise.all([listLibraryTypes(), listLibraryClans(), listLibraryDisciplines(), listSets(), listPrecons()])
+      .then(([t, c, d, s, p]) => {
         setTypes(t)
         setClans(c)
         setAllDisciplines(d)
+        setSets(s)
+        setPrecons(p)
         setStatus('ready')
       })
       .catch((e: Error) => {
@@ -60,12 +69,15 @@ export default function LibrarySearch() {
       clan,
       bloodCostMax,
       poolCostMax,
+      set,
+      precon,
+      artist,
       disciplines: active.map(([code]) => code),
       // vdb lets you mix levels per discipline; MVP applies "superior" to the
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, cardType, clan, bloodCostMax, poolCostMax, discModes])
+  }, [text, cardType, clan, bloodCostMax, poolCostMax, set, precon, artist, discModes])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -152,6 +164,39 @@ export default function LibrarySearch() {
             onChange={(e) => setPoolCostMax(e.target.value ? Number(e.target.value) : null)}
           />
         </div>
+        <select
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+          value={set ?? ''}
+          onChange={(e) => setSet(e.target.value || null)}
+          disabled={status === 'loading'}
+        >
+          <option value="">Any set</option>
+          {sets.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+          value={precon ?? ''}
+          onChange={(e) => setPrecon(e.target.value || null)}
+          disabled={status === 'loading'}
+        >
+          <option value="">Any precon</option>
+          {precons.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <input
+          className="min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+          placeholder="Artist"
+          value={artist ?? ''}
+          onChange={(e) => setArtist(e.target.value || null)}
+          disabled={status === 'loading'}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">

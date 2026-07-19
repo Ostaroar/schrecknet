@@ -5,6 +5,8 @@ import {
   listGroups,
   listCryptDisciplines,
   listTitles,
+  listSets,
+  listPrecons,
   emptyCryptFilters,
   type CryptCard,
   type TextMode,
@@ -35,10 +37,15 @@ export default function CryptSearch() {
   const [group, setGroup] = useState<number | null>(null)
   const [capacityMin, setCapacityMin] = useState<number | null>(null)
   const [capacityMax, setCapacityMax] = useState<number | null>(null)
+  const [set, setSet] = useState<string | null>(null)
+  const [precon, setPrecon] = useState<string | null>(null)
+  const [artist, setArtist] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
   const [clans, setClans] = useState<string[]>([])
   const [titles, setTitles] = useState<string[]>([])
   const [groups, setGroups] = useState<number[]>([])
+  const [sets, setSets] = useState<string[]>([])
+  const [precons, setPrecons] = useState<string[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [results, setResults] = useState<CryptCard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -46,12 +53,14 @@ export default function CryptSearch() {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([listClans(), listGroups(), listCryptDisciplines(), listTitles()])
-      .then(([c, g, d, t]) => {
+    Promise.all([listClans(), listGroups(), listCryptDisciplines(), listTitles(), listSets(), listPrecons()])
+      .then(([c, g, d, t, s, p]) => {
         setClans(c)
         setGroups(g)
         setTitles(t)
         setAllDisciplines(d)
+        setSets(s)
+        setPrecons(p)
         setStatus('ready')
       })
       .catch((e: Error) => {
@@ -71,12 +80,15 @@ export default function CryptSearch() {
       group,
       capacityMin,
       capacityMax,
+      set,
+      precon,
+      artist,
       disciplines: active.map(([code]) => code),
       // vdb lets you mix levels per discipline; MVP applies "superior" to the
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, textMode, clan, title, group, capacityMin, capacityMax, discModes])
+  }, [text, textMode, clan, title, group, capacityMin, capacityMax, set, precon, artist, discModes])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -198,6 +210,39 @@ export default function CryptSearch() {
             onChange={(e) => setCapacityMax(e.target.value ? Number(e.target.value) : null)}
           />
         </div>
+        <select
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+          value={set ?? ''}
+          onChange={(e) => setSet(e.target.value || null)}
+          disabled={status === 'loading'}
+        >
+          <option value="">Any set</option>
+          {sets.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+          value={precon ?? ''}
+          onChange={(e) => setPrecon(e.target.value || null)}
+          disabled={status === 'loading'}
+        >
+          <option value="">Any precon</option>
+          {precons.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <input
+          className="min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+          placeholder="Artist"
+          value={artist ?? ''}
+          onChange={(e) => setArtist(e.target.value || null)}
+          disabled={status === 'loading'}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
