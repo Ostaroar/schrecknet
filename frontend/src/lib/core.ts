@@ -10,6 +10,7 @@ import init, {
   decode_deck_share as decodeDeckShareWasm,
   parse_deck_text as parseDeckTextWasm,
   format_deck_text as formatDeckTextWasm,
+  compare_decks as compareDecksWasm,
 } from '../wasm/schrecknet_core.js'
 
 let ready: Promise<void> | null = null
@@ -83,4 +84,29 @@ export async function formatDeckText(crypt: NamedQty[], library: NamedQty[]): Pr
     library.map((c) => c.name),
     new Uint16Array(library.map((c) => c.qty)),
   )
+}
+
+export type DiffChange = 'only_a' | 'only_b' | 'changed' | 'same'
+
+export interface CardQtyDiff {
+  cardId: number
+  qtyA: number
+  qtyB: number
+  change: DiffChange
+}
+
+/** Compares card quantities using the shared Rust domain core. */
+export async function compareCardQtys(a: CardQty[], b: CardQty[]): Promise<CardQtyDiff[]> {
+  await ensureReady()
+  const raw = compareDecksWasm(
+    new Uint32Array(a.map(([id]) => id)),
+    new Uint16Array(a.map(([, qty]) => qty)),
+    new Uint32Array(b.map(([id]) => id)),
+    new Uint16Array(b.map(([, qty]) => qty)),
+  )
+  if (!raw) return []
+  return raw.split('\n').map((line) => {
+    const [cardId, qtyA, qtyB, change] = line.split('\t')
+    return { cardId: Number(cardId), qtyA: Number(qtyA), qtyB: Number(qtyB), change: change as DiffChange }
+  })
 }

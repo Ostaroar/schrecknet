@@ -106,7 +106,8 @@ docs/feature-parity.md's scope note).
   header line, and one deliberately-invalid card name — got back
   "Added 2 cards. Couldn't match: Not A Real Card.", and the exported text
   round-tripped exactly. ☐ still missing: JOL-specific format, XLSX
-- ☐ Diff
+- ☑ Deck diff — compare any two saved local decks at `#/diff`; shared Rust
+  core classifies additions, removals, quantity changes, and unchanged cards
 - ☐ Proxy PDF generation; precon browser; table seating tool
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync

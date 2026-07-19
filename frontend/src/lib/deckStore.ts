@@ -5,7 +5,7 @@
 
 import { query as cardsQuery } from './db'
 import { query as userQuery, run as userRun } from './userDb'
-import { validateDeck, encodeDeckShare, decodeDeckShare, parseDeckText, formatDeckText } from './core'
+import { validateDeck, encodeDeckShare, decodeDeckShare, parseDeckText, formatDeckText, compareCardQtys } from './core'
 import { routeTo } from './route'
 
 export interface DeckSummary {
@@ -274,4 +274,48 @@ export async function importDeckText(deckId: number, text: string): Promise<Impo
     added++
   }
   return { added, unresolved }
+}
+
+export interface DeckDiffEntry {
+  card: DeckCardDetail
+  qtyA: number
+  qtyB: number
+}
+
+export interface DeckDiff {
+  onlyInA: DeckDiffEntry[]
+  onlyInB: DeckDiffEntry[]
+  changed: DeckDiffEntry[]
+  same: DeckDiffEntry[]
+}
+
+/**
+ * Compares two decks' contents card-by-card. A card present in both at the
+ * same quantity is "same"; present in both at different quantities is
+ * "changed"; present in only one deck is "onlyInA"/"onlyInB". Classification
+ * is performed by the shared Rust core; this adapter only joins display data.
+ */
+export async function compareDecks(deckIdA: number, deckIdB: number): Promise<DeckDiff> {
+  const [cardsA, cardsB] = await Promise.all([getDeckCardDetails(deckIdA), getDeckCardDetails(deckIdB)])
+  const byId = new Map([...cardsA, ...cardsB].map((card) => [card.id, card]))
+  const rows = await compareCardQtys(
+    cardsA.map((card) => [card.id, card.qty]),
+    cardsB.map((card) => [card.id, card.qty]),
+  )
+  const diff: DeckDiff = { onlyInA: [], onlyInB: [], changed: [], same: [] }
+  for (const row of rows) {
+    const card = byId.get(row.cardId)
+    if (!card) continue
+    const entry = { card, qtyA: row.qtyA, qtyB: row.qtyB }
+    if (row.change === 'only_a') diff.onlyInA.push(entry)
+    else if (row.change === 'only_b') diff.onlyInB.push(entry)
+    else if (row.change === 'changed') diff.changed.push(entry)
+    else diff.same.push(entry)
+  }
+  const byName = (x: DeckDiffEntry, y: DeckDiffEntry) => x.card.name.localeCompare(y.card.name)
+  diff.onlyInA.sort(byName)
+  diff.onlyInB.sort(byName)
+  diff.changed.sort(byName)
+  diff.same.sort(byName)
+  return diff
 }

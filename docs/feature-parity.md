@@ -141,7 +141,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎
 - ☑ Draw simulator / test hand — live: crypt draw 4 / library draw 7,
       redrawable, respects each card's quantity in the deck
-- ☐ Deck diff: compare two decks/revisions (`/diff`)
+- ☑ Deck diff: compare two saved local decks card-by-card (`#/diff`), including
+      additions, removals, quantity changes, and unchanged cards; comparison
+      logic runs in the shared Rust core. Revision comparison follows when
+      branches/revisions are implemented.
 - ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a deck
 - ☑ Share deck via URL (deck-in-URL encoding for anonymous users) — live:
       `core/src/share.rs`, `#/share/<token>` preview + import page

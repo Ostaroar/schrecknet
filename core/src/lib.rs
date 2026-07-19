@@ -5,6 +5,7 @@
 //! browser; WASM bindings are kept in `wasm.rs` and only expose functions from
 //! the plain-Rust modules.
 
+pub mod diff;
 pub mod dtext;
 pub mod legality;
 pub mod share;

@@ -51,6 +51,12 @@ export default function DeckList() {
         </button>
       </div>
 
+      {decks.length >= 2 && (
+        <button onClick={() => navigate({ page: 'diff' })} className="justify-self-start text-sm text-blood-hi hover:underline">
+          Compare two decks →
+        </button>
+      )}
+
       {status === 'loading' ? (
         <p className="text-sm text-ink-dim">Loading decks…</p>
       ) : decks.length === 0 ? (

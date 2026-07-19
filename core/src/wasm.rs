@@ -78,3 +78,34 @@ pub fn format_deck_text(
         &to_named(library_names, library_qtys),
     ))
 }
+
+/// Compares two decks and returns tab-separated card rows for the JS adapter.
+#[wasm_bindgen]
+pub fn compare_decks(
+    ids_a: Vec<u32>,
+    qtys_a: Vec<u16>,
+    ids_b: Vec<u32>,
+    qtys_b: Vec<u16>,
+) -> Result<String, JsError> {
+    if ids_a.len() != qtys_a.len() || ids_b.len() != qtys_b.len() {
+        return Err(JsError::new("mismatched id/qty array lengths"));
+    }
+    let a = ids_a.into_iter().zip(qtys_a).collect();
+    let b = ids_b.into_iter().zip(qtys_b).collect();
+    Ok(crate::diff::compare(&a, &b)
+        .iter()
+        .map(|entry| {
+            let change = match entry.change {
+                crate::diff::Change::OnlyA => "only_a",
+                crate::diff::Change::OnlyB => "only_b",
+                crate::diff::Change::Changed => "changed",
+                crate::diff::Change::Same => "same",
+            };
+            format!(
+                "{}\t{}\t{}\t{change}",
+                entry.card_id, entry.qty_a, entry.qty_b
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n"))
+}

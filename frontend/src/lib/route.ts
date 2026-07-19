@@ -1,5 +1,5 @@
 // Minimal hash routing (#/crypt, #/library, #/cards/123, #/decks, #/decks/5,
-// #/share/<token>). Deliberately not a router library — AGENTS.md requires
+// #/share/<token>, #/diff). Deliberately not a router library — AGENTS.md requires
 // an ADR for new runtime deps, and this many routes still doesn't justify one.
 
 import { useEffect, useState } from 'react'
@@ -11,6 +11,7 @@ export type Route =
   | { page: 'decks' }
   | { page: 'deck'; id: number }
   | { page: 'share'; token: string }
+  | { page: 'diff' }
 
 export function parseHash(hash: string): Route {
   const path = hash.replace(/^#\/?/, '')
@@ -21,6 +22,7 @@ export function parseHash(hash: string): Route {
   const shareMatch = /^share\/(.+)$/.exec(path)
   if (shareMatch) return { page: 'share', token: shareMatch[1] }
   if (path === 'decks') return { page: 'decks' }
+  if (path === 'diff') return { page: 'diff' }
   if (path === 'library') return { page: 'library' }
   return { page: 'crypt' }
 }
@@ -39,6 +41,8 @@ export function routeTo(route: Route): string {
       return `#/decks/${route.id}`
     case 'share':
       return `#/share/${route.token}`
+    case 'diff':
+      return '#/diff'
   }
 }
 
