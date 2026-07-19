@@ -116,8 +116,11 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
    `schrecknet-data` emits schema/data v4 with deterministic document-v1 vectors and
    browser-local assets. A real build verifies all 662 cards have one 384-dimensional,
    1,536-byte normalized embedding; SQLite integrity passes.
-3. **Machine APIs:** add the lazy native embedder, shared service, `semantic_search`
-   MCP tool, REST mirror, schema tests, and real-data smoke tests.
+3. **Machine APIs — complete:** `core::semantic_native` owns the checksum-verified
+   local model contract shared by the data builder and server. One lazy server
+   embedder feeds a filter-first service used identically by the `semantic_search`
+   MCP tool and `POST /api/v1/cards/semantic`; bounded schemas, error mappings, and
+   real REST + Streamable HTTP MCP calls were verified against the generated corpus.
 4. **Offline browser:** add the worker, local-only model/runtime loading, lazy PWA
    caching, semantic mode on both search pages, progress/error states, and a true
    network-offline smoke test after installation.
@@ -148,8 +151,9 @@ until browser, MCP, REST, Docker, and offline tests all pass.
 
 - Two justified runtime dependencies are approved for implementation:
   `@huggingface/transformers` in the frontend worker and `fastembed` in native Rust.
-- The data builder also takes a direct `sha2` dependency to enforce the manifest's
-  supply-chain checksums; model acquisition continues to use its existing `ureq`.
+- The shared native core takes `sha2` to enforce the manifest's supply-chain
+  checksums for both builder and server; model acquisition continues to use the data
+  builder's existing `ureq`.
 - The first semantic search use downloads roughly 24 MB plus runtime WASM; subsequent
   use is offline from versioned local caches. Exact/regex search behavior is unchanged.
 - `cards.sqlite` grows by roughly 1 MB plus table overhead.

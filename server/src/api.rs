@@ -7,6 +7,7 @@ use axum::response::{IntoResponse, Json};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
+use crate::semantic_search::{SemanticError, SemanticSearchParams};
 use crate::AppState;
 
 pub async fn search_crypt(
@@ -25,6 +26,32 @@ pub async fn search_library(
 
 pub async fn list_precons(State(state): State<AppState>) -> impl IntoResponse {
     run(state, cards_db::list_precons).await
+}
+
+pub async fn semantic_search(
+    State(state): State<AppState>,
+    Json(params): Json<SemanticSearchParams>,
+) -> impl IntoResponse {
+    let data_dir = state.data_dir.clone();
+    let semantic = state.semantic;
+    let result = tokio::task::spawn_blocking(move || {
+        let conn =
+            cards_db::open(&data_dir).map_err(|error| SemanticError::Data(error.to_string()))?;
+        semantic.search(&conn, &params)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(hits)) => Json(hits).into_response(),
+        Ok(Err(SemanticError::InvalidRequest(message))) => {
+            (StatusCode::BAD_REQUEST, message).into_response()
+        }
+        Ok(Err(SemanticError::ModelUnavailable(message))) => {
+            (StatusCode::SERVICE_UNAVAILABLE, message).into_response()
+        }
+        Ok(Err(error)) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
 }
 
 pub async fn get_card(State(state): State<AppState>, Path(id): Path<i64>) -> impl IntoResponse {

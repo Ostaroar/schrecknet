@@ -6,9 +6,12 @@ mod api;
 mod card_detail;
 mod cards_db;
 mod mcp;
+mod semantic_search;
 mod user_db;
 
-use axum::{routing::get, Json, Router};
+use std::sync::Arc;
+
+use axum::{routing::get, routing::post, Json, Router};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::ServiceExt;
@@ -17,6 +20,7 @@ use tower_http::services::{ServeDir, ServeFile};
 #[derive(Clone)]
 pub struct AppState {
     pub data_dir: String,
+    pub semantic: Arc<semantic_search::SemanticSearchService>,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -27,12 +31,20 @@ fn env_or(key: &str, default: &str) -> String {
 async fn main() {
     let static_dir = env_or("SCHRECKNET_STATIC_DIR", "frontend/dist");
     let data_dir = env_or("SCHRECKNET_DATA_DIR", "dist");
+    let model_dir = env_or(
+        "SCHRECKNET_MODEL_DIR",
+        &format!("{data_dir}/models/semantic"),
+    );
     let app_db = env_or("SCHRECKNET_APP_DB", "dist/app.sqlite");
     let bind = env_or("SCHRECKNET_BIND", "0.0.0.0:8000");
     let index = format!("{static_dir}/index.html");
 
+    let semantic = Arc::new(semantic_search::SemanticSearchService::new(
+        model_dir.clone(),
+    ));
+
     if std::env::args().any(|arg| arg == "--mcp-stdio") {
-        mcp::SchreckNetMcp::new(data_dir)
+        mcp::SchreckNetMcp::new(data_dir, semantic)
             .serve(rmcp::transport::stdio())
             .await
             .expect("start MCP stdio transport")
@@ -46,11 +58,18 @@ async fn main() {
 
     let state = AppState {
         data_dir: data_dir.clone(),
+        semantic: Arc::clone(&semantic),
     };
 
     let mcp_data_dir = data_dir.clone();
+    let mcp_semantic = Arc::clone(&semantic);
     let mcp_service = StreamableHttpService::new(
-        move || Ok(mcp::SchreckNetMcp::new(mcp_data_dir.clone())),
+        move || {
+            Ok(mcp::SchreckNetMcp::new(
+                mcp_data_dir.clone(),
+                Arc::clone(&mcp_semantic),
+            ))
+        },
         LocalSessionManager::default().into(),
         Default::default(),
     );
@@ -60,6 +79,7 @@ async fn main() {
         .route("/api/v1/meta", get(meta))
         .route("/api/v1/crypt/search", get(api::search_crypt))
         .route("/api/v1/library/search", get(api::search_library))
+        .route("/api/v1/cards/semantic", post(api::semantic_search))
         .route("/api/v1/cards/lookup", get(api::get_card_by_name))
         .route("/api/v1/cards/{id}", get(api::get_card))
         .route("/api/v1/precons", get(api::list_precons))
@@ -67,6 +87,7 @@ async fn main() {
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.
         .nest_service("/data", ServeDir::new(&data_dir))
+        .nest_service("/models/semantic", ServeDir::new(&model_dir))
         .nest_service("/mcp", mcp_service)
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)));
 

@@ -95,7 +95,8 @@ cargo run -p schrecknet-server
 # local MCP clients over stdin/stdout (same tools/resources as HTTP /mcp)
 cargo run -p schrecknet-server -- --mcp-stdio
 # env: SCHRECKNET_BIND, SCHRECKNET_STATIC_DIR, SCHRECKNET_DATA_DIR (dir
-# containing cards.sqlite + cards.meta.json, served at /data/*), SCHRECKNET_APP_DB
+# containing cards.sqlite + cards.meta.json, served at /data/*),
+# SCHRECKNET_MODEL_DIR (verified local ONNX bundle), SCHRECKNET_APP_DB
 
 # data pipeline -> dist/cards.sqlite + cards.meta.json
 # fetches https://static.krcg.org/data/vtes.json (needs network); cached 24h

@@ -35,6 +35,7 @@ COPY --from=rust-build /out/cards.meta.json /app/data/cards.meta.json
 COPY --from=web-build /src/frontend/dist /app/static
 ENV SCHRECKNET_STATIC_DIR=/app/static \
     SCHRECKNET_DATA_DIR=/app/data \
+    SCHRECKNET_MODEL_DIR=/app/static/models/semantic \
     SCHRECKNET_APP_DB=/data/app.sqlite \
     SCHRECKNET_BIND=0.0.0.0:8000
 VOLUME /data

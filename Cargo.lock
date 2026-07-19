@@ -1600,7 +1600,10 @@ dependencies = [
 name = "schrecknet-core"
 version = "0.1.0"
 dependencies = [
+ "fastembed",
  "serde",
+ "serde_json",
+ "sha2",
  "wasm-bindgen",
 ]
 
@@ -1608,12 +1611,10 @@ dependencies = [
 name = "schrecknet-data"
 version = "0.1.0"
 dependencies = [
- "fastembed",
  "rusqlite",
  "schrecknet-core",
  "serde",
  "serde_json",
- "sha2",
  "ureq 2.12.1",
 ]
 

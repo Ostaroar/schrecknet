@@ -316,6 +316,21 @@ pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
 ) -> rusqlite::Result<Vec<CryptCard>> {
+    search_crypt_inner(conn, params, true)
+}
+
+pub(crate) fn filter_crypt(
+    conn: &Connection,
+    params: &CryptSearchParams,
+) -> rusqlite::Result<Vec<CryptCard>> {
+    search_crypt_inner(conn, params, false)
+}
+
+fn search_crypt_inner(
+    conn: &Connection,
+    params: &CryptSearchParams,
+    limited: bool,
+) -> rusqlite::Result<Vec<CryptCard>> {
     // The per-discipline EXISTS clauses are built dynamically (the count
     // varies) but every value is bound — no string interpolation of input.
     // set + precon are ANDed inside ONE EXISTS on the same printing row, not
@@ -399,11 +414,10 @@ pub fn search_crypt(
         bound.push(Box::new(code.to_lowercase()));
         bound.push(Box::new(params.disciplines_superior as i64));
     }
-    sql.push_str(
-        " GROUP BY c.id
-          ORDER BY c.capacity DESC, c.name ASC
-          LIMIT 200",
-    );
+    sql.push_str(" GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC");
+    if limited {
+        sql.push_str(" LIMIT 200");
+    }
 
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
@@ -428,6 +442,21 @@ pub fn search_crypt(
 pub fn search_library(
     conn: &Connection,
     params: &LibrarySearchParams,
+) -> rusqlite::Result<Vec<LibraryCard>> {
+    search_library_inner(conn, params, true)
+}
+
+pub(crate) fn filter_library(
+    conn: &Connection,
+    params: &LibrarySearchParams,
+) -> rusqlite::Result<Vec<LibraryCard>> {
+    search_library_inner(conn, params, false)
+}
+
+fn search_library_inner(
+    conn: &Connection,
+    params: &LibrarySearchParams,
+    limited: bool,
 ) -> rusqlite::Result<Vec<LibraryCard>> {
     let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
     let blood_cost = params.blood_cost.or(params.blood_cost_max);
@@ -529,11 +558,10 @@ pub fn search_library(
         bound.push(Box::new(code.to_lowercase()));
         bound.push(Box::new(params.disciplines_superior as i64));
     }
-    sql.push_str(
-        " GROUP BY c.id
-          ORDER BY c.name ASC
-          LIMIT 200",
-    );
+    sql.push_str(" GROUP BY c.id ORDER BY c.name ASC");
+    if limited {
+        sql.push_str(" LIMIT 200");
+    }
 
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
@@ -1499,5 +1527,50 @@ mod tests {
         let precons = list_precons(&conn).unwrap();
         assert_eq!(precons.len(), 1);
         assert_eq!(precons[0].precon, "Anarch Precon");
+    }
+
+    #[test]
+    fn semantic_filter_paths_are_not_truncated_to_the_ui_limit() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        for index in 0..205 {
+            conn.execute(
+                "INSERT INTO cards VALUES
+                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL)",
+                rusqlite::params![10_000 + index, format!("Crypt {index:03}")],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO cards VALUES
+                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL)",
+                rusqlite::params![20_000 + index, format!("Library {index:03}")],
+            )
+            .unwrap();
+        }
+
+        assert_eq!(
+            search_crypt(&conn, &CryptSearchParams::default())
+                .unwrap()
+                .len(),
+            200
+        );
+        assert_eq!(
+            filter_crypt(&conn, &CryptSearchParams::default())
+                .unwrap()
+                .len(),
+            207
+        );
+        assert_eq!(
+            search_library(&conn, &LibrarySearchParams::default())
+                .unwrap()
+                .len(),
+            200
+        );
+        assert_eq!(
+            filter_library(&conn, &LibrarySearchParams::default())
+                .unwrap()
+                .len(),
+            208
+        );
     }
 }

@@ -42,7 +42,7 @@ docs/feature-parity.md's scope note).
   precomputed vectors in `cards.sqlite`, exact cosine ranking in shared Rust,
   explicit Semantic mode on Crypt + Library, and one `semantic_search` MCP
   tool with a `POST /api/v1/cards/semantic` REST mirror. Delivery is split into
-  ☑ shared ranking → ☑ embedded corpus → ☐ machine APIs → ☐ offline browser →
+  ☑ shared ranking → ☑ embedded corpus → ☑ machine APIs → ☐ offline browser →
   ☐ VTES relevance gates; see docs/adr/0006-offline-semantic-card-search.md
 - ☐ Remaining crypt filters (sect, votes, traits, per-discipline level mixing,
   OR-groups) + remaining library filters (capacity requirement, traits,

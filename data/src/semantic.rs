@@ -1,48 +1,15 @@
 //! Pinned model acquisition and deterministic V5 card embedding generation.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::io::{Error as IoError, ErrorKind, Read};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
-use fastembed::{
-    InitOptionsUserDefined, Pooling, QuantizationMode, TextEmbedding, TokenizerFiles,
-    UserDefinedEmbeddingModel,
-};
 use rusqlite::{params, Connection};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use schrecknet_core::semantic_native::{
+    load_manifest, safe_relative_path, verify_file, LocalEmbedder, ModelBundle,
+};
 
 const DEFAULT_MANIFEST: &str = "models/semantic.json";
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ModelManifest {
-    pub model_id: String,
-    pub base_model: String,
-    pub source_repository: String,
-    pub revision: String,
-    pub license: String,
-    pub dimensions: usize,
-    pub max_length: usize,
-    pub pooling: String,
-    pub normalized: bool,
-    pub inference_batch_size: usize,
-    pub document_version: u32,
-    pub model_file: String,
-    pub files: Vec<ModelFile>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ModelFile {
-    pub path: String,
-    pub size: usize,
-    pub sha256: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct PreparedModel {
-    pub manifest: ModelManifest,
-    pub root: PathBuf,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CardDocument {
@@ -55,14 +22,13 @@ struct CardDocument {
 pub fn prepare_model(
     cache_dir: &Path,
     out_dir: &Path,
-) -> Result<PreparedModel, Box<dyn std::error::Error>> {
+) -> Result<ModelBundle, Box<dyn std::error::Error>> {
     let manifest_path = PathBuf::from(
         std::env::var("SCHRECKNET_SEMANTIC_MANIFEST")
             .unwrap_or_else(|_| DEFAULT_MANIFEST.to_owned()),
     );
     let manifest_bytes = std::fs::read(&manifest_path)?;
-    let manifest: ModelManifest = serde_json::from_slice(&manifest_bytes)?;
-    validate_manifest(&manifest)?;
+    let manifest = load_manifest(&manifest_path)?;
 
     let cache_root = cache_dir.join("semantic").join(&manifest.model_id);
     let output_root = out_dir
@@ -108,16 +74,13 @@ pub fn prepare_model(
     }
     std::fs::write(public_manifest, manifest_bytes)?;
 
-    Ok(PreparedModel {
-        manifest,
-        root: output_root,
-    })
+    ModelBundle::new(manifest, output_root)
 }
 
 /// Generates and stores one query-compatible embedding per V5 card.
 pub fn embed_cards(
     conn: &Connection,
-    prepared: &PreparedModel,
+    prepared: &ModelBundle,
 ) -> Result<usize, Box<dyn std::error::Error>> {
     let documents = card_documents(conn)?;
     if documents.is_empty() {
@@ -125,20 +88,7 @@ pub fn embed_cards(
     }
 
     let manifest = &prepared.manifest;
-    let model_bytes = read_model_file(prepared, &manifest.model_file)?;
-    let tokenizer_files = TokenizerFiles {
-        tokenizer_file: read_model_file(prepared, "tokenizer.json")?,
-        config_file: read_model_file(prepared, "config.json")?,
-        special_tokens_map_file: read_model_file(prepared, "special_tokens_map.json")?,
-        tokenizer_config_file: read_model_file(prepared, "tokenizer_config.json")?,
-    };
-    let user_model = UserDefinedEmbeddingModel::new(model_bytes, tokenizer_files)
-        .with_pooling(Pooling::Mean)
-        .with_quantization(QuantizationMode::Dynamic);
-    let mut model = TextEmbedding::try_new_from_user_defined(
-        user_model,
-        InitOptionsUserDefined::new().with_max_length(manifest.max_length),
-    )?;
+    let mut model = LocalEmbedder::load(prepared.clone())?;
 
     conn.execute("DELETE FROM card_embeddings", [])?;
     let transaction = conn.unchecked_transaction()?;
@@ -146,35 +96,8 @@ pub fn embed_cards(
         // The pinned INT8 graph uses dynamic activation quantization. Running one
         // document per inference keeps corpus vectors compatible with the single
         // query inference performed by browser and server adapters.
-        let embeddings = model.embed([document.text.as_str()], None)?;
-        let embedding = embeddings.first().ok_or_else(|| {
-            IoError::new(ErrorKind::InvalidData, "model returned no card embedding")
-        })?;
-        if embedding.len() != manifest.dimensions {
-            return Err(IoError::new(
-                ErrorKind::InvalidData,
-                format!(
-                    "card {} embedding has {} dimensions; expected {}",
-                    document.card_id,
-                    embedding.len(),
-                    manifest.dimensions
-                ),
-            )
-            .into());
-        }
-        let norm = embedding
-            .iter()
-            .map(|value| f64::from(*value) * f64::from(*value))
-            .sum::<f64>()
-            .sqrt();
-        if (norm - 1.0).abs() > 0.001 {
-            return Err(IoError::new(
-                ErrorKind::InvalidData,
-                format!("card {} embedding norm is {norm}", document.card_id),
-            )
-            .into());
-        }
-        let bytes = schrecknet_core::semantic::encode_f32_le(embedding)?;
+        let embedding = model.embed_one(&document.text)?;
+        let bytes = schrecknet_core::semantic::encode_f32_le(&embedding)?;
         transaction.execute(
             "INSERT INTO card_embeddings
              (card_id, model_id, dimensions, embedding)
@@ -209,113 +132,6 @@ pub fn embed_cards(
         .into());
     }
     Ok(count)
-}
-
-fn validate_manifest(manifest: &ModelManifest) -> Result<(), IoError> {
-    if manifest.model_id.trim().is_empty()
-        || manifest.source_repository.trim().is_empty()
-        || manifest.revision.len() != 40
-        || !manifest
-            .revision
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit())
-        || manifest.dimensions == 0
-        || manifest.max_length == 0
-        || manifest.pooling != "mean"
-        || !manifest.normalized
-        || manifest.inference_batch_size != 1
-        || manifest.files.is_empty()
-    {
-        return Err(IoError::new(
-            ErrorKind::InvalidData,
-            "semantic model manifest violates the ADR 0006 contract",
-        ));
-    }
-    let model_id_path = safe_relative_path(&manifest.model_id)?;
-    if model_id_path.components().count() != 1 {
-        return Err(IoError::new(
-            ErrorKind::InvalidData,
-            "semantic model id must be one safe path segment",
-        ));
-    }
-    safe_relative_path(&manifest.model_file)?;
-    if !manifest
-        .files
-        .iter()
-        .any(|file| file.path == manifest.model_file)
-    {
-        return Err(IoError::new(
-            ErrorKind::InvalidData,
-            "semantic model file is absent from the manifest file list",
-        ));
-    }
-    let mut paths = BTreeSet::new();
-    for file in &manifest.files {
-        safe_relative_path(&file.path)?;
-        if !paths.insert(file.path.as_str())
-            || file.size == 0
-            || file.sha256.len() != 64
-            || !file.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
-        {
-            return Err(IoError::new(
-                ErrorKind::InvalidData,
-                format!("invalid semantic model file entry: {}", file.path),
-            ));
-        }
-    }
-    for required in [
-        "config.json",
-        "special_tokens_map.json",
-        "tokenizer.json",
-        "tokenizer_config.json",
-    ] {
-        if !paths.contains(required) {
-            return Err(IoError::new(
-                ErrorKind::InvalidData,
-                format!("semantic model manifest is missing {required}"),
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn safe_relative_path(value: &str) -> Result<PathBuf, IoError> {
-    let path = Path::new(value);
-    if value.is_empty()
-        || path.is_absolute()
-        || !path
-            .components()
-            .all(|component| matches!(component, Component::Normal(_)))
-    {
-        return Err(IoError::new(
-            ErrorKind::InvalidData,
-            format!("unsafe semantic model path: {value}"),
-        ));
-    }
-    Ok(path.to_owned())
-}
-
-fn verify_file(file: &ModelFile, bytes: &[u8]) -> Result<(), IoError> {
-    let digest = format!("{:x}", Sha256::digest(bytes));
-    if bytes.len() != file.size || digest != file.sha256 {
-        return Err(IoError::new(
-            ErrorKind::InvalidData,
-            format!(
-                "semantic model checksum mismatch for {} ({} bytes, sha256 {digest})",
-                file.path,
-                bytes.len()
-            ),
-        ));
-    }
-    Ok(())
-}
-
-fn read_model_file(
-    prepared: &PreparedModel,
-    relative: &str,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let path = prepared.root.join(safe_relative_path(relative)?);
-    Ok(std::fs::read(path)?)
 }
 
 fn card_documents(conn: &Connection) -> rusqlite::Result<Vec<CardDocument>> {
@@ -472,30 +288,5 @@ mod tests {
                 text: "Name: Example\nKind: Crypt card\nClan or path: Ventrue\nTypes: Vampire\nDisciplines: Dominate (DOM) superior, Fortitude (FOR) inferior\nCapacity: 7\nGroup: 6\nTitle: Prince\nRules text: Gain one blood. Unlock.".into(),
             }]
         );
-    }
-
-    #[test]
-    fn rejects_model_path_traversal() {
-        assert!(safe_relative_path("onnx/model.onnx").is_ok());
-        assert!(safe_relative_path("../model.onnx").is_err());
-        assert!(safe_relative_path("/model.onnx").is_err());
-    }
-
-    #[test]
-    fn verifies_size_and_sha256() {
-        let file = ModelFile {
-            path: "test".into(),
-            size: 3,
-            sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".into(),
-        };
-        assert!(verify_file(&file, b"abc").is_ok());
-        assert!(verify_file(&file, b"abd").is_err());
-    }
-
-    #[test]
-    fn checked_in_manifest_satisfies_the_runtime_contract() {
-        let manifest: ModelManifest =
-            serde_json::from_str(include_str!("../../models/semantic.json")).unwrap();
-        validate_manifest(&manifest).unwrap();
     }
 }

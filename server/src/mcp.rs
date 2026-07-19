@@ -15,10 +15,12 @@ use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
+use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
 
 #[derive(Clone)]
 pub struct SchreckNetMcp {
     data_dir: Arc<String>,
+    semantic: Arc<SemanticSearchService>,
     // Read by the #[tool_handler]-generated ServerHandler::call_tool/list_tools
     // impl below, which rustc's dead_code pass doesn't trace through the macro.
     #[allow(dead_code)]
@@ -27,9 +29,10 @@ pub struct SchreckNetMcp {
 
 #[tool_router]
 impl SchreckNetMcp {
-    pub fn new(data_dir: String) -> Self {
+    pub fn new(data_dir: String, semantic: Arc<SemanticSearchService>) -> Self {
         Self {
             data_dir: Arc::new(data_dir),
+            semantic,
             tool_router: Self::tool_router(),
         }
     }
@@ -56,6 +59,33 @@ impl SchreckNetMcp {
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open()?;
         json_result(cards_db::search_library(&conn, &params))
+    }
+
+    #[tool(
+        description = "Semantically search canonical English VTES V5 card documents by concept, \
+        optionally restricted to crypt/library and the same structured filters as exact search. \
+        Runs locally with the pinned offline model and returns cosine-ranked card summaries."
+    )]
+    async fn semantic_search(
+        &self,
+        Parameters(params): Parameters<SemanticSearchParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let data_dir = Arc::clone(&self.data_dir);
+        let semantic = Arc::clone(&self.semantic);
+        let result = tokio::task::spawn_blocking(move || {
+            let conn = cards_db::open(&data_dir)
+                .map_err(|error| SemanticError::Data(error.to_string()))?;
+            semantic.search(&conn, &params)
+        })
+        .await
+        .map_err(|error| rmcp::ErrorData::internal_error(error.to_string(), None))?;
+        match result {
+            Ok(hits) => json_value(&hits),
+            Err(SemanticError::InvalidRequest(message)) => {
+                Err(rmcp::ErrorData::invalid_params(message, None))
+            }
+            Err(error) => Err(rmcp::ErrorData::internal_error(error.to_string(), None)),
+        }
     }
 
     #[tool(
@@ -103,7 +133,13 @@ fn json_result<T: serde::Serialize>(
     result: rusqlite::Result<T>,
 ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
     let value = result.map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
-    let json = serde_json::to_string(&value)
+    json_value(&value)
+}
+
+fn json_value<T: serde::Serialize>(
+    value: &T,
+) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+    let json = serde_json::to_string(value)
         .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
     Ok(rmcp::model::CallToolResult::success(vec![
         rmcp::model::ContentBlock::text(json),
@@ -142,8 +178,9 @@ impl ServerHandler for SchreckNetMcp {
             .enable_resources()
             .build();
         info.instructions = Some(
-            "SchreckNet hosts the V5 format of VTES exclusively. search_crypt searches \
-             the V5-legal crypt pool only — there is no classic-era card data here."
+            "SchreckNet hosts the V5 format of VTES exclusively; there is no classic-era \
+             or tournament data. Use search_crypt/search_library for exact or regex \
+             retrieval, and semantic_search for local English concept retrieval."
                 .into(),
         );
         info
