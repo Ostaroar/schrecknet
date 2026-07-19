@@ -141,7 +141,12 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       format specifics and Amaranth link import
 - ☑ Export: plain text (Lackey-style) with section headers, file download, and
       clipboard copy — live; ☐ still missing: JOL-specific format and XLSX
-- ☐ Proxy printing: select cards/quantities → print-ready PDF sheets ✎
+- ☑ Proxy printing — live at `#/decks/{id}/proxy`: every card in a deck
+      (one image per copy, actual quantities) laid out at physical card size
+      (2.5"×3.5", 9 per US Letter page). No PDF library dependency — uses
+      the browser's native Print/Save-as-PDF via `window.print()` with
+      print-scoped CSS (`.proxy-grid`/`@media print` in index.css) that
+      hides the app chrome and shows only the sheet
 - ☑ Draw simulator / test hand — live: crypt draw 4 / library draw 7,
       redrawable, respects each card's quantity in the deck
 - ☑ Deck diff: compare two saved local decks card-by-card (`#/diff`), including

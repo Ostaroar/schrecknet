@@ -4,6 +4,7 @@ import LibrarySearch from './components/LibrarySearch'
 import CardPage from './components/CardPage'
 import DeckList from './components/DeckList'
 import DeckEditor from './components/DeckEditor'
+import ProxySheet from './components/ProxySheet'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
 import TableSeating from './components/TableSeating'
@@ -26,6 +27,7 @@ export default function App() {
   const wide =
     route.page === 'deck' ||
     route.page === 'decks' ||
+    route.page === 'proxy' ||
     route.page === 'share' ||
     route.page === 'diff' ||
     route.page === 'seating' ||
@@ -48,6 +50,7 @@ export default function App() {
 
       {route.page !== 'card' &&
         route.page !== 'deck' &&
+        route.page !== 'proxy' &&
         route.page !== 'share' &&
         route.page !== 'diff' &&
         route.page !== 'seating' && (
@@ -72,6 +75,8 @@ export default function App() {
           <CardPage id={route.id} />
         ) : route.page === 'deck' ? (
           <DeckEditor id={route.id} />
+        ) : route.page === 'proxy' ? (
+          <ProxySheet deckId={route.deckId} />
         ) : route.page === 'share' ? (
           <SharedDeckPreview token={route.token} />
         ) : route.page === 'diff' ? (

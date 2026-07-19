@@ -1,7 +1,7 @@
 // Minimal hash routing (#/crypt, #/library, #/cards/123, #/decks, #/decks/5,
-// #/share/<token>, #/diff, #/seating, #/precons, #/help, #/about).
-// Deliberately not a router library — AGENTS.md requires an ADR for new
-// runtime deps, and this many routes still doesn't justify one.
+// #/decks/5/proxy, #/share/<token>, #/diff, #/seating, #/precons, #/help,
+// #/about). Deliberately not a router library — AGENTS.md requires an ADR
+// for new runtime deps, and this many routes still doesn't justify one.
 
 import { useEffect, useState } from 'react'
 
@@ -11,6 +11,7 @@ export type Route =
   | { page: 'card'; id: number }
   | { page: 'decks' }
   | { page: 'deck'; id: number }
+  | { page: 'proxy'; deckId: number }
   | { page: 'share'; token: string }
   | { page: 'diff' }
   | { page: 'seating' }
@@ -22,6 +23,8 @@ export function parseHash(hash: string): Route {
   const path = hash.replace(/^#\/?/, '')
   const cardMatch = /^cards\/(\d+)$/.exec(path)
   if (cardMatch) return { page: 'card', id: Number(cardMatch[1]) }
+  const proxyMatch = /^decks\/(\d+)\/proxy$/.exec(path)
+  if (proxyMatch) return { page: 'proxy', deckId: Number(proxyMatch[1]) }
   const deckMatch = /^decks\/(\d+)$/.exec(path)
   if (deckMatch) return { page: 'deck', id: Number(deckMatch[1]) }
   const shareMatch = /^share\/(.+)$/.exec(path)
@@ -48,6 +51,8 @@ export function routeTo(route: Route): string {
       return '#/decks'
     case 'deck':
       return `#/decks/${route.id}`
+    case 'proxy':
+      return `#/decks/${route.deckId}/proxy`
     case 'share':
       return `#/share/${route.token}`
     case 'diff':

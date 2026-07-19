@@ -139,7 +139,13 @@ docs/feature-parity.md's scope note).
   and fixed two pre-existing data-correctness bugs (see below); card
   quantities per precon aren't tracked by the source data (✎ noted, not a
   bug) — precon detail shows the deck's card pool, not exact copy counts
-- ☐ Proxy PDF generation
+- ☑ Proxy printing — `#/decks/{id}/proxy`, one image per physical copy at
+  2.5"×3.5" (real card size), 9 per US Letter page via CSS grid. Deliberately
+  no PDF-generation library: `window.print()` (browser's native Print/Save-
+  as-PDF) plus print-scoped CSS is the entire "PDF" story — no new runtime
+  dependency, no ADR needed. Verified live: a 3-copy card correctly renders
+  3 identical images, `@media print` rule confirmed present in the built
+  stylesheet with the app chrome scoped out via `.proxy-sheet-wrapper`
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync
 

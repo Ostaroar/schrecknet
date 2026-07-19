@@ -21,3 +21,58 @@ body {
   background-color: var(--color-ground);
   color: var(--color-ink);
 }
+
+/* Proxy print sheets (components/ProxySheet.tsx) — physical card sizing
+   (2.5in x 3.5in, standard poker card) independent of the app's dark theme.
+   window.print() is the whole "PDF generation" story here: no PDF library
+   dependency, the browser's own Print > Save as PDF does the rest. */
+.proxy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 2.5in);
+  gap: 0.08in;
+  justify-content: center;
+}
+.proxy-card {
+  width: 2.5in;
+  height: 3.5in;
+  overflow: hidden;
+  break-inside: avoid;
+}
+.proxy-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.proxy-card-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 0.15in;
+  border: 1px solid #999;
+  font-size: 9pt;
+  color: #333;
+}
+
+@media print {
+  @page {
+    margin: 0.3in;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .proxy-sheet-wrapper,
+  .proxy-sheet-wrapper * {
+    visibility: visible;
+  }
+  .proxy-sheet-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  body {
+    background: white;
+  }
+}

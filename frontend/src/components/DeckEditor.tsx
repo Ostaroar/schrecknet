@@ -528,6 +528,12 @@ export default function DeckEditor({ id }: { id: number }) {
           Clone
         </button>
         <button
+          onClick={() => navigate({ page: 'proxy', deckId: id })}
+          className="text-xs text-ink-dim hover:text-ink-muted"
+        >
+          Print proxies
+        </button>
+        <button
           onClick={async () => {
             if (confirm(`Delete "${deck.name}"? This can't be undone.`)) {
               await deleteDeck(id)
