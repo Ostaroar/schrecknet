@@ -46,7 +46,9 @@ CREATE TABLE cards(
   types TEXT,                      -- JSON array (multi-type)
   blood_cost TEXT, pool_cost TEXT, burn_option BOOLEAN,
   requirement_clan TEXT, requirement_capacity TEXT, requirement_title TEXT,
-  requirement_sect TEXT
+  requirement_sect TEXT,
+  image_url TEXT                   -- KRCG-hosted scan, hotlinked (Dark Pack:
+                                   -- URLs only, never image files) [schema v2]
 );
 CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior BOOLEAN);
 CREATE TABLE card_traits(card_id INT, trait TEXT);         -- precomputed trait flags

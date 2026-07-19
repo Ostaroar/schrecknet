@@ -84,14 +84,16 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '1'), ('data_version', '2'), ('scope', 'v5'),
+         ('schema_version', '2'), ('data_version', '2'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2)",
         rusqlite::params![stats.crypt.to_string(), stats.library.to_string()],
     )?;
     conn.execute_batch("VACUUM")?;
 
     let meta = serde_json::json!({
-        "schema_version": 1,
+        // schema_version bumps when the column layout changes (v2: image_url
+        // added to cards); data_version when the same schema gets new content.
+        "schema_version": 2,
         "data_version": 2,
         "scope": "v5",
         "cards": total,

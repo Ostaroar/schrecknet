@@ -45,9 +45,10 @@ interface LibraryRow {
 
 export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCard[]> {
   const typePattern = filters.cardType ? `%"${filters.cardType}"%` : null
-  // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison, and a
-  // NULL cost never matches a cost filter. Per-discipline EXISTS clauses are
-  // built dynamically like searchCrypt — every value is bound.
+  // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. NULL
+  // costs and the variable cost "X" (CAST('X') is 0) never match a max
+  // filter — mirrors server/src/cards_db.rs exactly. Per-discipline EXISTS
+  // clauses are built dynamically like searchCrypt — every value is bound.
   let sql = `SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
             GROUP_CONCAT(cd.discipline) AS disc
      FROM cards c
@@ -56,8 +57,10 @@ export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCar
        AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
        AND (?2 IS NULL OR c.types LIKE ?2)
        AND (?3 IS NULL OR c.clan LIKE '%' || ?3 || '%')
-       AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND CAST(c.blood_cost AS INTEGER) <= ?4))
-       AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND CAST(c.pool_cost AS INTEGER) <= ?5))`
+       AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
+            AND CAST(c.blood_cost AS INTEGER) <= ?4))
+       AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
+            AND CAST(c.pool_cost AS INTEGER) <= ?5))`
   const params: (string | number | null)[] = [
     filters.text.trim(),
     typePattern,

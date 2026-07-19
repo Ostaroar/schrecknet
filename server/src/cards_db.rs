@@ -208,10 +208,12 @@ pub fn search_library(
     params: &LibrarySearchParams,
 ) -> rusqlite::Result<Vec<LibraryCard>> {
     let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
-    // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison, and a
-    // NULL cost never matches a cost filter. Per-discipline EXISTS clauses are
-    // built dynamically like search_crypt — every value is bound, never
-    // interpolated.
+    // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. A
+    // NULL cost never matches a cost filter, and neither does the variable
+    // cost "X" (CAST('X') is 0, which would otherwise match every max —
+    // vdb.im treats X as a distinct value, not zero; e.g. Hidden Strength,
+    // Monkey Wrench). Per-discipline EXISTS clauses are built dynamically
+    // like search_crypt — every value is bound, never interpolated.
     let mut sql = String::from(
         "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
                 GROUP_CONCAT(cd.discipline) AS disc
@@ -221,8 +223,10 @@ pub fn search_library(
            AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
            AND (?2 IS NULL OR c.types LIKE ?2)
            AND (?3 IS NULL OR c.clan LIKE '%' || ?3 || '%')
-           AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND CAST(c.blood_cost AS INTEGER) <= ?4))
-           AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND CAST(c.pool_cost AS INTEGER) <= ?5))",
+           AND (?4 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X'
+                AND CAST(c.blood_cost AS INTEGER) <= ?4))
+           AND (?5 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X'
+                AND CAST(c.pool_cost AS INTEGER) <= ?5))",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
@@ -543,8 +547,9 @@ mod tests {
         conn.execute_batch(
             "INSERT INTO cards VALUES
                (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL),
-               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL);
-             INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0);",
+               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL),
+               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL);
+             INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0),(8,'for',0);",
         )
         .unwrap();
     }
@@ -627,6 +632,30 @@ mod tests {
             ..Default::default()
         };
         assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_variable_x_cost_never_matches_a_max_filter() {
+        // CAST('X' AS INTEGER) is 0 in SQLite, so without an explicit guard
+        // Hidden Strength (blood cost X) would match every blood_cost_max —
+        // including 0. vdb.im treats X as a distinct value, not zero.
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_filter_extras(&conn);
+        for max in [0, 1, 9] {
+            let params = LibrarySearchParams {
+                blood_cost_max: Some(max),
+                ..Default::default()
+            };
+            let results = search_library(&conn, &params).unwrap();
+            assert!(
+                results.iter().all(|c| c.name != "Hidden Strength"),
+                "X-cost card leaked through blood_cost_max={max}"
+            );
+        }
+        // …but it still appears when no cost filter is set.
+        let results = search_library(&conn, &LibrarySearchParams::default()).unwrap();
+        assert!(results.iter().any(|c| c.name == "Hidden Strength"));
     }
 
     #[test]
