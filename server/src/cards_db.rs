@@ -14,9 +14,15 @@ pub struct CryptSearchParams {
     /// Substring match against card name or card text (case-sensitive as stored).
     #[serde(default)]
     pub text: String,
+    /// Where `text` must match: card name, card text, or either (default).
+    #[serde(default)]
+    pub text_mode: TextMode,
     /// Exact-ish clan filter (substring match, e.g. "Ventrue").
     #[serde(default)]
     pub clan: Option<String>,
+    /// Exact title match (e.g. "Prince"); options come from the V5 pool.
+    #[serde(default)]
+    pub title: Option<String>,
     /// Crypt group (V5 pool is limited to groups 5-7).
     #[serde(default)]
     pub group: Option<i64>,
@@ -33,6 +39,19 @@ pub struct CryptSearchParams {
     /// If true, every discipline in `disciplines` must be at superior level.
     #[serde(default)]
     pub disciplines_superior: bool,
+}
+
+/// Scope of the `text` filter on crypt search.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum TextMode {
+    /// Match card name or card text (default).
+    #[default]
+    Any,
+    /// Match card name only.
+    Name,
+    /// Match card text only.
+    Text,
 }
 
 /// Accepts either a JSON array (MCP) or a comma-separated string (REST query
@@ -116,18 +135,24 @@ pub fn search_crypt(
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'crypt'
-           AND (?1 = '' OR c.name_ascii LIKE '%' || ?1 || '%' OR c.card_text LIKE '%' || ?1 || '%')
-           AND (?2 IS NULL OR c.clan LIKE '%' || ?2 || '%')
-           AND (?3 IS NULL OR c.grp = ?3)
-           AND (?4 IS NULL OR c.capacity >= ?4)
-           AND (?5 IS NULL OR c.capacity <= ?5)",
+           AND (?1 = ''
+                OR (?2 AND c.name_ascii LIKE '%' || ?1 || '%')
+                OR (?3 AND c.card_text LIKE '%' || ?1 || '%'))
+           AND (?4 IS NULL OR c.clan LIKE '%' || ?4 || '%')
+           AND (?5 IS NULL OR c.grp = ?5)
+           AND (?6 IS NULL OR c.capacity >= ?6)
+           AND (?7 IS NULL OR c.capacity <= ?7)
+           AND (?8 IS NULL OR c.title = ?8)",
     );
     let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(params.text.trim().to_owned()),
+        Box::new(params.text_mode != TextMode::Text),
+        Box::new(params.text_mode != TextMode::Name),
         Box::new(params.clan.clone()),
         Box::new(params.group),
         Box::new(params.capacity_min),
         Box::new(params.capacity_max),
+        Box::new(params.title.clone()),
     ];
     for code in &params.disciplines {
         sql.push_str(&format!(
@@ -354,6 +379,72 @@ mod tests {
         assert_eq!(params.disciplines, vec!["dom", "for"]);
         let params: CryptSearchParams = serde_json::from_str(r#"{"disciplines":["dom"]}"#).unwrap();
         assert_eq!(params.disciplines, vec!["dom"]);
+    }
+
+    #[test]
+    fn title_filter_matches_exactly() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = CryptSearchParams {
+            title: Some("Cardinal".into()),
+            ..Default::default()
+        };
+        let results = search_crypt(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Aaradhya");
+        // Exact match, not substring — "Card" must not match "Cardinal".
+        let params = CryptSearchParams {
+            title: Some("Card".into()),
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn text_mode_name_matches_name_only() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // "tyrant" is in Aaradhya's card_text, not her name.
+        let params = CryptSearchParams {
+            text: "tyrant".into(),
+            text_mode: TextMode::Name,
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+        let params = CryptSearchParams {
+            text: "aaradhya".into(),
+            text_mode: TextMode::Name,
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &params).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn text_mode_text_matches_card_text_only() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let params = CryptSearchParams {
+            text: "aaradhya".into(),
+            text_mode: TextMode::Text,
+            ..Default::default()
+        };
+        assert!(search_crypt(&conn, &params).unwrap().is_empty());
+        let params = CryptSearchParams {
+            text: "tyrant".into(),
+            text_mode: TextMode::Text,
+            ..Default::default()
+        };
+        assert_eq!(search_crypt(&conn, &params).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn text_mode_deserializes_lowercase_and_defaults_to_any() {
+        let params: CryptSearchParams = serde_urlencoded::from_str("text_mode=name").unwrap();
+        assert_eq!(params.text_mode, TextMode::Name);
+        let params: CryptSearchParams = serde_json::from_str(r#"{"text_mode":"text"}"#).unwrap();
+        assert_eq!(params.text_mode, TextMode::Text);
+        let params: CryptSearchParams = serde_json::from_str("{}").unwrap();
+        assert_eq!(params.text_mode, TextMode::Any);
     }
 
     #[test]

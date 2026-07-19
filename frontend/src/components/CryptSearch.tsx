@@ -4,8 +4,10 @@ import {
   listClans,
   listGroups,
   listCryptDisciplines,
+  listTitles,
   emptyCryptFilters,
   type CryptCard,
+  type TextMode,
 } from '../lib/cryptSearch'
 import CardDetailPanel from './CardDetailPanel'
 
@@ -27,12 +29,15 @@ type DisciplineMode = 'off' | 'any' | 'superior'
 
 export default function CryptSearch() {
   const [text, setText] = useState('')
+  const [textMode, setTextMode] = useState<TextMode>('any')
   const [clan, setClan] = useState<string | null>(null)
+  const [title, setTitle] = useState<string | null>(null)
   const [group, setGroup] = useState<number | null>(null)
   const [capacityMin, setCapacityMin] = useState<number | null>(null)
   const [capacityMax, setCapacityMax] = useState<number | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
   const [clans, setClans] = useState<string[]>([])
+  const [titles, setTitles] = useState<string[]>([])
   const [groups, setGroups] = useState<number[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [results, setResults] = useState<CryptCard[]>([])
@@ -41,10 +46,11 @@ export default function CryptSearch() {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([listClans(), listGroups(), listCryptDisciplines()])
-      .then(([c, g, d]) => {
+    Promise.all([listClans(), listGroups(), listCryptDisciplines(), listTitles()])
+      .then(([c, g, d, t]) => {
         setClans(c)
         setGroups(g)
+        setTitles(t)
         setAllDisciplines(d)
         setStatus('ready')
       })
@@ -59,7 +65,9 @@ export default function CryptSearch() {
     return {
       ...emptyCryptFilters,
       text,
+      textMode,
       clan,
+      title,
       group,
       capacityMin,
       capacityMax,
@@ -68,7 +76,7 @@ export default function CryptSearch() {
       // whole selection when any badge is in superior mode (feature-parity ✎).
       disciplinesSuperior: active.some(([, m]) => m === 'superior'),
     }
-  }, [text, clan, group, capacityMin, capacityMax, discModes])
+  }, [text, textMode, clan, title, group, capacityMin, capacityMax, discModes])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -106,6 +114,29 @@ export default function CryptSearch() {
           onChange={(e) => setText(e.target.value)}
           disabled={status === 'loading'}
         />
+        <div className="flex overflow-hidden rounded-lg border border-line">
+          {(
+            [
+              ['any', 'All'],
+              ['name', 'Name'],
+              ['text', 'Text'],
+            ] as [TextMode, string][]
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => setTextMode(mode)}
+              title={`Search in ${mode === 'any' ? 'name or text' : mode === 'name' ? 'card name only' : 'card text only'}`}
+              className={
+                'px-2.5 py-2 text-xs ' +
+                (textMode === mode
+                  ? 'bg-blood text-white'
+                  : 'bg-surface text-ink-dim hover:text-ink-muted')
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={clan ?? ''}
@@ -116,6 +147,19 @@ export default function CryptSearch() {
           {clans.map((c) => (
             <option key={c} value={c}>
               {c}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
+          value={title ?? ''}
+          onChange={(e) => setTitle(e.target.value || null)}
+          disabled={status === 'loading'}
+        >
+          <option value="">Any title</option>
+          {titles.map((t) => (
+            <option key={t} value={t}>
+              {t}
             </option>
           ))}
         </select>
