@@ -11,6 +11,8 @@ import init, {
   parse_deck_text as parseDeckTextWasm,
   format_deck_text as formatDeckTextWasm,
   compare_decks as compareDecksWasm,
+  capacity_stats as capacityStatsWasm,
+  category_distribution as categoryDistributionWasm,
 } from '../wasm/schrecknet_core.js'
 
 let ready: Promise<void> | null = null
@@ -108,5 +110,46 @@ export async function compareCardQtys(a: CardQty[], b: CardQty[]): Promise<CardQ
   return raw.split('\n').map((line) => {
     const [cardId, qtyA, qtyB, change] = line.split('\t')
     return { cardId: Number(cardId), qtyA: Number(qtyA), qtyB: Number(qtyB), change: change as DiffChange }
+  })
+}
+
+export interface CapacityStats {
+  count: number
+  min: number
+  max: number
+  average: number
+}
+
+export interface WeightedEntry {
+  label: string
+  qty: number
+}
+
+export interface DistributionEntry {
+  label: string
+  count: number
+}
+
+export async function computeCapacityStats(entries: { capacity: number; qty: number }[]): Promise<CapacityStats | null> {
+  await ensureReady()
+  const raw = capacityStatsWasm(
+    new Uint8Array(entries.map((entry) => entry.capacity)),
+    new Uint16Array(entries.map((entry) => entry.qty)),
+  )
+  if (!raw) return null
+  const [count, min, max, averageHundredths] = raw.split('\t').map(Number)
+  return { count, min, max, average: averageHundredths / 100 }
+}
+
+export async function computeDistribution(entries: WeightedEntry[]): Promise<DistributionEntry[]> {
+  await ensureReady()
+  const raw = categoryDistributionWasm(
+    entries.map((entry) => entry.label),
+    new Uint16Array(entries.map((entry) => entry.qty)),
+  )
+  if (!raw) return []
+  return raw.split('\n').map((line) => {
+    const [label, count] = line.split('\t')
+    return { label, count: Number(count) }
   })
 }

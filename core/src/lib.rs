@@ -9,6 +9,7 @@ pub mod diff;
 pub mod dtext;
 pub mod legality;
 pub mod share;
+pub mod stats;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm;

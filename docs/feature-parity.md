@@ -120,10 +120,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Crypt & library sections with quantity steppers — MVP live
       (frontend/src/components/DeckEditor.tsx); grouped-by-type display within
       each section still pending
-- ☑ Deck stats: crypt count, library count, V5 legality (group rule + size
-      bounds, via the real core/legality.rs compiled to WASM) — live; ☐ still
-      missing avg/min/max capacity, type distribution, discipline
-      distribution, cost curves
+- ☑ Deck stats: crypt/library count, V5 legality, weighted crypt capacity
+      min/average/max, library type distribution, discipline distribution,
+      and blood/pool cost curves — all aggregation runs in the Rust WASM core
 - ☐ Format legality checks: custom limited formats within the V5 pool ✎
       (limited format editor: allowed sets/cards); 2-Players variant within V5 ✎
       (keep only if the V5 pool supports it) — V5 base-format legality is live

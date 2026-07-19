@@ -80,6 +80,8 @@ docs/feature-parity.md's scope note).
   reimplementation — verified the group-rule violation renders the exact
   string the Rust unit tests assert. `core.wasm` build wired into CI and the
   Dockerfile (was a manual-only step through Phase 1).
+- ☑ Rich deck statistics through Rust/WASM: weighted capacity min/average/max,
+  library type and discipline distributions, and blood/pool cost curves
 - ☑ Clone deck (name + card quantities) — live in both the deck list and editor
 - ☑ Draw simulator — live (frontend/src/lib/drawHand.ts): draws a crypt hand
   of 4 / library hand of 7 respecting each card's quantity in the deck,

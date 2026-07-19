@@ -109,3 +109,34 @@ pub fn compare_decks(
         .collect::<Vec<_>>()
         .join("\n"))
 }
+
+/// Quantity-weighted crypt capacity stats as `count\tmin\tmax\taverage`.
+#[wasm_bindgen]
+pub fn capacity_stats(capacities: Vec<u8>, qtys: Vec<u16>) -> Result<String, JsError> {
+    if capacities.len() != qtys.len() {
+        return Err(JsError::new("mismatched capacity/qty array lengths"));
+    }
+    let values = capacities.into_iter().zip(qtys).collect::<Vec<_>>();
+    Ok(crate::stats::capacity(&values)
+        .map(|stats| {
+            format!(
+                "{}\t{}\t{}\t{}",
+                stats.count, stats.min, stats.max, stats.average_hundredths
+            )
+        })
+        .unwrap_or_default())
+}
+
+/// Quantity-weighted category counts as `label\tcount` lines.
+#[wasm_bindgen]
+pub fn category_distribution(labels: Vec<String>, qtys: Vec<u16>) -> Result<String, JsError> {
+    if labels.len() != qtys.len() {
+        return Err(JsError::new("mismatched label/qty array lengths"));
+    }
+    let entries = labels.into_iter().zip(qtys).collect::<Vec<_>>();
+    Ok(crate::stats::distribution(&entries)
+        .iter()
+        .map(|(label, count)| format!("{}\t{count}", label.replace(['\t', '\n'], " ")))
+        .collect::<Vec<_>>()
+        .join("\n"))
+}

@@ -23,6 +23,22 @@ import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
 
+function StatsDistribution({ label, entries }: { label: string; entries: { label: string; count: number }[] }) {
+  if (entries.length === 0) return null
+  return (
+    <div className="grid gap-1">
+      <span className="text-[10px] uppercase tracking-wide text-ink-dim">{label}</span>
+      <span className="flex flex-wrap gap-1">
+        {entries.map((entry) => (
+          <span key={entry.label} className="rounded-full border border-line-soft bg-raised px-2 py-0.5 text-[10px] text-ink-muted">
+            {entry.label} <span className="font-mono text-ink">{entry.count}</span>
+          </span>
+        ))}
+      </span>
+    </div>
+  )
+}
+
 function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
   return (
     <span className="flex items-center gap-1.5">
@@ -396,20 +412,33 @@ export default function DeckEditor({ id }: { id: number }) {
       <TagChips deckId={id} />
 
       {stats && (
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-line bg-surface px-4 py-2.5 text-xs">
-          <span className="text-ink-muted">
-            <span className="font-mono text-ink">{stats.cryptCount}</span> crypt ·{' '}
-            <span className="font-mono text-ink">{stats.libraryCount}</span> library
-          </span>
-          {stats.violations.length === 0 ? (
-            <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">V5 Legal</span>
-          ) : (
-            <ul className="grid gap-0.5 text-blood-hi">
-              {stats.violations.map((v, i) => (
-                <li key={i}>{v}</li>
-              ))}
-            </ul>
-          )}
+        <div className="grid gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-xs">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-ink-muted">
+              <span className="font-mono text-ink">{stats.cryptCount}</span> crypt ·{' '}
+              <span className="font-mono text-ink">{stats.libraryCount}</span> library
+            </span>
+            {stats.capacity && (
+              <span className="text-ink-muted">
+                capacity <span className="font-mono text-ink">{stats.capacity.min}</span>–
+                <span className="font-mono text-ink">{stats.capacity.max}</span> · avg{' '}
+                <span className="font-mono text-ink">{stats.capacity.average.toFixed(2)}</span>
+              </span>
+            )}
+            {stats.violations.length === 0 ? (
+              <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">V5 Legal</span>
+            ) : (
+              <ul className="grid gap-0.5 text-blood-hi">
+                {stats.violations.map((v, i) => <li key={i}>{v}</li>)}
+              </ul>
+            )}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <StatsDistribution label="Library types" entries={stats.types} />
+            <StatsDistribution label="Disciplines" entries={stats.disciplines} />
+            <StatsDistribution label="Blood cost curve" entries={stats.bloodCosts} />
+            <StatsDistribution label="Pool cost curve" entries={stats.poolCosts} />
+          </div>
         </div>
       )}
 

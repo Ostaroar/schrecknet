@@ -5,7 +5,18 @@
 
 import { query as cardsQuery } from './db'
 import { query as userQuery, run as userRun } from './userDb'
-import { validateDeck, encodeDeckShare, decodeDeckShare, parseDeckText, formatDeckText, compareCardQtys } from './core'
+import {
+  validateDeck,
+  encodeDeckShare,
+  decodeDeckShare,
+  parseDeckText,
+  formatDeckText,
+  compareCardQtys,
+  computeCapacityStats,
+  computeDistribution,
+  type CapacityStats,
+  type DistributionEntry,
+} from './core'
 import { routeTo } from './route'
 
 export interface DeckSummary {
@@ -130,6 +141,10 @@ export interface DeckCardDetail {
   clan: string | null
   capacity: number | null
   group: number | null
+  types: string[]
+  disciplines: string[]
+  bloodCost: string | null
+  poolCost: string | null
 }
 
 /** Deck contents joined with live card_id data — never denormalized into user.sqlite. */
@@ -145,8 +160,14 @@ export async function getDeckCardDetails(deckId: number): Promise<DeckCardDetail
     clan: string
     capacity: number | null
     grp: number | null
+    types: string | null
+    blood_cost: string | null
+    pool_cost: string | null
+    disciplines: string | null
   }>(
-    `SELECT id, kind, name, clan, capacity, grp FROM cards WHERE id IN (${placeholders})`,
+    `SELECT c.id, c.kind, c.name, c.clan, c.capacity, c.grp, c.types, c.blood_cost, c.pool_cost,
+            (SELECT GROUP_CONCAT(cd.discipline) FROM card_disciplines cd WHERE cd.card_id = c.id) AS disciplines
+     FROM cards c WHERE c.id IN (${placeholders})`,
     rows.map((r) => r.card_id),
   )
   return cards
@@ -158,6 +179,10 @@ export async function getDeckCardDetails(deckId: number): Promise<DeckCardDetail
       clan: c.clan || null,
       capacity: c.capacity,
       group: c.grp,
+      types: c.types ? (JSON.parse(c.types) as string[]) : [],
+      disciplines: c.disciplines ? c.disciplines.split(',') : [],
+      bloodCost: c.blood_cost,
+      poolCost: c.pool_cost,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 }
@@ -185,7 +210,16 @@ export async function previewSharedDeck(token: string): Promise<DeckCardDetail[]
     clan: string
     capacity: number | null
     grp: number | null
-  }>(`SELECT id, kind, name, clan, capacity, grp FROM cards WHERE id IN (${placeholders})`, all.map(([id]) => id))
+    types: string | null
+    blood_cost: string | null
+    pool_cost: string | null
+    disciplines: string | null
+  }>(
+    `SELECT c.id, c.kind, c.name, c.clan, c.capacity, c.grp, c.types, c.blood_cost, c.pool_cost,
+            (SELECT GROUP_CONCAT(cd.discipline) FROM card_disciplines cd WHERE cd.card_id = c.id) AS disciplines
+     FROM cards c WHERE c.id IN (${placeholders})`,
+    all.map(([id]) => id),
+  )
   return cards
     .map((c) => ({
       id: c.id,
@@ -195,6 +229,10 @@ export async function previewSharedDeck(token: string): Promise<DeckCardDetail[]
       clan: c.clan || null,
       capacity: c.capacity,
       group: c.grp,
+      types: c.types ? (JSON.parse(c.types) as string[]) : [],
+      disciplines: c.disciplines ? c.disciplines.split(',') : [],
+      bloodCost: c.blood_cost,
+      poolCost: c.pool_cost,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 }
@@ -213,6 +251,11 @@ export interface DeckStats {
   cryptCount: number
   libraryCount: number
   violations: string[]
+  capacity: CapacityStats | null
+  types: DistributionEntry[]
+  disciplines: DistributionEntry[]
+  bloodCosts: DistributionEntry[]
+  poolCosts: DistributionEntry[]
 }
 
 export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckStats> {
@@ -220,8 +263,24 @@ export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckSta
   const cryptCount = cryptCards.reduce((sum, c) => sum + c.qty, 0)
   const libraryCount = cards.filter((c) => c.kind === 'library').reduce((sum, c) => sum + c.qty, 0)
   const groups = [...new Set(cryptCards.map((c) => c.group ?? 0))]
-  const violations = await validateDeck(groups, cryptCount, libraryCount)
-  return { cryptCount, libraryCount, violations }
+  const libraryCards = cards.filter((c) => c.kind === 'library')
+  const [violations, capacity, types, disciplines, bloodCosts, poolCosts] = await Promise.all([
+    validateDeck(groups, cryptCount, libraryCount),
+    computeCapacityStats(
+      cryptCards
+        .filter((card): card is DeckCardDetail & { capacity: number } => card.capacity !== null)
+        .map((card) => ({ capacity: card.capacity, qty: card.qty })),
+    ),
+    computeDistribution(libraryCards.flatMap((card) => card.types.map((label) => ({ label, qty: card.qty })))),
+    computeDistribution(cards.flatMap((card) => card.disciplines.map((label) => ({ label, qty: card.qty })))),
+    computeDistribution(
+      libraryCards.filter((card) => card.bloodCost !== null).map((card) => ({ label: card.bloodCost ?? '', qty: card.qty })),
+    ),
+    computeDistribution(
+      libraryCards.filter((card) => card.poolCost !== null).map((card) => ({ label: card.poolCost ?? '', qty: card.qty })),
+    ),
+  ])
+  return { cryptCount, libraryCount, violations, capacity, types, disciplines, bloodCosts, poolCosts }
 }
 
 /** Formats a deck as a plain-text (Lackey/JOL-style) card list for export. */
