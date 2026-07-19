@@ -86,7 +86,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 ## Card Detail (`/cards/:id`)
 - ☑ Full card text — inline expand panel on search results AND a routed page
       (frontend/src/components/CardPage.tsx) with full translations shown
-- ☐ Card image (incl. legacy/alternate printings) with set-specific scans ✎
+- ☑ Card image — MVP: single primary KRCG scan (`image_url`, hotlinked per Dark
+      Pack rule) on the card page; ☐ legacy/alternate printings with set-specific
+      scans still pending ✎
 - ☐ Icon inline rendering within card text (disciplines, clans, costs)
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text live; ☐ links to source not rendered yet

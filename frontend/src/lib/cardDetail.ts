@@ -32,6 +32,7 @@ export interface CardDetail {
   kind: 'crypt' | 'library'
   name: string
   card_text: string | null
+  image_url: string | null
   clan: string | null
   capacity: number | null
   group: number | null
@@ -58,8 +59,9 @@ export async function getCard(id: number): Promise<CardDetail | null> {
     types: string | null
     blood_cost: string | null
     pool_cost: string | null
+    image_url: string | null
   }>(
-    `SELECT kind, name, card_text, clan, capacity, grp, title, types, blood_cost, pool_cost
+    `SELECT kind, name, card_text, clan, capacity, grp, title, types, blood_cost, pool_cost, image_url
      FROM cards WHERE id = ?1`,
     [id],
   )
@@ -90,6 +92,7 @@ export async function getCard(id: number): Promise<CardDetail | null> {
     kind: isCrypt ? 'crypt' : 'library',
     name: base.name,
     card_text: base.card_text,
+    image_url: base.image_url,
     clan: base.clan || null,
     capacity: isCrypt ? base.capacity : null,
     group: isCrypt ? base.grp : null,

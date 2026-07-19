@@ -89,11 +89,21 @@ export default function CardPage({ id }: { id: number }) {
         )}
       </header>
 
-      {card.card_text && (
-        <p className="rounded-xl border border-line bg-surface p-5 leading-relaxed text-ink">
-          {card.card_text}
-        </p>
-      )}
+      <div className="flex flex-wrap items-start gap-5">
+        {card.image_url && (
+          <img
+            src={card.image_url}
+            alt={card.name}
+            loading="lazy"
+            className="w-full max-w-[280px] rounded-xl border border-line"
+          />
+        )}
+        {card.card_text && (
+          <p className="min-w-[16rem] flex-1 rounded-xl border border-line bg-surface p-5 leading-relaxed text-ink">
+            {card.card_text}
+          </p>
+        )}
+      </div>
 
       <section className="grid gap-1 text-sm">
         <h2 className="text-xs uppercase tracking-wide text-ink-dim">Printings</h2>
