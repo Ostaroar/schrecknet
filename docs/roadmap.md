@@ -72,6 +72,9 @@ docs/feature-parity.md's scope note).
 - ☑ VDB search-result workflow: explicit stable sort modes on browser/REST/MCP,
   hotlinked image previews on hover/tap, responsive rows, and a remembered local
   active-deck rail with inline quantity-aware add controls and "Show Deck"
+- ☑ VDB precon filter parity: exact set + precon identities, OR-composed
+  multi-selection, and Any/Only/First/Reprint history modes across exact search,
+  semantic candidate filtering, REST, and MCP; legacy substring API retained
 - ☑ Card-text language switcher: build-time pool-derived options from
   `cards.meta.json`, a persisted global preference, and English fallback per
   card (currently EN/ES/FR; future source languages appear automatically)

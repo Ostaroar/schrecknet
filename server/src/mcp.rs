@@ -40,7 +40,8 @@ impl SchreckNetMcp {
     #[tool(
         description = "Search VTES V5 crypt (vampire) cards by text, clan, sects, title, vote \
         threshold, traits, groups, capacity, independently leveled discipline requirements, \
-        VDB-style OR-discipline rows, and V5 set/printing history. Supports explicit VDB-compatible \
+        VDB-style OR-discipline rows, V5 set/printing history, and exact multi-precon selection \
+        with Any/Only/First/Reprint modes. Supports explicit VDB-compatible \
         capacity_desc, capacity_asc, clan, group, name, and sect sort modes; results include the \
         primary card image URL when available."
     )]
@@ -55,7 +56,8 @@ impl SchreckNetMcp {
     #[tool(
         description = "Search VTES V5 library cards by text, type, discipline requirements \
         (all/any/none/only, including no requirement), clan, sect, title, traits, \
-        vampire-capacity requirements, costs, and V5 set/printing history. Supports explicit \
+        vampire-capacity requirements, costs, V5 set/printing history, and exact multi-precon \
+        selection with Any/Only/First/Reprint modes. Supports explicit \
         VDB-compatible requirement, cost_desc, cost_asc, name, and type sort modes; results \
         include the primary card image URL when available."
     )]

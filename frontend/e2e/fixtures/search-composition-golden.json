@@ -47,6 +47,22 @@
     "controls": ["+Stealth / -Intercept", "Combat Ends"],
     "expected_ids": [100771, 102279, 101542]
   },
+  "precon_filter": {
+    "selections": [
+      { "set": "New Blood", "precon": "Malkavian", "value": "New Blood:Malkavian" },
+      { "set": "New Blood II", "precon": "Banu Haqim", "value": "New Blood II:Banu Haqim" }
+    ],
+    "printing": "reprint",
+    "crypt": {
+      "rest_query": "precons=New%20Blood%3AMalkavian%2CNew%20Blood%20II%3ABanu%20Haqim&precon_print=reprint",
+      "expected_ids": [201598, 201530, 201587, 201532, 201544, 201594, 201546]
+    },
+    "library": {
+      "rest_query": "precons=New%20Blood%3AMalkavian%2CNew%20Blood%20II%3ABanu%20Haqim&precon_print=reprint&traits=unlock",
+      "trait_control": "Wake / Unlock",
+      "expected_ids": [100680, 101321, 101706, 102137]
+    }
+  },
   "result_sort": {
     "crypt": {
       "base_query": "traits=unlock",

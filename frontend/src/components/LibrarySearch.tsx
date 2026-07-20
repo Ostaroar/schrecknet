@@ -22,6 +22,7 @@ import SemanticModeControl from './SemanticModeControl'
 import SetFilterControls from './SetFilterControls'
 import TraitFilterControls from './TraitFilterControls'
 import SearchDeckPanel, { AddToDeckButton } from './SearchDeckPanel'
+import PreconFilterControls from './PreconFilterControls'
 import {
   defaultSetAge,
   defaultSetPrint,
@@ -38,6 +39,7 @@ import type { LibraryDisciplineLogic } from '../lib/disciplineFilter'
 import type { RequirementLogic } from '../lib/requirementFilter'
 import { sortLibraryResults } from '../lib/searchSort'
 import { useSearchDeck } from '../lib/useSearchDeck'
+import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 
 type DisciplineMode = 'off' | 'selected'
 
@@ -187,12 +189,13 @@ export default function LibrarySearch() {
   const [set, setSet] = useState<string | null>(null)
   const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
   const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
-  const [precon, setPrecon] = useState<string | null>(null)
+  const [selectedPrecons, setSelectedPrecons] = useState<PreconSelection[]>([])
+  const [preconPrint, setPreconPrint] = useState<SetPrintMode>(defaultSetPrint)
   const [artist, setArtist] = useState<string | null>(null)
   const [types, setTypes] = useState<string[]>([])
   const [clans, setClans] = useState<string[]>([])
   const [sets, setSets] = useState<string[]>([])
-  const [precons, setPrecons] = useState<string[]>([])
+  const [precons, setPrecons] = useState<PreconOption[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [allSectRequirements, setAllSectRequirements] = useState<string[]>([])
   const [allTitleRequirements, setAllTitleRequirements] = useState<string[]>([])
@@ -262,7 +265,9 @@ export default function LibrarySearch() {
       set,
       setAge,
       setPrint,
-      precon,
+      precon: null,
+      precons: selectedPrecons,
+      preconPrint,
       artist,
       sort: sort === 'relevance' ? 'name' : sort,
       disciplines: active.map(([code]) => code),
@@ -290,7 +295,8 @@ export default function LibrarySearch() {
     set,
     setAge,
     setPrint,
-    precon,
+    selectedPrecons,
+    preconPrint,
     artist,
     discModes,
     disciplineLogic,
@@ -554,19 +560,14 @@ export default function LibrarySearch() {
           onAgeChange={setSetAge}
           onPrintingChange={setSetPrint}
         />
-        <select
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
-          value={precon ?? ''}
-          onChange={(e) => setPrecon(e.target.value || null)}
+        <PreconFilterControls
+          options={precons}
+          value={selectedPrecons}
+          printing={preconPrint}
           disabled={status === 'loading'}
-        >
-          <option value="">Any precon</option>
-          {precons.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          onValueChange={setSelectedPrecons}
+          onPrintingChange={setPreconPrint}
+        />
         <input
           className="min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
           placeholder="Artist"

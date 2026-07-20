@@ -78,9 +78,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       MCP (`set`, `set_age`, `set_print`). Semantics verified against vdb's
       current `SearchFormSet` + `cardFilters`; chronology intentionally uses
       only the V5 print history stored by SchreckNet
-- ☑ Precon filter MVP: substring match against printing precon, any-printing
-      semantics, NULL precon never matches (`precon` param on all three
-      surfaces); ☐ still missing: exact-match / multi-select modes
+- ☑ Precon filter: VDB-compatible exact `set:precon` identities, repeatable
+      OR selection, and Any / Only In / First Print / Reprint modes on browser,
+      REST, MCP, and semantic candidate filtering. Options are V5-pool-derived;
+      legacy substring `precon` remains API-compatible and NULL never matches ✎
 - ☑ Artist filter — substring match against credited artist name, any-artist
       semantics (`artist` param on all three surfaces)
 - ☑ Results: VDB sort modes on browser, REST, and MCP (capacity/clan/group/name/

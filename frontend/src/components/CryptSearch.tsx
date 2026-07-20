@@ -20,6 +20,7 @@ import SemanticModeControl from './SemanticModeControl'
 import SetFilterControls from './SetFilterControls'
 import TraitFilterControls from './TraitFilterControls'
 import SearchDeckPanel, { AddToDeckButton } from './SearchDeckPanel'
+import PreconFilterControls from './PreconFilterControls'
 import {
   defaultSetAge,
   defaultSetPrint,
@@ -36,6 +37,7 @@ import type { DisciplineRequirement } from '../lib/disciplineFilter'
 import type { RequirementLogic } from '../lib/requirementFilter'
 import { sortCryptResults } from '../lib/searchSort'
 import { useSearchDeck } from '../lib/useSearchDeck'
+import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
   return (
@@ -73,7 +75,8 @@ export default function CryptSearch() {
   const [set, setSet] = useState<string | null>(null)
   const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
   const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
-  const [precon, setPrecon] = useState<string | null>(null)
+  const [selectedPrecons, setSelectedPrecons] = useState<PreconSelection[]>([])
+  const [preconPrint, setPreconPrint] = useState<SetPrintMode>(defaultSetPrint)
   const [artist, setArtist] = useState<string | null>(null)
   const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
   const [orDisciplineGroups, setOrDisciplineGroups] = useState<OrDisciplineGroup[]>([])
@@ -82,7 +85,7 @@ export default function CryptSearch() {
   const [sects, setSects] = useState<string[]>([])
   const [groups, setGroups] = useState<number[]>([])
   const [sets, setSets] = useState<string[]>([])
-  const [precons, setPrecons] = useState<string[]>([])
+  const [precons, setPrecons] = useState<PreconOption[]>([])
   const [allDisciplines, setAllDisciplines] = useState<string[]>([])
   const [allTraits, setAllTraits] = useState<string[]>([])
   const [results, setResults] = useState<Array<CryptCard | SemanticResult<CryptCard>>>([])
@@ -144,7 +147,9 @@ export default function CryptSearch() {
       set,
       setAge,
       setPrint,
-      precon,
+      precon: null,
+      precons: selectedPrecons,
+      preconPrint,
       artist,
       sort: sort === 'relevance' ? 'capacity_desc' : sort,
       disciplineRequirements: active.map(([code, mode]) => ({
@@ -171,7 +176,8 @@ export default function CryptSearch() {
     set,
     setAge,
     setPrint,
-    precon,
+    selectedPrecons,
+    preconPrint,
     artist,
     discModes,
     orDisciplineGroups,
@@ -470,19 +476,14 @@ export default function CryptSearch() {
           onAgeChange={setSetAge}
           onPrintingChange={setSetPrint}
         />
-        <select
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
-          value={precon ?? ''}
-          onChange={(e) => setPrecon(e.target.value || null)}
+        <PreconFilterControls
+          options={precons}
+          value={selectedPrecons}
+          printing={preconPrint}
           disabled={status === 'loading'}
-        >
-          <option value="">Any precon</option>
-          {precons.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          onValueChange={setSelectedPrecons}
+          onPrintingChange={setPreconPrint}
+        />
         <input
           className="min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
           placeholder="Artist"

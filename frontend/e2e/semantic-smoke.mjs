@@ -162,6 +162,15 @@ try {
     }
   }
 
+  async function selectPreconFixture(preconFixture) {
+    for (const selection of preconFixture.selections) {
+      await page.getByLabel('Add precon', { exact: true }).selectOption(selection.value)
+    }
+    await page
+      .getByLabel('Precon printing relation', { exact: true })
+      .selectOption(preconFixture.printing)
+  }
+
   // Golden exact-search parity for the VDB composition grammar. This checks
   // the REST adapter against the real V5 database, then recreates the same
   // filter through the offline browser controls and requires identical order.
@@ -226,6 +235,20 @@ try {
     await page.getByLabel(`Trait ${trait}`, { exact: true }).click()
   }
   await waitForExactIds(cryptTraitsFixture.expected_ids)
+
+  // VDB identifies a precon by exact set + deck name, ORs repeated selector
+  // rows, and then applies Any/Only/First/Reprint to each selected printing.
+  const preconFixture = searchFixture.precon_filter
+  const cryptPreconRest = await exactRestSearch('crypt', preconFixture.crypt.rest_query)
+  assert.deepEqual(
+    cryptPreconRest.map((card) => card.id),
+    preconFixture.crypt.expected_ids,
+    'crypt exact/multi-precon REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  await selectPreconFixture(preconFixture)
+  await waitForExactIds(preconFixture.crypt.expected_ids)
 
   await page.getByRole('button', { name: 'library search', exact: true }).click()
   await page.waitForFunction(() => location.hash === '#/library')
@@ -299,6 +322,42 @@ try {
     await page.getByLabel(`Trait ${trait}`, { exact: true }).click()
   }
   await waitForExactIds(libraryTraitsFixture.expected_ids)
+
+  const libraryPreconRest = await exactRestSearch('library', preconFixture.library.rest_query)
+  assert.deepEqual(
+    libraryPreconRest.map((card) => card.id),
+    preconFixture.library.expected_ids,
+    'library exact/multi-precon REST fixture drifted',
+  )
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Name / text').waitFor()
+  await page
+    .getByLabel(`Trait ${preconFixture.library.trait_control}`, { exact: true })
+    .click()
+  await selectPreconFixture(preconFixture)
+  await waitForExactIds(preconFixture.library.expected_ids)
+
+  const semanticPreconResponse = await fetch(`${baseUrl}/api/v1/cards/semantic`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      query: 'wake and block',
+      kind: 'library',
+      library: {
+        precons: preconFixture.selections.map(({ set, precon }) => ({ set, precon })),
+        precon_print: preconFixture.printing,
+        traits: ['unlock'],
+      },
+      limit: 50,
+    }),
+  })
+  assert.equal(semanticPreconResponse.status, 200, 'semantic precon filter request failed')
+  const semanticPreconHits = await semanticPreconResponse.json()
+  assert.deepEqual(
+    semanticPreconHits.map((card) => card.id).sort((left, right) => left - right),
+    [...preconFixture.library.expected_ids].sort((left, right) => left - right),
+    'semantic exact/multi-precon candidate filtering drifted',
+  )
 
   // Independent VDB-source oracle snapshot: every currently emitted trait
   // keeps its exact V5 cardinality, catching classifier or source drift even

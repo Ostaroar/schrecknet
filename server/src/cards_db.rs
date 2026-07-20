@@ -90,9 +90,20 @@ pub struct CryptSearchParams {
     #[serde(default)]
     pub set_print: SetPrintMode,
     /// Substring match against printing `precon` (e.g. "Anarch"); printings
-    /// with no precon (NULL) never match.
+    /// with no precon (NULL) never match. Backwards-compatible: prefer
+    /// `precons` for exact VDB-compatible selection.
     #[serde(default)]
     pub precon: Option<String>,
+    /// Exact VDB precon identities. MCP accepts objects such as
+    /// `[{"set":"Fifth Edition","precon":"Ventrue"}]`; REST accepts
+    /// comma-separated `set:precon` pairs. Multiple selections use OR
+    /// semantics and supersede the legacy substring `precon` field.
+    #[serde(default, deserialize_with = "deserialize_precon_selections")]
+    pub precons: Vec<PreconSelection>,
+    /// Printing-history relation for exact `precons`: any, only printing,
+    /// first V5 printing, or a later V5 reprint.
+    #[serde(default)]
+    pub precon_print: SetPrintMode,
     /// Substring match against artist name; a card matches if any credited
     /// artist matches.
     #[serde(default)]
@@ -274,6 +285,61 @@ pub enum SetPrintMode {
     First,
     /// The selected set is later than the card's earliest V5 printing.
     Reprint,
+}
+
+/// One exact preconstructed-deck identity. Precon names repeat across V5 sets,
+/// so the set is part of the stable machine value just as it is in VDB.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
+pub struct PreconSelection {
+    pub set: String,
+    pub precon: String,
+}
+
+/// MCP uses structured objects; REST uses a compact comma-separated
+/// `set:precon` grammar because axum's query extractor does not deserialize
+/// arrays of objects from a conventional URL query string.
+fn deserialize_precon_selections<'de, D>(deserializer: D) -> Result<Vec<PreconSelection>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StructuredOrCsv {
+        Structured(Vec<PreconSelection>),
+        Csv(String),
+    }
+
+    fn normalized<E: serde::de::Error>(selection: PreconSelection) -> Result<PreconSelection, E> {
+        let set = selection.set.trim().to_owned();
+        let precon = selection.precon.trim().to_owned();
+        if set.is_empty() || precon.is_empty() {
+            return Err(E::custom(
+                "precon selections require non-empty set and precon names",
+            ));
+        }
+        Ok(PreconSelection { set, precon })
+    }
+
+    match StructuredOrCsv::deserialize(deserializer)? {
+        StructuredOrCsv::Structured(selections) => {
+            selections.into_iter().map(normalized::<D::Error>).collect()
+        }
+        StructuredOrCsv::Csv(csv) => csv
+            .split(',')
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| {
+                let (set, precon) = value.split_once(':').ok_or_else(|| {
+                    serde::de::Error::custom(
+                        "REST precons must use comma-separated set:precon pairs",
+                    )
+                })?;
+                normalized::<D::Error>(PreconSelection {
+                    set: set.to_owned(),
+                    precon: precon.to_owned(),
+                })
+            })
+            .collect(),
+    }
 }
 
 impl SetPrintMode {
@@ -525,9 +591,16 @@ pub struct LibrarySearchParams {
     #[serde(default)]
     pub set_print: SetPrintMode,
     /// Substring match against printing `precon` (e.g. "Anarch"); printings
-    /// with no precon (NULL) never match.
+    /// with no precon (NULL) never match. Backwards-compatible: prefer
+    /// `precons` for exact VDB-compatible selection.
     #[serde(default)]
     pub precon: Option<String>,
+    /// Exact set + precon identities, OR-composed. See CryptSearchParams.
+    #[serde(default, deserialize_with = "deserialize_precon_selections")]
+    pub precons: Vec<PreconSelection>,
+    /// Printing-history relation for exact `precons`.
+    #[serde(default)]
+    pub precon_print: SetPrintMode,
     /// Substring match against artist name; a card matches if any credited
     /// artist matches.
     #[serde(default)]
@@ -919,6 +992,61 @@ fn push_trait_filters(
     }
 }
 
+fn push_exact_precon_filter(
+    sql: &mut String,
+    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    precons: &[PreconSelection],
+    print_mode: SetPrintMode,
+) {
+    let selections: Vec<_> = precons
+        .iter()
+        .filter_map(|selection| {
+            let set = selection.set.trim();
+            let precon = selection.precon.trim();
+            (!set.is_empty() && !precon.is_empty()).then_some((set, precon))
+        })
+        .collect();
+    if selections.is_empty() {
+        return;
+    }
+
+    bound.push(Box::new(print_mode.as_sql_value()));
+    let print_index = bound.len();
+    sql.push_str(" AND (");
+    for (index, (set, precon)) in selections.into_iter().enumerate() {
+        if index > 0 {
+            sql.push_str(" OR ");
+        }
+        bound.push(Box::new(set.to_owned()));
+        let set_index = bound.len();
+        bound.push(Box::new(precon.to_owned()));
+        let precon_index = bound.len();
+        sql.push_str(&format!(
+            "EXISTS (SELECT 1 FROM printings pp
+              JOIN sets sp ON sp.id = pp.set_id
+              WHERE pp.card_id = c.id
+                AND sp.name = ?{set_index}
+                AND pp.precon = ?{precon_index}
+                AND (?{print_index} = 'any'
+                  OR (?{print_index} = 'only'
+                    AND 1 = (SELECT COUNT(DISTINCT po.set_id) FROM printings po
+                             WHERE po.card_id = c.id)
+                    AND 1 = (SELECT COUNT(DISTINCT COALESCE(po.precon, ''))
+                             FROM printings po
+                             WHERE po.card_id = c.id AND po.set_id = pp.set_id))
+                  OR (?{print_index} = 'first'
+                    AND sp.release_date = (SELECT MIN(sf.release_date)
+                      FROM printings pf JOIN sets sf ON sf.id = pf.set_id
+                      WHERE pf.card_id = c.id))
+                  OR (?{print_index} = 'reprint'
+                    AND sp.release_date > (SELECT MIN(sr.release_date)
+                      FROM printings pr JOIN sets sr ON sr.id = pr.set_id
+                      WHERE pr.card_id = c.id))))"
+        ));
+    }
+    sql.push(')');
+}
+
 pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
@@ -948,6 +1076,11 @@ fn search_crypt_inner(
     // was the first caller to combine the two).
     let single_group = if params.groups.is_empty() {
         params.group
+    } else {
+        None
+    };
+    let legacy_precon = if params.precons.is_empty() {
+        params.precon.clone()
     } else {
         None
     };
@@ -1015,7 +1148,7 @@ fn search_crypt_inner(
         Box::new(params.capacity_max),
         Box::new(params.title.clone()),
         Box::new(params.set.clone()),
-        Box::new(params.precon.clone()),
+        Box::new(legacy_precon),
         Box::new(params.artist.clone()),
         Box::new(params.text_regex as i64),
         Box::new(params.set_age.as_sql_value()),
@@ -1025,6 +1158,7 @@ fn search_crypt_inner(
     push_group_filter(&mut sql, &mut bound, &params.groups);
     push_crypt_sect_filter(&mut sql, &mut bound, &params.sects, params.sect_logic);
     push_trait_filters(&mut sql, &mut bound, &params.traits);
+    push_exact_precon_filter(&mut sql, &mut bound, &params.precons, params.precon_print);
     for requirement in effective_discipline_requirements(
         &params.discipline_requirements,
         &params.disciplines,
@@ -1084,6 +1218,11 @@ fn search_library_inner(
     limited: bool,
 ) -> rusqlite::Result<Vec<LibraryCard>> {
     let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
+    let legacy_precon = if params.precons.is_empty() {
+        params.precon.clone()
+    } else {
+        None
+    };
     let blood_cost = params.blood_cost.or(params.blood_cost_max);
     let blood_cost_mode = if params.blood_cost.is_some() {
         params.blood_cost_mode
@@ -1173,13 +1312,14 @@ fn search_library_inner(
         Box::new(pool_cost),
         Box::new(pool_cost_mode.as_sql_value()),
         Box::new(params.set.clone()),
-        Box::new(params.precon.clone()),
+        Box::new(legacy_precon),
         Box::new(params.artist.clone()),
         Box::new(params.text_regex as i64),
         Box::new(params.set_age.as_sql_value()),
         Box::new(params.set_print.as_sql_value()),
     ];
     push_library_discipline_filter(&mut sql, &mut bound, params);
+    push_exact_precon_filter(&mut sql, &mut bound, &params.precons, params.precon_print);
     push_library_requirement_filter(
         &mut sql,
         &mut bound,
@@ -1897,6 +2037,117 @@ mod tests {
         let results = search_crypt(&conn, &params).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].name, "Abaddon");
+    }
+
+    #[test]
+    fn exact_precons_deserialize_for_rest_and_mcp() {
+        let rest: CryptSearchParams = serde_urlencoded::from_str(
+            "precons=Fifth+Edition%3AVentrue%2CNew+Blood%3AVentrue&precon_print=reprint",
+        )
+        .unwrap();
+        assert_eq!(
+            rest.precons,
+            vec![
+                PreconSelection {
+                    set: "Fifth Edition".into(),
+                    precon: "Ventrue".into(),
+                },
+                PreconSelection {
+                    set: "New Blood".into(),
+                    precon: "Ventrue".into(),
+                },
+            ]
+        );
+        assert_eq!(rest.precon_print, SetPrintMode::Reprint);
+
+        let mcp: LibrarySearchParams = serde_json::from_str(
+            r#"{"precons":[{"set":"New Blood","precon":"Malkavian"}],"precon_print":"first"}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            mcp.precons,
+            vec![PreconSelection {
+                set: "New Blood".into(),
+                precon: "Malkavian".into(),
+            }]
+        );
+        assert_eq!(mcp.precon_print, SetPrintMode::First);
+        assert!(serde_urlencoded::from_str::<CryptSearchParams>("precons=Ventrue").is_err());
+    }
+
+    #[test]
+    fn crypt_exact_precons_use_or_and_vdb_print_modes() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        conn.execute_batch(
+            "INSERT INTO sets VALUES (3,'New Blood','2022-04-17');
+             INSERT INTO printings VALUES (1,3,'Ventrue','C',0);",
+        )
+        .unwrap();
+
+        let selection = |set: &str, precon: &str| PreconSelection {
+            set: set.into(),
+            precon: precon.into(),
+        };
+        let names = |params: CryptSearchParams| {
+            search_crypt(&conn, &params)
+                .unwrap()
+                .into_iter()
+                .map(|card| card.name)
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            names(CryptSearchParams {
+                precons: vec![selection("New Blood", "Ventrue")],
+                ..Default::default()
+            }),
+            vec!["Aaradhya"]
+        );
+        assert!(names(CryptSearchParams {
+            precons: vec![selection("Fifth Edition", "Ventrue")],
+            ..Default::default()
+        })
+        .is_empty());
+        assert_eq!(
+            names(CryptSearchParams {
+                precons: vec![
+                    selection("Anarch Revolt", "Anarch Precon"),
+                    selection("New Blood", "Ventrue"),
+                ],
+                ..Default::default()
+            }),
+            vec!["Aaradhya", "Abaddon"]
+        );
+        assert!(names(CryptSearchParams {
+            precons: vec![selection("New Blood", "Ventrue")],
+            precon_print: SetPrintMode::Only,
+            ..Default::default()
+        })
+        .is_empty());
+        assert!(names(CryptSearchParams {
+            precons: vec![selection("New Blood", "Ventrue")],
+            precon_print: SetPrintMode::First,
+            ..Default::default()
+        })
+        .is_empty());
+        assert_eq!(
+            names(CryptSearchParams {
+                precons: vec![selection("New Blood", "Ventrue")],
+                precon_print: SetPrintMode::Reprint,
+                ..Default::default()
+            }),
+            vec!["Aaradhya"]
+        );
+        assert_eq!(
+            names(CryptSearchParams {
+                precon: Some("does not match".into()),
+                precons: vec![selection("Anarch Revolt", "Anarch Precon")],
+                precon_print: SetPrintMode::Only,
+                ..Default::default()
+            }),
+            vec!["Abaddon"]
+        );
     }
 
     #[test]
@@ -2794,6 +3045,28 @@ mod tests {
             ..Default::default()
         };
         assert!(search_library(&conn, &params).unwrap().is_empty());
+    }
+
+    #[test]
+    fn library_exact_precon_filter_uses_the_same_print_history() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        conn.execute_batch(
+            "INSERT INTO sets VALUES (3,'New Blood','2022-04-17');
+             INSERT INTO printings VALUES (3,3,'Ventrue','C',0);",
+        )
+        .unwrap();
+        let params = LibrarySearchParams {
+            precons: vec![PreconSelection {
+                set: "New Blood".into(),
+                precon: "Ventrue".into(),
+            }],
+            precon_print: SetPrintMode::Reprint,
+            ..Default::default()
+        };
+        let results = search_library(&conn, &params).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "Villein");
     }
 
     #[test]

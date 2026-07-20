@@ -9,6 +9,12 @@ import {
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 import { appendLibraryRequirementFilter, type RequirementLogic } from './requirementFilter'
 import { appendTraitFilters, listCardTraits } from './cardTraits'
+import {
+  appendExactPreconFilter,
+  listSearchPrecons,
+  type PreconOption,
+  type PreconSelection,
+} from './preconFilter'
 
 export type TextMode = 'any' | 'name' | 'text'
 export type CostMode = 'at_most' | 'exact' | 'at_least'
@@ -41,6 +47,8 @@ export interface LibraryFilters {
   setAge: SetAgeMode
   setPrint: SetPrintMode
   precon: string | null
+  precons: PreconSelection[]
+  preconPrint: SetPrintMode
   artist: string | null
   sort: LibrarySort
 }
@@ -71,6 +79,8 @@ export const emptyLibraryFilters: LibraryFilters = {
   setAge: defaultSetAge,
   setPrint: defaultSetPrint,
   precon: null,
+  precons: [],
+  preconPrint: defaultSetPrint,
   artist: null,
   sort: 'name',
 }
@@ -146,6 +156,7 @@ export async function filterLibrary(filters: LibraryFilters): Promise<LibraryCar
 
 async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Promise<LibraryCard[]> {
   const typePattern = filters.cardType ? `%"${filters.cardType}"%` : null
+  const legacyPrecon = filters.precons.length === 0 ? filters.precon : null
   // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. NULL
   // costs and the variable cost "X" (CAST('X') is 0) never match a numeric
   // filter — mirrors server/src/cards_db.rs exactly. Per-discipline EXISTS
@@ -219,7 +230,7 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
     filters.poolCost,
     filters.poolCostMode,
     filters.set,
-    filters.precon,
+    legacyPrecon,
     filters.artist,
     filters.textRegex ? 1 : 0,
     filters.setAge,
@@ -250,6 +261,7 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
     'title',
   )
   sql = appendTraitFilters(sql, params, filters.traits)
+  sql = appendExactPreconFilter(sql, params, filters.precons, filters.preconPrint)
   if (filters.capacityRequirement !== null) {
     params.push(filters.capacityRequirement)
     const placeholder = `?${params.length}`
@@ -324,11 +336,8 @@ export async function listSets(): Promise<string[]> {
   return rows.map((r) => r.name)
 }
 
-export async function listPrecons(): Promise<string[]> {
-  const rows = await query<{ precon: string }>(
-    `SELECT DISTINCT precon FROM printings WHERE precon IS NOT NULL ORDER BY precon`,
-  )
-  return rows.map((r) => r.precon)
+export async function listPrecons(): Promise<PreconOption[]> {
+  return listSearchPrecons()
 }
 
 export async function listArtists(): Promise<string[]> {

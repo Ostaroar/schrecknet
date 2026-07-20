@@ -10,6 +10,12 @@ import {
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 import type { RequirementLogic } from './requirementFilter'
 import { appendTraitFilters, listCardTraits } from './cardTraits'
+import {
+  appendExactPreconFilter,
+  listSearchPrecons,
+  type PreconOption,
+  type PreconSelection,
+} from './preconFilter'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
@@ -43,6 +49,8 @@ export interface CryptFilters {
   setAge: SetAgeMode
   setPrint: SetPrintMode
   precon: string | null
+  precons: PreconSelection[]
+  preconPrint: SetPrintMode
   artist: string | null
   sort: CryptSort
 }
@@ -69,6 +77,8 @@ export const emptyCryptFilters: CryptFilters = {
   setAge: defaultSetAge,
   setPrint: defaultSetPrint,
   precon: null,
+  precons: [],
+  preconPrint: defaultSetPrint,
   artist: null,
   sort: 'capacity_desc',
 }
@@ -161,6 +171,7 @@ export async function filterCrypt(filters: CryptFilters): Promise<CryptCard[]> {
 
 async function searchCryptInner(filters: CryptFilters, limited: boolean): Promise<CryptCard[]> {
   const singleGroup = filters.groups.length === 0 ? filters.group : null
+  const legacyPrecon = filters.precons.length === 0 ? filters.precon : null
   let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
             c.image_url,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
@@ -224,7 +235,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     filters.capacityMax,
     filters.title,
     filters.set,
-    filters.precon,
+    legacyPrecon,
     filters.artist,
     filters.textRegex ? 1 : 0,
     filters.setAge,
@@ -241,6 +252,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
   }
   sql = appendCryptSectFilter(sql, params, filters.sects, filters.sectLogic)
   sql = appendTraitFilters(sql, params, filters.traits)
+  sql = appendExactPreconFilter(sql, params, filters.precons, filters.preconPrint)
   sql = appendDisciplineFilters(
     sql,
     params,
@@ -304,11 +316,8 @@ export async function listSets(): Promise<string[]> {
   return rows.map((r) => r.name)
 }
 
-export async function listPrecons(): Promise<string[]> {
-  const rows = await query<{ precon: string }>(
-    `SELECT DISTINCT precon FROM printings WHERE precon IS NOT NULL ORDER BY precon`,
-  )
-  return rows.map((r) => r.precon)
+export async function listPrecons(): Promise<PreconOption[]> {
+  return listSearchPrecons()
 }
 
 export async function listArtists(): Promise<string[]> {

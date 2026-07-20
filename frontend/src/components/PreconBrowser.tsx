@@ -12,8 +12,8 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
     setCrypt(null)
     setLibrary(null)
     Promise.all([
-      searchCrypt({ ...emptyCryptFilters, set, precon }),
-      searchLibrary({ ...emptyLibraryFilters, set, precon }),
+      searchCrypt({ ...emptyCryptFilters, precons: [{ set, precon }] }),
+      searchLibrary({ ...emptyLibraryFilters, precons: [{ set, precon }] }),
     ]).then(([c, l]) => {
       setCrypt(c)
       setLibrary(l)
