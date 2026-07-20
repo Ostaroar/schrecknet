@@ -35,7 +35,7 @@ import {
 } from '../lib/semanticSearch'
 import type { DisciplineRequirement } from '../lib/disciplineFilter'
 import type { RequirementLogic } from '../lib/requirementFilter'
-import { sortCryptResults } from '../lib/searchSort'
+import { orderCryptCards } from '../lib/core'
 import { useSearchDeck } from '../lib/useSearchDeck'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 import { DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
@@ -172,10 +172,7 @@ export default function CryptSearch() {
     sort,
   ])
 
-  const displayResults = useMemo(
-    () => (sort === 'relevance' ? results : sortCryptResults(results, sort)),
-    [results, sort],
-  )
+  const displayResults = results
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -192,6 +189,7 @@ export default function CryptSearch() {
         searchSemanticCrypt(text, filters, (progress) => {
           if (!cancelled) setSemanticProgress(progress)
         })
+          .then((rows) => (sort === 'relevance' ? rows : orderCryptCards(rows, sort)))
           .then((rows) => {
             if (cancelled) return
             setResults(rows)

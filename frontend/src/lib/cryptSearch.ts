@@ -16,6 +16,7 @@ import {
   type PreconOption,
   type PreconSelection,
 } from './preconFilter'
+import { orderCryptCards } from './core'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
@@ -111,24 +112,8 @@ interface CryptRow {
   sect: string | null
   votes: number
   image_url: string | null
+  name_ascii: string
   disc: string | null
-}
-
-function cryptOrderBy(sort: CryptSort): string {
-  switch (sort) {
-    case 'capacity_asc':
-      return 'c.capacity ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-    case 'clan':
-      return 'c.clan COLLATE NOCASE ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-    case 'group':
-      return 'c.grp ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-    case 'name':
-      return 'c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-    case 'sect':
-      return 'c.sect COLLATE NOCASE ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-    case 'capacity_desc':
-      return 'c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-  }
 }
 
 function appendCryptSectFilter(
@@ -173,7 +158,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
   const singleGroup = filters.groups.length === 0 ? filters.group : null
   const legacyPrecon = filters.precons.length === 0 ? filters.precon : null
   let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
-            c.image_url,
+            c.image_url, c.name_ascii,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
@@ -261,11 +246,16 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     filters.disciplinesSuperior,
     filters.disciplineOr,
   )
-  sql += ` GROUP BY c.id ORDER BY ${cryptOrderBy(filters.sort)}`
-  if (limited) sql += ` LIMIT 200`
+  sql += ` GROUP BY c.id`
 
   const rows = await query<CryptRow>(sql, params)
-  return rows.map((r) => ({ ...r, disciplines: parseDisciplines(r.disc) }))
+  const cards = rows.map(({ name_ascii: _sortName, disc, ...row }) => ({
+    ...row,
+    disciplines: parseDisciplines(disc),
+  }))
+  const sortNames = new Map(rows.map((row) => [row.id, row.name_ascii]))
+  const ordered = await orderCryptCards(cards, filters.sort, sortNames)
+  return limited ? ordered.slice(0, 200) : ordered
 }
 
 export async function listClans(): Promise<string[]> {

@@ -38,6 +38,10 @@ docs/feature-parity.md's scope note).
 - ☑ Regex search mode (`text_regex`, all three surfaces) — first justified new
   dependency (the `regex` crate, server-side only; browser reuses native
   `RegExp`), documented in docs/adr/0005-regex-crate-for-search.md
+- ☑ Shared native/WASM result ordering: crypt and library sort modes now use
+  `core/src/search_sort.rs` on both server and browser, replacing duplicated
+  TypeScript and SQL `ORDER BY` implementations; filter/query planning remains
+  the next Rust-core migration boundary
 - ☑ Offline semantic card search (additive, not vdb parity): lazy local
   all-MiniLM-L6-v2 ONNX inference, checksum-pinned build assets, ~1 MB of
   precomputed vectors in `cards.sqlite`, exact cosine ranking in shared Rust,

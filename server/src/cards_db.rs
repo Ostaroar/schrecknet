@@ -146,27 +146,14 @@ pub enum CryptSort {
 }
 
 impl CryptSort {
-    /// Static SQL only: no request value is ever interpolated into ORDER BY.
-    fn order_by(self) -> &'static str {
+    fn as_core(self) -> schrecknet_core::search_sort::CryptSort {
         match self {
-            Self::CapacityDesc => {
-                " ORDER BY c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            }
-            Self::CapacityAsc => {
-                " ORDER BY c.capacity ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            }
-            Self::Clan => {
-                " ORDER BY c.clan COLLATE NOCASE ASC, c.capacity DESC, \
-                 c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            }
-            Self::Group => {
-                " ORDER BY c.grp ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            }
-            Self::Name => " ORDER BY c.name_ascii COLLATE NOCASE ASC, c.id ASC",
-            Self::Sect => {
-                " ORDER BY c.sect COLLATE NOCASE ASC, c.capacity DESC, \
-                 c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            }
+            Self::CapacityDesc => schrecknet_core::search_sort::CryptSort::CapacityDesc,
+            Self::CapacityAsc => schrecknet_core::search_sort::CryptSort::CapacityAsc,
+            Self::Clan => schrecknet_core::search_sort::CryptSort::Clan,
+            Self::Group => schrecknet_core::search_sort::CryptSort::Group,
+            Self::Name => schrecknet_core::search_sort::CryptSort::Name,
+            Self::Sect => schrecknet_core::search_sort::CryptSort::Sect,
         }
     }
 }
@@ -628,57 +615,13 @@ pub enum LibrarySort {
 }
 
 impl LibrarySort {
-    /// Static SQL only: no request value is ever interpolated into ORDER BY.
-    fn order_by(self) -> &'static str {
+    fn as_core(self) -> schrecknet_core::search_sort::LibrarySort {
         match self {
-            Self::Requirement => concat!(
-                " ORDER BY ",
-                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
-                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
-                "disc_sort COLLATE NOCASE ASC, type_sort COLLATE NOCASE ASC, ",
-                "c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            ),
-            Self::CostDesc => concat!(
-                " ORDER BY CASE WHEN ",
-                "c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
-                "AND c.blood_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
-                "CASE WHEN c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
-                "AND c.blood_cost NOT GLOB '*[^0-9]*' ",
-                "THEN CAST(c.blood_cost AS INTEGER) END DESC, ",
-                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
-                "AND c.pool_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
-                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
-                "AND c.pool_cost NOT GLOB '*[^0-9]*' ",
-                "THEN CAST(c.pool_cost AS INTEGER) END DESC, ",
-                "type_sort COLLATE NOCASE ASC, ",
-                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
-                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
-                "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            ),
-            Self::CostAsc => concat!(
-                " ORDER BY CASE WHEN ",
-                "c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
-                "AND c.blood_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
-                "CASE WHEN c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
-                "AND c.blood_cost NOT GLOB '*[^0-9]*' ",
-                "THEN CAST(c.blood_cost AS INTEGER) END ASC, ",
-                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
-                "AND c.pool_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
-                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
-                "AND c.pool_cost NOT GLOB '*[^0-9]*' ",
-                "THEN CAST(c.pool_cost AS INTEGER) END ASC, ",
-                "type_sort COLLATE NOCASE ASC, ",
-                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
-                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
-                "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            ),
-            Self::Name => " ORDER BY c.name_ascii COLLATE NOCASE ASC, c.id ASC",
-            Self::Type => concat!(
-                " ORDER BY type_sort COLLATE NOCASE ASC, ",
-                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
-                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
-                "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
-            ),
+            Self::Requirement => schrecknet_core::search_sort::LibrarySort::Requirement,
+            Self::CostDesc => schrecknet_core::search_sort::LibrarySort::CostDesc,
+            Self::CostAsc => schrecknet_core::search_sort::LibrarySort::CostAsc,
+            Self::Name => schrecknet_core::search_sort::LibrarySort::Name,
+            Self::Type => schrecknet_core::search_sort::LibrarySort::Type,
         }
     }
 }
@@ -1086,7 +1029,8 @@ fn search_crypt_inner(
     };
     let mut sql = String::from(
         "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
-                c.image_url, GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
+                c.image_url, c.name_ascii,
+                GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'crypt'
@@ -1170,32 +1114,57 @@ fn search_crypt_inner(
         push_discipline_group(&mut sql, &mut bound, group);
     }
     sql.push_str(" GROUP BY c.id");
-    sql.push_str(params.sort.order_by());
-    if limited {
-        sql.push_str(" LIMIT 200");
-    }
 
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
         rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
-            let disc: Option<String> = row.get(9)?;
-            Ok(CryptCard {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                clan: row.get(2)?,
-                capacity: row.get(3)?,
-                group: row.get(4)?,
-                title: row.get(5)?,
-                sect: row.get(6)?,
-                votes: row.get(7)?,
-                image_url: row.get(8)?,
-                disciplines: parse_disciplines(disc),
-            })
+            let id: i64 = row.get(0)?;
+            let name: String = row.get(1)?;
+            let clan: String = row.get(2)?;
+            let capacity: i64 = row.get(3)?;
+            let group: i64 = row.get(4)?;
+            let sect: Option<String> = row.get(6)?;
+            let sort_id = u32::try_from(id).map_err(|error| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Integer,
+                    Box::new(error),
+                )
+            })?;
+            let disc: Option<String> = row.get(10)?;
+            Ok((
+                CryptCard {
+                    id,
+                    name,
+                    clan: clan.clone(),
+                    capacity,
+                    group,
+                    title: row.get(5)?,
+                    sect: sect.clone(),
+                    votes: row.get(7)?,
+                    image_url: row.get(8)?,
+                    disciplines: parse_disciplines(disc),
+                },
+                schrecknet_core::search_sort::CryptSortRecord {
+                    id: sort_id,
+                    name_ascii: row.get(9)?,
+                    clan,
+                    capacity,
+                    group,
+                    sect: sect.unwrap_or_default(),
+                },
+            ))
         },
     )?;
-
-    rows.collect()
+    let mut rows = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    rows.sort_by(|left, right| {
+        schrecknet_core::search_sort::compare_crypt(&left.1, &right.1, params.sort.as_core())
+    });
+    if limited {
+        rows.truncate(200);
+    }
+    Ok(rows.into_iter().map(|(card, _)| card).collect())
 }
 
 pub fn search_library(
@@ -1243,13 +1212,7 @@ fn search_library_inner(
     // like search_crypt — every value is bound, never interpolated.
     let mut sql = String::from(
         "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
-                c.image_url, GROUP_CONCAT(cd.discipline) AS disc,
-                (SELECT GROUP_CONCAT(ordered.discipline, ',') FROM (
-                    SELECT d2.discipline FROM card_disciplines d2
-                    WHERE d2.card_id = c.id ORDER BY d2.discipline
-                ) ordered) AS disc_sort,
-                (SELECT GROUP_CONCAT(type_entry.value, '/')
-                 FROM json_each(c.types) type_entry) AS type_sort
+                c.image_url, c.name_ascii, GROUP_CONCAT(cd.discipline) AS disc
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'library'
@@ -1351,34 +1314,61 @@ fn search_library_inner(
         bound.push(Box::new(capacity));
     }
     sql.push_str(" GROUP BY c.id");
-    sql.push_str(params.sort.order_by());
-    if limited {
-        sql.push_str(" LIMIT 200");
-    }
 
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
         rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
+            let id: i64 = row.get(0)?;
+            let name: String = row.get(1)?;
             let types_json: String = row.get(2)?;
-            let disc: Option<String> = row.get(7)?;
+            let types: Vec<String> = serde_json::from_str(&types_json).unwrap_or_default();
+            let disc: Option<String> = row.get(8)?;
+            let disciplines = disc
+                .map(|value| value.split(',').map(str::to_string).collect::<Vec<_>>())
+                .unwrap_or_default();
             let clan: Option<String> = row.get(3)?;
-            Ok(LibraryCard {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                types: serde_json::from_str(&types_json).unwrap_or_default(),
-                clan: clan.filter(|c| !c.is_empty()),
-                blood_cost: row.get(4)?,
-                pool_cost: row.get(5)?,
-                image_url: row.get(6)?,
-                disciplines: disc
-                    .map(|d| d.split(',').map(str::to_string).collect())
-                    .unwrap_or_default(),
-            })
+            let clan = clan.filter(|value| !value.is_empty());
+            let blood_cost: Option<String> = row.get(4)?;
+            let pool_cost: Option<String> = row.get(5)?;
+            let sort_id = u32::try_from(id).map_err(|error| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Integer,
+                    Box::new(error),
+                )
+            })?;
+            Ok((
+                LibraryCard {
+                    id,
+                    name,
+                    types: types.clone(),
+                    clan: clan.clone(),
+                    blood_cost: blood_cost.clone(),
+                    pool_cost: pool_cost.clone(),
+                    image_url: row.get(6)?,
+                    disciplines: disciplines.clone(),
+                },
+                schrecknet_core::search_sort::LibrarySortRecord {
+                    id: sort_id,
+                    name_ascii: row.get(7)?,
+                    types,
+                    clan: clan.unwrap_or_default(),
+                    disciplines,
+                    blood_cost,
+                    pool_cost,
+                },
+            ))
         },
     )?;
-
-    rows.collect()
+    let mut rows = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    rows.sort_by(|left, right| {
+        schrecknet_core::search_sort::compare_library(&left.1, &right.1, params.sort.as_core())
+    });
+    if limited {
+        rows.truncate(200);
+    }
+    Ok(rows.into_iter().map(|(card, _)| card).collect())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

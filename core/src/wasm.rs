@@ -129,6 +129,139 @@ pub fn draw_opening_hand(
         .map_err(|error| JsError::new(&error.to_string()))
 }
 
+fn crypt_sort_mode(value: &str) -> Result<crate::search_sort::CryptSort, JsError> {
+    match value {
+        "capacity_desc" => Ok(crate::search_sort::CryptSort::CapacityDesc),
+        "capacity_asc" => Ok(crate::search_sort::CryptSort::CapacityAsc),
+        "clan" => Ok(crate::search_sort::CryptSort::Clan),
+        "group" => Ok(crate::search_sort::CryptSort::Group),
+        "name" => Ok(crate::search_sort::CryptSort::Name),
+        "sect" => Ok(crate::search_sort::CryptSort::Sect),
+        _ => Err(JsError::new("unknown crypt sort mode")),
+    }
+}
+
+/// Returns card ids in shared VDB-compatible crypt order.
+#[wasm_bindgen]
+pub fn sort_crypt_cards(
+    card_ids: Vec<u32>,
+    names_ascii: Vec<String>,
+    clans: Vec<String>,
+    capacities: Vec<i32>,
+    groups: Vec<i32>,
+    sects: Vec<String>,
+    mode: &str,
+) -> Result<Vec<u32>, JsError> {
+    let length = card_ids.len();
+    if [
+        names_ascii.len(),
+        clans.len(),
+        capacities.len(),
+        groups.len(),
+        sects.len(),
+    ]
+    .iter()
+    .any(|&candidate| candidate != length)
+    {
+        return Err(JsError::new("mismatched crypt sort array lengths"));
+    }
+    let records = card_ids
+        .into_iter()
+        .zip(names_ascii)
+        .zip(clans)
+        .zip(capacities)
+        .zip(groups)
+        .zip(sects)
+        .map(|(((((id, name_ascii), clan), capacity), group), sect)| {
+            crate::search_sort::CryptSortRecord {
+                id,
+                name_ascii,
+                clan,
+                capacity: i64::from(capacity),
+                group: i64::from(group),
+                sect,
+            }
+        })
+        .collect::<Vec<_>>();
+    Ok(crate::search_sort::crypt_order(
+        &records,
+        crypt_sort_mode(mode)?,
+    ))
+}
+
+fn library_sort_mode(value: &str) -> Result<crate::search_sort::LibrarySort, JsError> {
+    match value {
+        "requirement" => Ok(crate::search_sort::LibrarySort::Requirement),
+        "cost_desc" => Ok(crate::search_sort::LibrarySort::CostDesc),
+        "cost_asc" => Ok(crate::search_sort::LibrarySort::CostAsc),
+        "name" => Ok(crate::search_sort::LibrarySort::Name),
+        "type" => Ok(crate::search_sort::LibrarySort::Type),
+        _ => Err(JsError::new("unknown library sort mode")),
+    }
+}
+
+fn split_sort_values(value: String) -> Vec<String> {
+    if value.is_empty() {
+        Vec::new()
+    } else {
+        value.split('\u{1f}').map(str::to_owned).collect()
+    }
+}
+
+/// Returns card ids in shared VDB-compatible library order.
+#[wasm_bindgen]
+pub fn sort_library_cards(
+    card_ids: Vec<u32>,
+    names_ascii: Vec<String>,
+    types: Vec<String>,
+    clans: Vec<String>,
+    disciplines: Vec<String>,
+    blood_costs: Vec<String>,
+    pool_costs: Vec<String>,
+    mode: &str,
+) -> Result<Vec<u32>, JsError> {
+    let length = card_ids.len();
+    if [
+        names_ascii.len(),
+        types.len(),
+        clans.len(),
+        disciplines.len(),
+        blood_costs.len(),
+        pool_costs.len(),
+    ]
+    .iter()
+    .any(|&candidate| candidate != length)
+    {
+        return Err(JsError::new("mismatched library sort array lengths"));
+    }
+    let records = card_ids
+        .into_iter()
+        .zip(names_ascii)
+        .zip(types)
+        .zip(clans)
+        .zip(disciplines)
+        .zip(blood_costs)
+        .zip(pool_costs)
+        .map(
+            |((((((id, name_ascii), types), clan), disciplines), blood_cost), pool_cost)| {
+                crate::search_sort::LibrarySortRecord {
+                    id,
+                    name_ascii,
+                    types: split_sort_values(types),
+                    clan,
+                    disciplines: split_sort_values(disciplines),
+                    blood_cost: (!blood_cost.is_empty()).then_some(blood_cost),
+                    pool_cost: (!pool_cost.is_empty()).then_some(pool_cost),
+                }
+            },
+        )
+        .collect::<Vec<_>>();
+    Ok(crate::search_sort::library_order(
+        &records,
+        library_sort_mode(mode)?,
+    ))
+}
+
 /// Quantity-weighted crypt capacity stats as `count\tmin\tmax\taverage`.
 #[wasm_bindgen]
 pub fn capacity_stats(capacities: Vec<u8>, qtys: Vec<u16>) -> Result<String, JsError> {

@@ -12,6 +12,8 @@ import init, {
   format_deck_text as formatDeckTextWasm,
   compare_decks as compareDecksWasm,
   draw_opening_hand as drawOpeningHandWasm,
+  sort_crypt_cards as sortCryptCardsWasm,
+  sort_library_cards as sortLibraryCardsWasm,
   capacity_stats as capacityStatsWasm,
   category_distribution as categoryDistributionWasm,
   rank_semantic_cards as rankSemanticCardsWasm,
@@ -138,6 +140,78 @@ export async function drawOpeningHandIds(
     seed[1],
   )
   return { cardIds: Array.from(cardIds), seed }
+}
+
+export type CryptSortMode = 'capacity_desc' | 'capacity_asc' | 'clan' | 'group' | 'name' | 'sect'
+
+interface CryptSortable {
+  id: number
+  name: string
+  clan: string
+  capacity: number
+  grp: number
+  sect: string | null
+}
+
+function reorderByIds<T extends { id: number }>(cards: T[], orderedIds: Uint32Array): T[] {
+  const byId = new Map(cards.map((card) => [card.id, card]))
+  return Array.from(orderedIds, (id) => {
+    const card = byId.get(id)
+    if (!card) throw new Error(`sort returned unknown card id ${id}`)
+    return card
+  })
+}
+
+/** Applies the same Rust crypt ordering used by the native search service. */
+export async function orderCryptCards<T extends CryptSortable>(
+  cards: T[],
+  mode: CryptSortMode,
+  sortNames: ReadonlyMap<number, string> = new Map(),
+): Promise<T[]> {
+  await ensureReady()
+  const orderedIds = sortCryptCardsWasm(
+    new Uint32Array(cards.map((card) => card.id)),
+    cards.map((card) => sortNames.get(card.id) ?? card.name),
+    cards.map((card) => card.clan),
+    new Int32Array(cards.map((card) => card.capacity)),
+    new Int32Array(cards.map((card) => card.grp)),
+    cards.map((card) => card.sect ?? ''),
+    mode,
+  )
+  return reorderByIds(cards, orderedIds)
+}
+
+export type LibrarySortMode = 'requirement' | 'cost_desc' | 'cost_asc' | 'name' | 'type'
+
+interface LibrarySortable {
+  id: number
+  name: string
+  types: string[]
+  clan: string | null
+  disciplines: string[]
+  blood_cost: string | null
+  pool_cost: string | null
+}
+
+/** Applies the same Rust library ordering used by the native search service. */
+export async function orderLibraryCards<T extends LibrarySortable>(
+  cards: T[],
+  mode: LibrarySortMode,
+  sortNames: ReadonlyMap<number, string> = new Map(),
+): Promise<T[]> {
+  await ensureReady()
+  const separator = '\u001f'
+  const orderedIds = sortLibraryCardsWasm(
+    new Uint32Array(cards.map((card) => card.id)),
+    cards.map((card) => sortNames.get(card.id) ?? card.name),
+    cards.map((card) => card.types.join(separator)),
+    cards.map((card) => card.clan ?? ''),
+    cards.map((card) => card.disciplines.join(separator)),
+    cards.map((card) => card.blood_cost ?? ''),
+    cards.map((card) => card.pool_cost ?? ''),
+    mode,
+  )
+  return reorderByIds(cards, orderedIds)
 }
 
 export interface CapacityStats {

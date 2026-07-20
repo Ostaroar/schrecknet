@@ -37,7 +37,7 @@ import {
 } from '../lib/semanticSearch'
 import type { LibraryDisciplineLogic } from '../lib/disciplineFilter'
 import type { RequirementLogic } from '../lib/requirementFilter'
-import { sortLibraryResults } from '../lib/searchSort'
+import { orderLibraryCards } from '../lib/core'
 import { useSearchDeck } from '../lib/useSearchDeck'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 import { CardTypeSummary, DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
@@ -305,10 +305,7 @@ export default function LibrarySearch() {
     sort,
   ])
 
-  const displayResults = useMemo(
-    () => (sort === 'relevance' ? results : sortLibraryResults(results, sort)),
-    [results, sort],
-  )
+  const displayResults = results
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -340,6 +337,7 @@ export default function LibrarySearch() {
         searchSemanticLibrary(text, filters, (progress) => {
           if (!cancelled) setSemanticProgress(progress)
         })
+          .then((rows) => (sort === 'relevance' ? rows : orderLibraryCards(rows, sort)))
           .then((rows) => {
             if (cancelled) return
             setResults(rows)

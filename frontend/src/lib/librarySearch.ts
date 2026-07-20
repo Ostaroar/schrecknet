@@ -15,6 +15,7 @@ import {
   type PreconOption,
   type PreconSelection,
 } from './preconFilter'
+import { orderLibraryCards } from './core'
 
 export type TextMode = 'any' | 'name' | 'text'
 export type CostMode = 'at_most' | 'exact' | 'at_least'
@@ -104,45 +105,8 @@ interface LibraryRow {
   blood_cost: string | null
   pool_cost: string | null
   image_url: string | null
+  name_ascii: string
   disc: string | null
-}
-
-function libraryOrderBy(sort: LibrarySort): string {
-  const name = 'c.name_ascii COLLATE NOCASE ASC, c.id ASC'
-  const type = `type_sort COLLATE NOCASE ASC,
-    CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC,
-    c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC,
-    disc_sort COLLATE NOCASE ASC, ${name}`
-  const requirement = `CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC,
-    c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC,
-    disc_sort COLLATE NOCASE ASC,
-    type_sort COLLATE NOCASE ASC, ${name}`
-  const numericCosts = (direction: 'ASC' | 'DESC') => `CASE
-      WHEN c.blood_cost IS NOT NULL AND c.blood_cost != ''
-        AND c.blood_cost NOT GLOB '*[^0-9]*' THEN 0
-      ELSE 1 END ASC,
-    CASE WHEN c.blood_cost IS NOT NULL AND c.blood_cost != ''
-      AND c.blood_cost NOT GLOB '*[^0-9]*'
-      THEN CAST(c.blood_cost AS INTEGER) END ${direction},
-    CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != ''
-      AND c.pool_cost NOT GLOB '*[^0-9]*' THEN 0
-      ELSE 1 END ASC,
-    CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != ''
-      AND c.pool_cost NOT GLOB '*[^0-9]*'
-      THEN CAST(c.pool_cost AS INTEGER) END ${direction},
-    ${type}`
-  switch (sort) {
-    case 'requirement':
-      return requirement
-    case 'cost_desc':
-      return numericCosts('DESC')
-    case 'cost_asc':
-      return numericCosts('ASC')
-    case 'type':
-      return type
-    case 'name':
-      return name
-  }
 }
 
 export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCard[]> {
@@ -162,13 +126,7 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
   // filter — mirrors server/src/cards_db.rs exactly. Per-discipline EXISTS
   // clauses are built dynamically like searchCrypt — every value is bound.
   let sql = `SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
-            c.image_url, GROUP_CONCAT(cd.discipline) AS disc,
-            (SELECT GROUP_CONCAT(ordered.discipline, ',') FROM (
-                SELECT d2.discipline FROM card_disciplines d2
-                WHERE d2.card_id = c.id ORDER BY d2.discipline
-            ) ordered) AS disc_sort,
-            (SELECT GROUP_CONCAT(type_entry.value, '/')
-             FROM json_each(c.types) type_entry) AS type_sort
+            c.image_url, c.name_ascii, GROUP_CONCAT(cd.discipline) AS disc
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
      WHERE c.kind = 'library'
@@ -272,16 +230,18 @@ async function searchLibraryInner(filters: LibraryFilters, limited: boolean): Pr
               WHERE ccr.card_id = c.id AND ccr.${column} IS NOT NULL
                 AND ccr.${column} ${operator} ${placeholder})`
   }
-  sql += ` GROUP BY c.id ORDER BY ${libraryOrderBy(filters.sort)}`
-  if (limited) sql += ` LIMIT 200`
+  sql += ` GROUP BY c.id`
 
   const rows = await query<LibraryRow>(sql, params)
-  return rows.map((r) => ({
-    ...r,
-    types: JSON.parse(r.types) as string[],
-    clan: r.clan || null,
-    disciplines: r.disc ? r.disc.split(',') : [],
+  const cards = rows.map(({ name_ascii: _sortName, disc, ...row }) => ({
+    ...row,
+    types: JSON.parse(row.types) as string[],
+    clan: row.clan || null,
+    disciplines: disc ? disc.split(',') : [],
   }))
+  const sortNames = new Map(rows.map((row) => [row.id, row.name_ascii]))
+  const ordered = await orderLibraryCards(cards, filters.sort, sortNames)
+  return limited ? ordered.slice(0, 200) : ordered
 }
 
 export async function listLibraryTypes(): Promise<string[]> {
