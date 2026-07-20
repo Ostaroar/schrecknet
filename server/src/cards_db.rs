@@ -97,6 +97,9 @@ pub struct CryptSearchParams {
     /// artist matches.
     #[serde(default)]
     pub artist: Option<String>,
+    /// Explicit VDB-compatible result ordering. Defaults to capacity_desc.
+    #[serde(default)]
+    pub sort: CryptSort,
 }
 
 /// Scope of the `text` filter on crypt search.
@@ -110,6 +113,51 @@ pub enum TextMode {
     Name,
     /// Match card text only.
     Text,
+}
+
+/// VDB-compatible exact crypt-search ordering.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CryptSort {
+    /// Highest capacity first (default), then name.
+    #[default]
+    CapacityDesc,
+    /// Lowest capacity first, then name.
+    CapacityAsc,
+    /// Clan, then capacity descending, then name.
+    Clan,
+    /// Group, then capacity descending, then name.
+    Group,
+    /// Canonical card name.
+    Name,
+    /// Sect, then capacity descending, then name.
+    Sect,
+}
+
+impl CryptSort {
+    /// Static SQL only: no request value is ever interpolated into ORDER BY.
+    fn order_by(self) -> &'static str {
+        match self {
+            Self::CapacityDesc => {
+                " ORDER BY c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            }
+            Self::CapacityAsc => {
+                " ORDER BY c.capacity ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            }
+            Self::Clan => {
+                " ORDER BY c.clan COLLATE NOCASE ASC, c.capacity DESC, \
+                 c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            }
+            Self::Group => {
+                " ORDER BY c.grp ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            }
+            Self::Name => " ORDER BY c.name_ascii COLLATE NOCASE ASC, c.id ASC",
+            Self::Sect => {
+                " ORDER BY c.sect COLLATE NOCASE ASC, c.capacity DESC, \
+                 c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            }
+        }
+    }
 }
 
 /// Set logic for library discipline requirements, matching VDB's selector.
@@ -379,6 +427,7 @@ pub struct CryptCard {
     pub title: Option<String>,
     pub sect: Option<String>,
     pub votes: i64,
+    pub image_url: Option<String>,
     pub disciplines: Vec<Discipline>,
 }
 
@@ -483,6 +532,82 @@ pub struct LibrarySearchParams {
     /// artist matches.
     #[serde(default)]
     pub artist: Option<String>,
+    /// Explicit VDB-compatible result ordering. Defaults to name.
+    #[serde(default)]
+    pub sort: LibrarySort,
+}
+
+/// VDB-compatible exact library-search ordering.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LibrarySort {
+    /// Clan/path requirement, discipline requirement, type, then name.
+    Requirement,
+    /// Numeric blood/pool costs descending; X and absent costs follow.
+    CostDesc,
+    /// Numeric blood/pool costs ascending; X and absent costs follow.
+    CostAsc,
+    /// Canonical card name (default).
+    #[default]
+    Name,
+    /// Card type, then clan/discipline requirement, then name.
+    Type,
+}
+
+impl LibrarySort {
+    /// Static SQL only: no request value is ever interpolated into ORDER BY.
+    fn order_by(self) -> &'static str {
+        match self {
+            Self::Requirement => concat!(
+                " ORDER BY ",
+                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
+                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
+                "disc_sort COLLATE NOCASE ASC, c.types COLLATE NOCASE ASC, ",
+                "c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            ),
+            Self::CostDesc => concat!(
+                " ORDER BY CASE WHEN ",
+                "c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
+                "AND c.blood_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
+                "CASE WHEN c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
+                "AND c.blood_cost NOT GLOB '*[^0-9]*' ",
+                "THEN CAST(c.blood_cost AS INTEGER) END DESC, ",
+                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
+                "AND c.pool_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
+                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
+                "AND c.pool_cost NOT GLOB '*[^0-9]*' ",
+                "THEN CAST(c.pool_cost AS INTEGER) END DESC, ",
+                "c.types COLLATE NOCASE ASC, ",
+                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
+                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
+                "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            ),
+            Self::CostAsc => concat!(
+                " ORDER BY CASE WHEN ",
+                "c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
+                "AND c.blood_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
+                "CASE WHEN c.blood_cost IS NOT NULL AND c.blood_cost != '' ",
+                "AND c.blood_cost NOT GLOB '*[^0-9]*' ",
+                "THEN CAST(c.blood_cost AS INTEGER) END ASC, ",
+                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
+                "AND c.pool_cost NOT GLOB '*[^0-9]*' THEN 0 ELSE 1 END ASC, ",
+                "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
+                "AND c.pool_cost NOT GLOB '*[^0-9]*' ",
+                "THEN CAST(c.pool_cost AS INTEGER) END ASC, ",
+                "c.types COLLATE NOCASE ASC, ",
+                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
+                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
+                "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            ),
+            Self::Name => " ORDER BY c.name_ascii COLLATE NOCASE ASC, c.id ASC",
+            Self::Type => concat!(
+                " ORDER BY c.types COLLATE NOCASE ASC, ",
+                "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
+                "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
+                "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -493,6 +618,7 @@ pub struct LibraryCard {
     pub clan: Option<String>,
     pub blood_cost: Option<String>,
     pub pool_cost: Option<String>,
+    pub image_url: Option<String>,
     pub disciplines: Vec<String>,
 }
 
@@ -827,7 +953,7 @@ fn search_crypt_inner(
     };
     let mut sql = String::from(
         "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
-                GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
+                c.image_url, GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'crypt'
@@ -909,7 +1035,8 @@ fn search_crypt_inner(
     for group in &params.discipline_or {
         push_discipline_group(&mut sql, &mut bound, group);
     }
-    sql.push_str(" GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC");
+    sql.push_str(" GROUP BY c.id");
+    sql.push_str(params.sort.order_by());
     if limited {
         sql.push_str(" LIMIT 200");
     }
@@ -918,7 +1045,7 @@ fn search_crypt_inner(
     let rows = stmt.query_map(
         rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
-            let disc: Option<String> = row.get(8)?;
+            let disc: Option<String> = row.get(9)?;
             Ok(CryptCard {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -928,6 +1055,7 @@ fn search_crypt_inner(
                 title: row.get(5)?,
                 sect: row.get(6)?,
                 votes: row.get(7)?,
+                image_url: row.get(8)?,
                 disciplines: parse_disciplines(disc),
             })
         },
@@ -976,7 +1104,11 @@ fn search_library_inner(
     // like search_crypt — every value is bound, never interpolated.
     let mut sql = String::from(
         "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
-                GROUP_CONCAT(cd.discipline) AS disc
+                c.image_url, GROUP_CONCAT(cd.discipline) AS disc,
+                (SELECT GROUP_CONCAT(ordered.discipline, ',') FROM (
+                    SELECT d2.discipline FROM card_disciplines d2
+                    WHERE d2.card_id = c.id ORDER BY d2.discipline
+                ) ordered) AS disc_sort
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'library'
@@ -1076,7 +1208,8 @@ fn search_library_inner(
         ));
         bound.push(Box::new(capacity));
     }
-    sql.push_str(" GROUP BY c.id ORDER BY c.name ASC");
+    sql.push_str(" GROUP BY c.id");
+    sql.push_str(params.sort.order_by());
     if limited {
         sql.push_str(" LIMIT 200");
     }
@@ -1086,7 +1219,7 @@ fn search_library_inner(
         rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
         |row| {
             let types_json: String = row.get(2)?;
-            let disc: Option<String> = row.get(6)?;
+            let disc: Option<String> = row.get(7)?;
             let clan: Option<String> = row.get(3)?;
             Ok(LibraryCard {
                 id: row.get(0)?,
@@ -1095,6 +1228,7 @@ fn search_library_inner(
                 clan: clan.filter(|c| !c.is_empty()),
                 blood_cost: row.get(4)?,
                 pool_cost: row.get(5)?,
+                image_url: row.get(6)?,
                 disciplines: disc
                     .map(|d| d.split(',').map(str::to_string).collect())
                     .unwrap_or_default(),
@@ -1170,7 +1304,8 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE cards(id INT, kind TEXT, name TEXT, name_ascii TEXT, card_text TEXT,
                clan TEXT, capacity INT, grp INT, title TEXT,
-               types TEXT, blood_cost TEXT, pool_cost TEXT, sect TEXT, votes INT);
+               types TEXT, blood_cost TEXT, pool_cost TEXT, sect TEXT, votes INT,
+               image_url TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              CREATE TABLE card_capacity_requirements(
                card_id INT PRIMARY KEY, min_capacity INT, max_capacity INT);
@@ -1183,11 +1318,11 @@ mod tests {
              CREATE TABLE artists(id INT, name TEXT);
              CREATE TABLE card_artists(card_id INT, artist_id INT);
              INSERT INTO cards VALUES
-               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL,'Sabbat',3),
-               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL,'Independent',0),
-               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL),
-               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL,NULL,NULL),
-               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL);
+               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL,'Sabbat',3,'https://static.krcg.org/card/1.jpg'),
+               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL,'Independent',0,NULL),
+               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL,'https://static.krcg.org/card/3.jpg'),
+               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL,NULL,NULL,NULL),
+               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL,NULL);
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);
              INSERT INTO card_traits VALUES
                (1,'1 bleed'),(1,'unlock'),(2,'maneuver'),
@@ -1213,6 +1348,97 @@ mod tests {
         assert_eq!(
             results.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
             vec!["Aaradhya", "Abaddon"]
+        );
+    }
+
+    #[test]
+    fn crypt_sort_modes_match_vdb_grouping_and_tie_breaks() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let cases = [
+            (CryptSort::CapacityDesc, vec!["Aaradhya", "Abaddon"]),
+            (CryptSort::CapacityAsc, vec!["Abaddon", "Aaradhya"]),
+            (CryptSort::Clan, vec!["Abaddon", "Aaradhya"]),
+            (CryptSort::Group, vec!["Aaradhya", "Abaddon"]),
+            (CryptSort::Name, vec!["Aaradhya", "Abaddon"]),
+            (CryptSort::Sect, vec!["Abaddon", "Aaradhya"]),
+        ];
+
+        for (sort, expected) in cases {
+            let results = search_crypt(
+                &conn,
+                &CryptSearchParams {
+                    sort,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                results
+                    .iter()
+                    .map(|card| card.name.as_str())
+                    .collect::<Vec<_>>(),
+                expected,
+                "unexpected order for {sort:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn crypt_sort_defaults_and_deserializes_for_rest_and_mcp() {
+        assert_eq!(CryptSearchParams::default().sort, CryptSort::CapacityDesc);
+        let cases = [
+            ("capacity_desc", CryptSort::CapacityDesc),
+            ("capacity_asc", CryptSort::CapacityAsc),
+            ("clan", CryptSort::Clan),
+            ("group", CryptSort::Group),
+            ("name", CryptSort::Name),
+            ("sect", CryptSort::Sect),
+        ];
+
+        for (value, expected) in cases {
+            let rest: CryptSearchParams =
+                serde_urlencoded::from_str(&format!("sort={value}")).unwrap();
+            let mcp: CryptSearchParams =
+                serde_json::from_str(&format!(r#"{{"sort":"{value}"}}"#)).unwrap();
+            assert_eq!(rest.sort, expected);
+            assert_eq!(mcp.sort, expected);
+        }
+    }
+
+    #[test]
+    fn exact_search_image_urls_roundtrip_for_both_card_kinds() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+
+        let crypt = search_crypt(&conn, &CryptSearchParams::default()).unwrap();
+        assert_eq!(
+            crypt
+                .iter()
+                .find(|card| card.id == 1)
+                .unwrap()
+                .image_url
+                .as_deref(),
+            Some("https://static.krcg.org/card/1.jpg")
+        );
+        assert_eq!(
+            crypt.iter().find(|card| card.id == 2).unwrap().image_url,
+            None
+        );
+
+        let library = search_library(&conn, &LibrarySearchParams::default()).unwrap();
+        assert_eq!(
+            library
+                .iter()
+                .find(|card| card.id == 3)
+                .unwrap()
+                .image_url
+                .as_deref(),
+            Some("https://static.krcg.org/card/3.jpg")
+        );
+        assert_eq!(
+            library.iter().find(|card| card.id == 4).unwrap().image_url,
+            None
         );
     }
 
@@ -1684,7 +1910,7 @@ mod tests {
         // match here).
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL,'Anarch',0);
+               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL,'Anarch',0,NULL);
              INSERT INTO printings VALUES (6,1,NULL,'C',1), (6,2,'Anarch Precon','U',0);",
         )
         .unwrap();
@@ -1868,6 +2094,119 @@ mod tests {
         );
     }
 
+    fn seed_library_sort_cards(conn: &Connection) {
+        conn.execute_batch(
+            "INSERT INTO cards VALUES
+               (20,'library','Alpha Numeric Low','alpha numeric low','sort fixture','',NULL,NULL,NULL,'[\"Action\"]','1','3',NULL,NULL,NULL),
+               (21,'library','Beta Numeric High','beta numeric high','sort fixture','',NULL,NULL,NULL,'[\"Action\"]','3','1',NULL,NULL,NULL),
+               (22,'library','Clan Required','clan required','sort fixture','Ventrue',NULL,NULL,NULL,'[\"Master\"]',NULL,'1',NULL,NULL,NULL),
+               (23,'library','Discipline Required','discipline required','sort fixture','',NULL,NULL,NULL,'[\"Combat\"]','X','2',NULL,NULL,NULL),
+               (24,'library','No Requirement','no requirement','sort fixture','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL,NULL);
+             INSERT INTO card_disciplines VALUES (23,'aus',0);",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn library_sort_modes_match_vdb_grouping_and_cost_rules() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        seed_library_sort_cards(&conn);
+        let cases = [
+            (
+                LibrarySort::Requirement,
+                vec![
+                    "Clan Required",
+                    "Discipline Required",
+                    "Alpha Numeric Low",
+                    "Beta Numeric High",
+                    "No Requirement",
+                ],
+            ),
+            (
+                LibrarySort::CostDesc,
+                vec![
+                    "Beta Numeric High",
+                    "Alpha Numeric Low",
+                    "Discipline Required",
+                    "Clan Required",
+                    "No Requirement",
+                ],
+            ),
+            (
+                LibrarySort::CostAsc,
+                vec![
+                    "Alpha Numeric Low",
+                    "Beta Numeric High",
+                    "Clan Required",
+                    "Discipline Required",
+                    "No Requirement",
+                ],
+            ),
+            (
+                LibrarySort::Name,
+                vec![
+                    "Alpha Numeric Low",
+                    "Beta Numeric High",
+                    "Clan Required",
+                    "Discipline Required",
+                    "No Requirement",
+                ],
+            ),
+            (
+                LibrarySort::Type,
+                vec![
+                    "Alpha Numeric Low",
+                    "Beta Numeric High",
+                    "Discipline Required",
+                    "Clan Required",
+                    "No Requirement",
+                ],
+            ),
+        ];
+
+        for (sort, expected) in cases {
+            let results = search_library(
+                &conn,
+                &LibrarySearchParams {
+                    text: "sort fixture".into(),
+                    sort,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                results
+                    .iter()
+                    .map(|card| card.name.as_str())
+                    .collect::<Vec<_>>(),
+                expected,
+                "unexpected order for {sort:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn library_sort_defaults_and_deserializes_for_rest_and_mcp() {
+        assert_eq!(LibrarySearchParams::default().sort, LibrarySort::Name);
+        let cases = [
+            ("requirement", LibrarySort::Requirement),
+            ("cost_desc", LibrarySort::CostDesc),
+            ("cost_asc", LibrarySort::CostAsc),
+            ("name", LibrarySort::Name),
+            ("type", LibrarySort::Type),
+        ];
+
+        for (value, expected) in cases {
+            let rest: LibrarySearchParams =
+                serde_urlencoded::from_str(&format!("sort={value}")).unwrap();
+            let mcp: LibrarySearchParams =
+                serde_json::from_str(&format!(r#"{{"sort":"{value}"}}"#)).unwrap();
+            assert_eq!(rest.sort, expected);
+            assert_eq!(mcp.sort, expected);
+        }
+    }
+
     #[test]
     fn library_text_modes_limit_the_search_scope() {
         let conn = Connection::open_in_memory().unwrap();
@@ -1989,10 +2328,10 @@ mod tests {
     fn seed_library_filter_extras(conn: &Connection) {
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL),
-               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL,NULL,NULL),
-               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL,NULL,NULL),
-               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL,NULL,NULL);
+               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL,NULL),
+               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL,NULL,NULL,NULL),
+               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL,NULL,NULL,NULL),
+               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL,NULL,NULL,NULL);
              INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0),(8,'for',0);",
         )
         .unwrap();
@@ -2535,7 +2874,7 @@ mod tests {
         // Add a second card to the same precon, and one in a different set.
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL,'Anarch',0);
+               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL,'Anarch',0,NULL);
              INSERT INTO sets VALUES (3,'Camarilla Edition','2003-08-18');
              INSERT INTO printings VALUES
                (6,2,'Anarch Precon','U',1),
@@ -2578,13 +2917,13 @@ mod tests {
         for index in 0..205 {
             conn.execute(
                 "INSERT INTO cards VALUES
-                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL, 'Camarilla', 0)",
+                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL, 'Camarilla', 0, NULL)",
                 rusqlite::params![10_000 + index, format!("Crypt {index:03}")],
             )
             .unwrap();
             conn.execute(
                 "INSERT INTO cards VALUES
-                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL, NULL, NULL)",
+                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL, NULL, NULL, NULL)",
                 rusqlite::params![20_000 + index, format!("Library {index:03}")],
             )
             .unwrap();
@@ -2596,23 +2935,19 @@ mod tests {
                 .len(),
             200
         );
-        assert_eq!(
-            filter_crypt(&conn, &CryptSearchParams::default())
-                .unwrap()
-                .len(),
-            207
-        );
+        let crypt_candidates = filter_crypt(&conn, &CryptSearchParams::default()).unwrap();
+        assert_eq!(crypt_candidates.len(), 207);
+        assert_eq!(crypt_candidates.first().unwrap().name, "Aaradhya");
+        assert_eq!(crypt_candidates.last().unwrap().name, "Crypt 204");
         assert_eq!(
             search_library(&conn, &LibrarySearchParams::default())
                 .unwrap()
                 .len(),
             200
         );
-        assert_eq!(
-            filter_library(&conn, &LibrarySearchParams::default())
-                .unwrap()
-                .len(),
-            208
-        );
+        let library_candidates = filter_library(&conn, &LibrarySearchParams::default()).unwrap();
+        assert_eq!(library_candidates.len(), 208);
+        assert_eq!(library_candidates.first().unwrap().name, "Absolute Tyranny");
+        assert_eq!(library_candidates.last().unwrap().name, "Villein");
     }
 }
