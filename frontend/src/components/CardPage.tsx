@@ -3,6 +3,7 @@ import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
 import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
 import { navigate } from '../lib/route'
+import CardText from './CardText'
 
 function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
   return (
@@ -108,7 +109,9 @@ export default function CardPage({ id }: { id: number }) {
         )}
         {localized.card_text && (
           <div className="min-w-[16rem] flex-1 rounded-xl border border-line bg-surface p-5">
-            <p className="leading-relaxed text-ink">{localized.card_text}</p>
+            <p className="leading-relaxed text-ink">
+              <CardText text={localized.card_text} />
+            </p>
             {localized.isFallback && (
               <p className="mt-3 text-xs text-ink-dim">
                 No {languageLabel(language)} translation is available for this card; showing English.

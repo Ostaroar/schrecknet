@@ -426,6 +426,45 @@ try {
     await deckPanel.getByText(expectedTotals, { exact: true }).waitFor()
   }
 
+  // VDB card-text bracket tokens render as accessible visual symbols on both
+  // card-detail surfaces. Lock inferior/superior discipline levels, card-type
+  // tokens, translated text, and the removal of the raw bracket notation.
+  await page.goto(`${baseUrl}/#/cards/100401`, { waitUntil: 'domcontentloaded' })
+  await page.getByRole('heading', { name: 'Conditioning', level: 1 }).waitFor()
+  const inferiorDominate = page.locator('[data-card-text-symbol="dom"]')
+  const superiorDominate = page.locator('[data-card-text-symbol="DOM"]')
+  await inferiorDominate.waitFor()
+  await superiorDominate.waitFor()
+  assert.equal(await inferiorDominate.getAttribute('aria-label'), 'Dominate symbol')
+  assert.equal(await superiorDominate.getAttribute('aria-label'), 'Superior Dominate symbol')
+  const inferiorBox = await inferiorDominate.boundingBox()
+  const superiorBox = await superiorDominate.boundingBox()
+  assert.ok(inferiorBox && superiorBox && inferiorBox.y < superiorBox.y, 'card-text line breaks collapsed')
+  assert.equal(
+    await page.locator('article').evaluate((article) => /\[(?:dom|DOM)\]/.test(article.textContent ?? '')),
+    false,
+    'raw discipline tokens remained visible',
+  )
+
+  await page.getByLabel('Card text language', { exact: true }).selectOption('es')
+  await page.getByRole('heading', { name: 'Condicionamiento', level: 1 }).waitFor()
+  assert.equal(await page.locator('[data-card-text-symbol="dom"]').count(), 1)
+  assert.equal(await page.locator('[data-card-text-symbol="DOM"]').count(), 1)
+
+  await page.getByLabel('Card text language', { exact: true }).selectOption('en')
+  await page.goto(`${baseUrl}/#/cards/201598`, { waitUntil: 'domcontentloaded' })
+  const politicalAction = page.locator('[data-card-text-symbol="POLITICAL ACTION"]')
+  await politicalAction.waitFor()
+  assert.equal(await politicalAction.getAttribute('aria-label'), 'Political Action symbol')
+
+  await page.goto(`${baseUrl}/#/library`, { waitUntil: 'domcontentloaded' })
+  await page.getByLabel('Card text language', { exact: true }).selectOption('es')
+  await page.getByPlaceholder('Name / text').fill('Conditioning')
+  await waitForExactIds([100401])
+  await page.locator('main button[data-card-id="100401"]').click()
+  await page.locator('[data-card-text-symbol="dom"]').waitFor()
+  await page.getByText('Card text: Español', { exact: true }).waitFor()
+
   // The semantic golden queries intentionally start with no structured
   // filters. Reload to discard the exact-search component state above while
   // keeping the service worker/model caches warm.

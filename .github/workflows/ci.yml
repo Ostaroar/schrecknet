@@ -81,6 +81,9 @@ jobs:
       - run: npm ci --ignore-scripts
         working-directory: frontend
       - run: chmod +x target/debug/schrecknet-server
+      - name: card-text token parser contract
+        run: npm run test:card-text
+        working-directory: frontend
       - name: exact composition + browser/native semantic parity + offline smoke
         run: npm run test:semantic
         working-directory: frontend

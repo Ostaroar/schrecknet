@@ -40,6 +40,11 @@ ships as re-stepped tokens; dark is the definitive reading.
 
 - **Discipline badge**: 3-letter code; gold-filled = superior, outlined = inferior.
   Identical in search rows, deck lists, card previews, filters.
+- **Card-text symbols**: KRCG/VDB bracket tokens use the actual VTES discipline
+  and card-type glyphs, colorized with muted ink / superior gold / blood crimson.
+  Each symbol retains a full accessible label,
+  translated rules text keeps its original line breaks, and an unknown token is
+  shown verbatim so a future data update cannot silently remove rules text.
 - **Capacity**: number in a blood-tinted circle.
 - **Active filters**: echoed as removable chips above results.
 - **Semantic mode**: an explicit gold `◇ Semantic` toggle beside the text modes;

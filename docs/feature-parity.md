@@ -140,7 +140,15 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☑ Card image — MVP: single primary KRCG scan (`image_url`, hotlinked per Dark
       Pack rule) on the card page; ☐ legacy/alternate printings with set-specific
       scans still pending ✎
-- ☐ Icon inline rendering within card text (disciplines, clans, costs)
+- ☑ Icon inline rendering within card text — every bracket token present in
+      the current V5 pool renders on both the full page and inline detail panel:
+      actual VTES basic / superior discipline glyphs plus card-type glyphs,
+      colorized through the SchreckNet design tokens and precached offline.
+      English, Spanish, and French use the same safe parser; unknown future
+      tokens remain verbatim rather than losing rules text. Clan/cost bracket
+      tokens do not occur in the current V5 export (their structured values are
+      already rendered in the card header); the pool-derived token inventory is
+      locked by a parser contract and representative browser fixtures ✎
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text and authoritative source links live
 - ☑ Artist credit(s) — live

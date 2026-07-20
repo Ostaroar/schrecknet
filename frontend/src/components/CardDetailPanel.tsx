@@ -3,6 +3,7 @@ import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
 import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
 import { routeTo } from '../lib/route'
+import CardText from './CardText'
 
 export default function CardDetailPanel({ id }: { id: number }) {
   const [card, setCard] = useState<CardDetail | null>(null)
@@ -22,7 +23,11 @@ export default function CardDetailPanel({ id }: { id: number }) {
 
   return (
     <div className="grid gap-3 border-t border-line-soft bg-ground px-4 py-4 text-sm">
-      {localized.card_text && <p className="leading-relaxed text-ink-muted">{localized.card_text}</p>}
+      {localized.card_text && (
+        <p className="leading-relaxed text-ink-muted">
+          <CardText text={localized.card_text} />
+        </p>
+      )}
       {language !== 'en' && (
         <p className="text-xs text-ink-dim">
           {localized.isFallback

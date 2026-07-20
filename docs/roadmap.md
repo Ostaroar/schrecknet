@@ -69,6 +69,10 @@ docs/feature-parity.md's scope note).
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
 - ☑ Card images and rulings source links
+- ☑ Inline VTES symbols in card text: safe pool-derived bracket-token parsing,
+  bundled and offline-precached basic/superior discipline and card-type glyphs,
+  translated-text support, and identical accessible rendering on full pages
+  plus inline result details
 - ☑ VDB search-result workflow: explicit stable sort modes on browser/REST/MCP,
   hotlinked image previews on hover/tap, responsive rows, and a remembered local
   active-deck rail with inline quantity-aware add controls and "Show Deck"

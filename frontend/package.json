@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && tsc -p tsconfig.sw.json && vite build",
     "preview": "vite preview",
+    "test:card-text": "node e2e/card-text-parser.mjs",
     "test:semantic": "node e2e/semantic-smoke.mjs"
   },
   "dependencies": {

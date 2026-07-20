@@ -3,7 +3,9 @@
 // zero dependencies so it doesn't need one).
 //
 // Scope: caches the built app shell (JS/CSS/wasm/HTML/manifest/icons) so a
-// repeat visit loads and renders with no network. It deliberately does NOT
+// repeat visit loads and renders with no network. Stable public card-symbol
+// SVGs are precached during installation; hashed build assets fill the cache
+// as they are used. The worker deliberately does NOT
 // touch /api/*, /data/*, or /models/* — the first two are dynamic/live, and
 // /data/cards.sqlite specifically already has its own offline story via the
 // OPFS-backed dbWorker.ts; caching it here too would be redundant and could
@@ -15,8 +17,8 @@
 // for content-hashed static assets. A successful navigation is also stored
 // under the stable /index.html key for offline SPA fallback. Vite's output
 // filenames are content-hashed, so we don't (and can't) know them at SW-write
-// time — nothing is precached on 'install'; the cache fills in as the app is
-// used, which is enough for the "second visit works offline" requirement.
+// time. The cache otherwise fills in as the app is used, which is enough for
+// the "second visit works offline" requirement.
 
 /// <reference lib="webworker" />
 export {}
@@ -28,13 +30,33 @@ const CACHE_NAME = 'schrecknet-shell-v1'
 // upgrades; otherwise installing a new app build would silently force users
 // to download the optional ~24 MB model again.
 const SEMANTIC_MODEL_CACHE = 'transformers-cache'
+const CARD_TEXT_SYMBOL_ASSETS = [
+  ...[
+    'animalism',
+    'auspex',
+    'bloodsorcery',
+    'celerity',
+    'dominate',
+    'fortitude',
+    'obfuscate',
+    'oblivion',
+    'potence',
+    'presence',
+    'protean',
+  ].flatMap((name) => [
+    `/images/disciplines/${name}.svg`,
+    `/images/disciplines/${name}sup.svg`,
+  ]),
+  ...['action', 'actionmodifier', 'combat', 'politicalaction', 'reaction'].map(
+    (name) => `/images/types/${name}.svg`,
+  ),
+]
 
 const isExcludedPath = (pathname: string): boolean =>
   pathname.startsWith('/api') || pathname.startsWith('/data') || pathname.startsWith('/models')
 
-self.addEventListener('install', () => {
-  // No filename-based precaching possible (hashed build output). Activate
-  // immediately so the new SW takes over without waiting on old tabs.
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CARD_TEXT_SYMBOL_ASSETS)))
   self.skipWaiting()
 })
 
