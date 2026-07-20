@@ -1,0 +1,512 @@
+digraph VTES_V5_FULL_GAMELOOP_FSM {
+  graph [rankdir=LR, fontsize=12, labelloc="t", label="VTES v5 — Full Game Loop FSM (5 players) — rules-level, card-agnostic"];
+  node  [shape=box, fontsize=10, fontname="Helvetica"];
+  edge  [fontsize=9, fontname="Helvetica"];
+
+  // -------------------- META LOOP --------------------
+  subgraph cluster_META {
+    label="META LOOP: Game continues until one Methuselah remains (VP scoring)";
+    color="#666666";
+
+    META_START [label="Start game session\n(choose 5 seats clockwise)\nPredator=right, Prey=left"];
+    META_SETUP [label="Setup:\n• Build crypt+library decks\n• Shuffle both decks, cut by predator\n• Draw 7 library cards (starting hand)\n• Deal 4 crypt cards to uncontrolled region face down\n• Initial pool + Edge setup (per rules)\n• Choose first Methuselah"];
+    META_TURN_CLOCK [label="Turn passes clockwise to next Methuselah"];
+    META_ENDCHECK [label="Check end condition:\nonly 1 Methuselah remains\n(or table ends)"];
+    META_SCORING [label="Victory Points (VP) update:\n• Gain 1 VP when prey is ousted\n• Gain +1 VP if last remaining\nWinner = highest VP (even if ousted)"];
+
+    META_START -> META_SETUP -> TURN_BEGIN;
+    TURN_END -> META_TURN_CLOCK -> TURN_BEGIN;
+    META_ENDCHECK -> META_SCORING -> META_ENDCHECK;
+  }
+
+  // -------------------- HAND / DRAW MANAGEMENT (GLOBAL RULE) --------------------
+  subgraph cluster_HAND {
+    label="GLOBAL: Hand / Draw Management (library)";
+    color="#9c9c9c";
+
+    HAND_RULE [label="Hand size baseline = 7\nWhenever hand size changes or cards are added/removed:\nImmediately draw up to, or discard down to, hand size"];
+    DRAW_REPLACE [label="Drawing cards (replacement):\nWhenever you play a card from hand,\ndraw 1 from library to replace it\n(unless card text says otherwise).\nIf library empty: you continue playing, but don't draw."];
+  }
+
+  // -------------------- TURN STRUCTURE --------------------
+  subgraph cluster_TURN {
+    label="TURN STRUCTURE (5 phases in order)";
+    color="#1f77b4";
+
+    TURN_BEGIN [label="Active Methuselah turn begins"];
+    PH_UNLOCK [label="1) Unlock Phase\n• Unlock all your cards\n• Resolve unlock-phase effects\n• Handle contests / yields\n• (Adv) Optional: burn 1 pool per Infernal minion to unlock\n• If you have the Edge, you may gain 1 pool from blood bank"];
+    PH_MASTER [label="2) Master Phase\n• Receive master phase actions (MPA)\n• Use MPAs (e.g., play master cards)\n• Choose ordering vs other master-phase effects\n• Unused MPAs are lost"];
+    PH_MINION [label="3) Minion Phase\n• Ready, unlocked minions may take actions\n• Mandatory actions first\n• Each action fully resolves before next"];
+    PH_INFLUENCE [label="4) Influence Phase\n• Receive transfers (normally 4)\n• Early-game balancing (5 players):\n  seat1 gets 1, seat2 gets 2, seat3 gets 3 transfers on their first influence phase\n  (seats 4-5 reach their first influence phase after this)\n• Spend transfers to influence/reveal vampires etc."];
+    PH_DISCARD [label="5) Discard Phase\n• Receive discard phase action (DPA)\n• Use DPA to discard+replace\n• (Adv) Use DPA to play event (≤1 per phase; each event only once per game)\n• Unused DPA lost"];
+    TURN_END [label="End of turn"];
+
+    TURN_BEGIN -> PH_UNLOCK -> PH_MASTER -> PH_MINION -> PH_INFLUENCE -> PH_DISCARD -> TURN_END;
+  }
+
+  // -------------------- CONTEST LOOP (ADV) --------------------
+  subgraph cluster_CONTEST {
+    label="ADVANCED: Contest (unique cards & titles) — paid each unlock phase";
+    color="#9467bd";
+
+    CONTEST_CHECK [label="If unique card/title duplicates enter play -> contest begins\nAll contested copies turn face down (out of play)"];
+    CONTEST_PAY [label="During your unlock phase:\n• Pay cost to contest (card: 1 pool; title: 1 blood)\nOR\n• Yield (burn yielded card / lose title)\n• Vampires in torpor must yield contested titles"];
+    CONTEST_RESOLVE [label="If all others yield:\n• Your copy unlocks & turns face up during your next unlock\n• Contest ends"];
+
+    PH_UNLOCK -> CONTEST_CHECK [style=dashed, label="if contest exists"];
+    CONTEST_CHECK -> CONTEST_PAY -> CONTEST_RESOLVE -> PH_UNLOCK;
+  }
+
+  // -------------------- INFLUENCE SUBLOOP --------------------
+  subgraph cluster_INFLUENCE {
+    label="Influence Phase Subloop (transfers)";
+    color="#2ca02c";
+
+    INF_START [label="Start Influence Phase\nSet transfers by seat/turn"];
+    INF_SPEND [label="Repeat until transfers = 0 (player choice):\n• 1 transfer: move 1 pool -> uncontrolled vampire (adds blood)\n• 2 transfers: move 1 blood from uncontrolled vampire -> your pool\n• 4 transfers + burn 1 pool: move vampire from crypt -> uncontrolled\n(plus any other allowed transfer options)"];
+    INF_REVEAL [label="At any time in this phase:\nIf uncontrolled vampire blood ≥ capacity:\n• move to ready region face up, unlocked\n• excess blood returns to blood bank"];
+    INF_END [label="End Influence Phase\nunused transfers lost"];
+
+    PH_INFLUENCE -> INF_START -> INF_SPEND -> INF_REVEAL -> INF_SPEND;
+    INF_SPEND -> INF_END [label="no transfers left / pass"];
+    INF_END -> PH_DISCARD;
+  }
+
+  // -------------------- DISCARD SUBLOOP --------------------
+  subgraph cluster_DISCARD {
+    label="Discard Phase Subloop (DPA)";
+    color="#8c564b";
+    DIS_START [label="Start Discard Phase\nGain DPA"];
+    DIS_USE [label="Use DPA (optional):\nA) Discard 1 card -> draw 1\nB) (Adv) Play 1 event card (≤1 per phase)"];
+    DIS_END [label="End Discard Phase\nunused DPA lost"];
+    PH_DISCARD -> DIS_START -> DIS_USE -> DIS_END -> TURN_END;
+  }
+
+  // -------------------- MINION PHASE / ACTION LOOP --------------------
+  subgraph cluster_MINION {
+    label="Minion Phase Core Loop (actions resolve one-by-one)";
+    color="#ff7f0e";
+
+    MINION_READY [label="Select your next action\n(only ready, unlocked minion)\nOR end minion phase"];
+    MINION_MANDATORY [label="Mandatory actions gate:\n• If any of your ready, unlocked vampires have 0 blood,\n  they have mandatory HUNT actions.\n• While mandatory actions remain, you cannot take non-mandatory actions.\n• If multiple mandatory actions exist, choose order.\n(Other mandatory actions can exist via card text.)"];
+    ACTION_DECLARE [label="Announce action & lock acting minion\n• Basic bleed / basic hunt / action card in hand / effect in play\n• Set targets (directed/undirected)\n• Pay costs (if any)"];
+    ACTION_ASANN [label="Window: 'as action is announced'\n(only effects explicitly allowed here)"];
+    ACTION_BLOCK_WHO [label="Block eligibility (rule-level):\n• Directed at a Methuselah (e.g., bleed prey): that Methuselah may attempt to block\n• Directed at a minion: that minion's controller may attempt to block\n• Undirected: prey and predator may attempt to block\n(Other cases require card-specific rules; excluded here)"];
+    ACTION_BLOCK_LOOP [label="Resolve block attempts (clockwise)\nEach eligible player may attempt with a ready, unlocked minion\n(see Block Attempt FSM)"];
+    ACTION_BLOCKED [label="Action blocked?\nYES -> blocked path\nNO  -> successful path"];
+    ACTION_SUCCESS [label="Successful action resolves\nBranch by action type:\n• Bleed -> Bleed subloop\n• Hunt -> Hunt subloop\n• Political -> Referendum subloop\n• Other -> Resolve per card/effect"];
+    ACTION_END [label="Action ends\nIf a minion unlocks during this phase (effect), it may act again"];
+
+    PH_MINION -> MINION_READY -> MINION_MANDATORY -> ACTION_DECLARE -> ACTION_ASANN -> ACTION_BLOCK_WHO -> ACTION_BLOCK_LOOP -> ACTION_BLOCKED;
+    ACTION_BLOCKED -> ACTION_SUCCESS [label="NO"];
+    ACTION_BLOCKED -> ACTION_BLOCKED_PATH [label="YES"];
+    ACTION_SUCCESS -> ACTION_END -> MINION_READY;
+    ACTION_BLOCKED_PATH -> ACTION_END;
+
+    MINION_READY -> PH_INFLUENCE [label="end minion phase / no actions"];
+  }
+
+  // -------------------- BLEED SUBLOOP (RULE-LEVEL) --------------------
+  subgraph cluster_BLEED {
+    label="Bleed Subloop (directed at prey by default; Edge handling)";
+    color="#e377c2";
+
+    BLEED_START [label="If action is BLEED and is unblocked:\n• default bleed amount = 1 (modifiable)\n• action modifiers & reactions may modify/redirect/reduce (card-agnostic here)"];
+    BLEED_FINAL [label="Set final bleed amount B (B ≥ 0)"];
+    BLEED_BURN [label="Prey burns B pool (if possible)\nIf pool reaches 0 -> oust check"];
+    EDGE_GAIN [label="If B ≥ 1, bleed is successful:\nActing controller gets the Edge\n(take from current holder if any)"];
+    BLEED_DONE [label="Bleed subloop ends -> return to action end"];
+
+    ACTION_SUCCESS -> BLEED_START [style=dashed, label="if bleed"];
+    BLEED_START -> BLEED_FINAL -> BLEED_BURN -> EDGE_GAIN -> BLEED_DONE -> ACTION_END;
+  }
+
+  // -------------------- HUNT SUBLOOP (RULE-LEVEL) --------------------
+  subgraph cluster_HUNT {
+    label="Hunt Subloop (basic hunt action)";
+    color="#98df8a";
+
+    HUNT_START [label="If action is HUNT and is unblocked:\n• undirected action\n• default stealth +1\n• hunt is mandatory at 0 blood"];
+    HUNT_GAIN [label="If successful:\nActing vampire gains hunt amount blood\nfrom blood bank"];
+    HUNT_DONE [label="Hunt subloop ends -> return to action end"];
+
+    ACTION_SUCCESS -> HUNT_START [style=dashed, label="if hunt"];
+    HUNT_START -> HUNT_GAIN -> HUNT_DONE -> ACTION_END;
+  }
+
+  // -------------------- BLOCK ATTEMPT FSM --------------------
+  subgraph cluster_BLOCK {
+    label="Block Attempt + Block Resolution FSM (stealth/intercept + impulse + post-block exceptions)";
+    color="#d62728";
+
+    BLOCK_START [label="Potential blocker chosen
+(ready, unlocked minion)"];
+    BLOCK_WINDOW [label="Window: action modifiers + reactions
+• Stealth/Intercept added only if needed
+• Same minion cannot play same reaction/modifier more than once per action
+• Impulse cycles; any effect returns impulse to acting"];
+    BLOCK_COMPARE [label="Compare:
+if Intercept ≥ Stealth => block succeeds
+else => block fails"];
+    BLOCK_FAIL [label="Block fails
+• return to next blocker opportunity
+• action continues"];
+    BLOCK_SUCCESS [label="Block attempt succeeds
+(Intercept ≥ Stealth)
+=> action becomes blocked (unsuccessful)"];
+
+    BLOCK_RESOLUTION [label="Block resolution (rule)
+If action is blocked:
+• Any card played to perform the action is burned
+• Two simultaneous consequences:
+  A) blocking minion locks
+  B) blocking minion enters combat with acting minion
+Exception (rule-level):
+If an effect ends the action before block resolution
+OR before consequence B (entering combat),
+then neither consequence occurs."];
+
+    BLOCK_ENDED_EARLY_Q [shape=diamond, label="Did an effect end the action
+before block resolution or
+before entering combat?"];
+    BLOCK_ENDED_EARLY [label="Action ended early (rule-level)
+• Not treated as blocked resolution
+• No lock + no combat
+• Cleanup per the ending effect"];
+
+    PRE_COMBAT_WINDOW [label="Post-block / pre-combat window
+(only effects usable 'when action is blocked'
+or 'before combat begins')
+Use shared IMPULSE_WINDOW
+Context A (combat/directed@1)
+ENV timeouts => auto-PASS"];
+    COMBAT_HAPPENS_Q [shape=diamond, label="Enter combat as a result
+of the successful block?"];
+
+    BLOCKED_NO_COMBAT [label="Blocked, no combat
+(Action unsuccessful)
+• blocker locks (already)
+• no action effects
+• no action cost paid
+Continue to blocked-action cleanup"];
+
+    BLOCKED_TORPOR_SPECIAL [label="Special rule: Leave Torpor is blocked
+No combat (minions in torpor cannot enter combat).
+If blocker is a vampire: optional immediate diablerie opportunity.
+If blocker is an ally or declines: action simply fails."];
+
+    // Wiring
+    ACTION_BLOCK_LOOP -> BLOCK_START;
+    BLOCK_START -> IMPULSE_WINDOW [style=dashed, label="open window (block context)"];
+    IMPULSE_WINDOW -> BLOCK_WINDOW [style=dashed, label="represents repeated play/pass"];
+    BLOCK_WINDOW -> BLOCK_COMPARE -> BLOCK_FAIL;
+    BLOCK_COMPARE -> BLOCK_SUCCESS [label="YES"];
+    BLOCK_COMPARE -> BLOCK_FAIL [label="NO"];
+    BLOCK_FAIL -> ACTION_BLOCK_LOOP [label="next eligible blocker / none"];
+
+    // Resolution and exception gates
+    BLOCK_SUCCESS -> BLOCK_RESOLUTION -> BLOCK_ENDED_EARLY_Q;
+    BLOCK_ENDED_EARLY_Q -> BLOCK_ENDED_EARLY [label="YES"];
+    BLOCK_ENDED_EARLY -> ACTION_END [label="cleanup"];
+
+    BLOCK_ENDED_EARLY_Q -> PRE_COMBAT_WINDOW [label="NO (proceed)"];
+    PRE_COMBAT_WINDOW -> IMPULSE_WINDOW [style=dashed, label="open window (post-block/pre-combat)"];
+    PRE_COMBAT_WINDOW -> COMBAT_HAPPENS_Q [label="window closes"];
+
+    // Default: blocked => combat (ready-region acting minion)
+    COMBAT_HAPPENS_Q -> COMBAT_START_NODE [label="YES (default)"];
+
+    // Rule-level no-combat variants (not card-specific flows)
+    COMBAT_HAPPENS_Q -> BLOCKED_TORPOR_SPECIAL [label="NO (acting minion in torpor)"];
+    COMBAT_HAPPENS_Q -> BLOCKED_NO_COMBAT [label="NO (combat canceled/replaced)"];
+
+    BLOCKED_NO_COMBAT -> ACTION_BLOCKED_PATH;
+
+    // Leave Torpor blocked => possible immediate diablerie (rule)
+    BLOCKED_TORPOR_SPECIAL -> DIABLERIE_IMMEDIATE [label="blocker is vampire & chooses diablerie"];
+    BLOCKED_TORPOR_SPECIAL -> ACTION_BLOCKED_PATH [label="blocker declines / ally"];
+
+  }
+
+  // -------------------- COMBAT FSM --------------------
+  subgraph cluster_COMBAT {
+    label="Combat FSM (7-step rounds per v5 rulebook; card-agnostic)";
+    color="#17becf";
+
+    COMBAT_START_NODE [label="Combat begins\n(acting minion vs opposing minion)\nCombat occurs in 1+ rounds."];
+    COMBAT_CARD_LIMIT [label="Combat card limit:\n• The only minion cards that can be played during combat are combat cards.\nADV: Some combat cards are played by minions \"not involved in the current combat\"; minions controlled by ANY Methuselah can play those cards.\n(Non-combatants can play ONLY if the combat card text explicitly allows it.)"];
+
+    COMBAT_OOC_NOTE [shape=note, label="Non-combatant combat-card play (ADV):\nA minion not involved in the current combat may play a combat card ONLY if that combat card explicitly says so.\nSequencing is still by impulse during combat:\nActing Methuselah first; once they pass, defending Methuselah; then remaining Methuselahs clockwise (5-player).\nIf any Methuselah plays an effect, impulse snaps back to the acting Methuselah."];
+
+    COMBAT_ROUND_BEGIN [label="Start of combat round\n(Each round has 7 steps)"];
+
+    COMBAT_S1_BEFORE_RANGE [label="1) Before Range\nPlay cards/effects usable before range is chosen.\nNOTE: 'before range is determined' effects must be played\nbefore the acting minion decides whether to play a maneuver."];
+    COMBAT_S2_DETERMINE_RANGE [label="2) Determine Range\nDefault = close.\nUse maneuvers to change/offset to close or long.\nNo minion may play two maneuvers in a row."];
+    COMBAT_RANGE_LOOP [shape=diamond, label="Maneuver cycle:\nAny combatant play a maneuver (alternate)?"];
+    COMBAT_RANGE_SET [label="Range is set for this round\n(close or long)\n(If maneuver came from strike card/weapon:\nthat also sets the initial strike choice constraint.)"];
+
+    COMBAT_S3_BEFORE_STRIKES [label="3) Before Strikes\nPlay cards/effects usable after range is set\nbut before strikes are chosen."];
+    COMBAT_S4_STRIKE [label="4) Strike\nResolve 1+ strike pairs at the same range.\nEach pair:\n- Acting minion chooses strike\n- Opposing minion chooses strike\n- Resolve simultaneously (except special cases)"];
+    STRIKE_TARGET_NOTE [label="Strike targeting note:\nAt long range, a ranged strike may target an opposing retainer\n(instead of the opposing minion) if announced when strike is announced."];
+    STRIKE_PAIR_BEGIN [label="Strike Pair: Choose & Resolve"];
+    STRIKE_CHOOSE_ACTING [label="Choose Strike (acting)\nFrom: hand strike / weapon / combat card / other strike source.\nIf maneuver was used from a strike card/weapon this round:\nno other strike for the initial strike."];
+    STRIKE_CHOOSE_OPP [label="Choose Strike (opposing)"];
+    STRIKE_RESOLVE [label="Resolve Strike Pair\nApply strike effects.\nThen proceed to damage resolution.\nIf a combatant becomes not ready at any point:\nround & combat end immediately."];
+    STRIKE_ADDITIONAL_Q [shape=diamond, label="Additional strikes this round?"];
+    STRIKE_GAIN_ADDITIONAL [label="Additional Strikes (Adv):\nAnnounced/performed only after the first pair.\nActing decides to gain additional strikes before opposing.\nOnly 1 card/effect to gain additional strikes per round ('limited').\nResolve by repeating Choose+Resolve steps\n(only minions with remaining additional strikes act).\nAll additional strikes occur at the same range."];
+    STRIKE_ADDITIONAL_LOOP [shape=diamond, label="More additional strikes to resolve?"];
+
+    COMBAT_S5_DAMAGE_RES [label="5) Damage Resolution\nTwo substeps:\nA) Prevent damage (play prevention combat cards)\nB) Mend damage:\n- Vampires burn 1 blood per unprevented damage\n- Allies/retainers burn 1 life per unprevented damage"];
+    COMBAT_EARLY_END_Q [shape=diamond, label="Any combatant not ready?"];
+    COMBAT_END_IMMEDIATE [label="Combat ends immediately\n(if a combatant is no longer ready)\nReturn to action flow after resolving required steps."];
+    COMBAT_S6_PRESS [label="6) Press\nIf both combatants still ready:\nUse presses to continue into another round or to end combat.\nCombatants may continue playing presses to offset opponent's last press.\nNo minion may play two presses in a row."];
+    COMBAT_PRESS_LOOP [shape=diamond, label="Press cycle:\nUncancelled press to continue exists?"];
+    COMBAT_S7_END_ROUND [label="7) End of Round\nPlay end-of-round cards/effects\n(after the press step).\nNote: This step also occurs even if combat ends prematurely."];
+    COMBAT_S7_END_ROUND_PREMATURE [label="7) End of Round (premature)\nPlay end-of-round cards/effects\n(after the press step).\nNote: Occurs even if combat ends prematurely."];
+    COMBAT_CONTINUE_Q [shape=diamond, label="Continue into another round?"];
+    COMBAT_END_NODE [label="Combat ends\nReturn to action resolution flow"];
+
+    // Main flow
+    COMBAT_START_NODE -> COMBAT_CARD_LIMIT -> COMBAT_ROUND_BEGIN -> COMBAT_S1_BEFORE_RANGE;
+    COMBAT_CARD_LIMIT -> COMBAT_OOC_NOTE [style=dotted, label="ADV note"];
+    COMBAT_S1_BEFORE_RANGE -> COMBAT_S2_DETERMINE_RANGE -> COMBAT_RANGE_LOOP;
+    COMBAT_RANGE_LOOP -> COMBAT_S2_DETERMINE_RANGE [label="maneuver played (alternate)"];
+    COMBAT_RANGE_LOOP -> COMBAT_RANGE_SET [label="both decline / stop"];
+    COMBAT_RANGE_SET -> COMBAT_S3_BEFORE_STRIKES -> COMBAT_S4_STRIKE -> STRIKE_TARGET_NOTE -> STRIKE_PAIR_BEGIN;
+
+    // Strike pair
+    STRIKE_PAIR_BEGIN -> STRIKE_CHOOSE_ACTING -> STRIKE_CHOOSE_OPP -> STRIKE_RESOLVE -> COMBAT_S5_DAMAGE_RES;
+
+    // Additional strikes
+    COMBAT_S4_STRIKE -> STRIKE_ADDITIONAL_Q [style=dashed, label="after first pair"];
+    STRIKE_ADDITIONAL_Q -> COMBAT_S5_DAMAGE_RES [label="NO"];
+    STRIKE_ADDITIONAL_Q -> STRIKE_GAIN_ADDITIONAL [label="YES"];
+    STRIKE_GAIN_ADDITIONAL -> STRIKE_PAIR_BEGIN [label="resolve next additional pair"];
+    STRIKE_PAIR_BEGIN -> STRIKE_ADDITIONAL_LOOP [style=dashed, label="only for additional strikes"];
+    STRIKE_ADDITIONAL_LOOP -> STRIKE_PAIR_BEGIN [label="YES (another pair)"];
+    STRIKE_ADDITIONAL_LOOP -> COMBAT_S5_DAMAGE_RES [label="NO (done)"];
+
+    // Damage resolution -> Press -> End of round
+    COMBAT_S5_DAMAGE_RES -> COMBAT_EARLY_END_Q;
+    COMBAT_EARLY_END_Q -> COMBAT_END_IMMEDIATE [label="YES"];
+    COMBAT_END_IMMEDIATE -> COMBAT_S7_END_ROUND_PREMATURE [label="end-of-round step still occurs"];
+    COMBAT_EARLY_END_Q -> COMBAT_S6_PRESS [label="NO"];
+
+    COMBAT_S6_PRESS -> COMBAT_PRESS_LOOP;
+    COMBAT_PRESS_LOOP -> COMBAT_S6_PRESS [label="press played (alternate)"];
+    COMBAT_PRESS_LOOP -> COMBAT_S7_END_ROUND [label="pressing complete"];
+
+    COMBAT_S7_END_ROUND -> COMBAT_CONTINUE_Q;
+    COMBAT_S7_END_ROUND_PREMATURE -> COMBAT_END_NODE [label="combat already ended"];
+    COMBAT_CONTINUE_Q -> COMBAT_ROUND_BEGIN [label="YES (uncancelled press to continue)"];
+    COMBAT_CONTINUE_Q -> COMBAT_END_NODE [label="NO (combat ends)"];
+
+
+    // Global immediate-end condition (rulebook: if a combatant is no longer ready, round & combat end immediately)
+    COMBAT_S1_BEFORE_RANGE -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+    COMBAT_S2_DETERMINE_RANGE -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+    COMBAT_S3_BEFORE_STRIKES -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+    COMBAT_S4_STRIKE -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+    COMBAT_S5_DAMAGE_RES -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+    COMBAT_S6_PRESS -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+    COMBAT_S7_END_ROUND -> COMBAT_END_IMMEDIATE [style=dashed, label="if combatant not ready"];
+
+    // Windows (use shared impulse window; context = combat)
+    COMBAT_S1_BEFORE_RANGE -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 1)"];
+    COMBAT_S2_DETERMINE_RANGE -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 2)"];
+    COMBAT_S3_BEFORE_STRIKES -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 3)"];
+    COMBAT_S4_STRIKE -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 4)"];
+    COMBAT_S5_DAMAGE_RES -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 5)"];
+    COMBAT_S6_PRESS -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 6)"];
+    COMBAT_S7_END_ROUND -> IMPULSE_WINDOW [style=dashed, label="open window (combat step 7)"];
+
+    // Acting minion priority note
+    COMBAT_ROUND_BEGIN -> COMBAT_PRIORITY_NOTE [style=dotted];
+    COMBAT_PRIORITY_NOTE [shape=note, label="Priority within combat steps:\nAt every combat stage, the acting minion gets first opportunity\nbefore the opposing minion.\nOperationally this is handled by impulse:\n• Acting Methuselah keeps impulse until they pass.\n• Then the defending Methuselah gets impulse.\n• Then the remaining Methuselahs get impulse clockwise (5-player).\nOther Methuselahs can only act if a card/effect explicitly allows it\n(e.g., combat cards playable by minions not involved in the current combat)."];
+    COMBAT_END_NODE -> ACTION_BLOCKED_PATH [style=dotted, label="after combat (from block)"];
+  }
+
+  // -------------------- REFERENDUM FSM --------------------
+  subgraph cluster_REF {
+    label="Referendum FSM (political actions & blood hunts)";
+    color="#bcbd22";
+
+    REF_START [label="Referendum starts\n• Terms set/declared (if political action)\n• Then proceed to polling"];
+    REF_POLL_OPEN [label="Polling step\nImpulse cycles; votes/ballots cast in order\n• Acting may delay casting until they choose to cast\n• Edge holder may burn Edge to gain 1 vote"];
+    REF_TALLY [label="Tally votes & determine pass/fail"];
+    REF_RESOLVE [label="If passes: apply terms/effects\nIf fails: no effect\nNote: political action still 'successful' if unblocked even if referendum fails"];
+    REF_END [label="Referendum ends -> return to action resolution flow"];
+
+    ACTION_SUCCESS -> REF_START [style=dashed, label="if action calls referendum / blood hunt"];
+    REF_START -> REF_POLL_OPEN -> IMPULSE_WINDOW [style=dashed, label="open window (referendum polling)"];
+    REF_POLL_OPEN -> REF_TALLY -> REF_RESOLVE -> REF_END -> ACTION_END;
+  }
+
+  // -------------------- TORPOR / DIABLERIE / BLOOD HUNT --------------------
+  subgraph cluster_TORPOR {
+    label="Torpor / Diablerie / Blood Hunt (rule-level)";
+    color="#7f7f7f";
+
+    TORPOR_ENTER [label="Minion enters torpor\n(typically from combat damage)"];
+    TORPOR_LEAVE [label="Leave Torpor action\n(only action torpor vampire may take)"];
+    DIABLERIE_ACTION [label="Diablerie (directed action)\nBurn vampire in torpor\nDiablerie steps are a single unit:\nno interruption; effects before/after only"];
+    DIABLERIE_IMMEDIATE [label="Immediate diablerie opportunity
+(from blocked Leave Torpor)
+Not an action (cannot be blocked)"];
+    BLOOD_HUNT_REF [label="Blood Hunt referendum\nAutomatic & immediate after diablerie\nNot an action (cannot be blocked)"];
+    DIABLERIST_BURN [label="If blood hunt passes:\nDiablerist burned"];
+    TROPHY_DISCIPLINE [label="If victim older / Red List:\nMay gain Discipline / trophies\n(handled before blood hunt if applicable)"];
+
+    COMBAT_S5_DAMAGE_RES -> TORPOR_ENTER [style=dashed, label="if torpor outcome"];
+    TORPOR_ENTER -> TORPOR_LEAVE [style=dashed, label="future minion phase option"];
+    TORPOR_ENTER -> DIABLERIE_ACTION [style=dashed, label="if diablerie declared"];
+    DIABLERIE_IMMEDIATE -> TROPHY_DISCIPLINE [style=dashed, label="if chosen"];
+    DIABLERIE_ACTION -> TROPHY_DISCIPLINE -> BLOOD_HUNT_REF -> REF_POLL_OPEN;
+    BLOOD_HUNT_REF -> DIABLERIST_BURN [style=dashed, label="if passes"];
+  }
+
+  // -------------------- OUST / WITHDRAW --------------------
+  subgraph cluster_OUST {
+    label="Oust / Withdraw / Removal";
+    color="#000000";
+
+    POOL_ZERO [label="If Methuselah pool reaches 0 -> ousted\nRemove all cards they control from game\nReturn rivals' owned cards they controlled at end"];
+    PREY_OUST [label="If your prey is ousted:\nGain 1 VP\nIf you are not ousted at same time, gain 6 pool"];
+    WITHDRAW [label="(Optional) Withdraw\nAnnounce intention to withdraw\n(handled per rules/advanced summary)"];
+
+    META_ENDCHECK -> POOL_ZERO [style=dashed, label="continuous check"];
+    POOL_ZERO -> PREY_OUST -> META_ENDCHECK;
+    PH_UNLOCK -> WITHDRAW [style=dashed, label="optional (advanced)"];
+  }
+
+  // -------------------- CARD PLAY MICRO-FSM (used inside any impulse window) --------------------
+  subgraph cluster_CARDPLAY {
+    label="Card Play Micro-FSM (rule-level, applies to any card/effect)";
+    color="#555555";
+
+    CP_DECLARE [label="Declare effect fully:\n• announce targets/costs/choices\n• show card/effect\n• card may be temporarily out-of-play until resolution"];
+    CP_ASPLAYED [label="Timing: 'as card is played'\nONLY cancel-as-played + wake effects legal\nUse ABC sequencing until all pass\n(then continue)"];
+    CP_RESOLVE [label="Resolve or cancel:\n• if canceled, card effect does not happen\n• move card to ash heap or into play upon resolution\n• acting regains impulse after any effect resolves"];
+    CP_REPLACE [label="Replace/draw:\n• after 'as played' window closes and card is resolved/canceled\n• draw 1 to replace (unless no-replace)\n• if library empty: no draw\n• enforce HAND_RULE immediately"];
+  }
+
+  // -------------------- IMPULSE WINDOW (shared) --------------------
+  subgraph cluster_IMPULSE {
+    label="Shared Impulse Window (play/pass loop; timers are ENV-defined) — EXPLICIT ORDER";
+    color="#444444";
+
+    IMPULSE_WINDOW [shape=oval, label="OPEN IMPULSE WINDOW\nA play window exists at specific FSM steps.\nENV sets a timer per polled player; timeout => auto-PASS."];
+    IMP_ACTING [label="Acting Methuselah ALWAYS has impulse first.\n('Acting' = player who is currently resolving an action/card/effect)"];
+    IMP_POLL [label="Poll current impulse owner:\nPLAY 0+ allowed effects/cards OR PASS\n(If PLAY happens: resolve it, then acting gets impulse back)"];
+    IMP_PLAY [label="If PLAY:\n1) run Card Play Micro-FSM (declare -> as played -> resolve -> replace)\n2) acting immediately regains impulse"];
+    IMP_PASS [label="If PASS (or timeout):\nadvance impulse to the next Methuselah\naccording to the context-specific order below."];
+    IMP_CTX [shape=diamond, label="Context for impulse order\n(after acting passes)?"];
+    IMP_ORDER_SINGLE [label="Context A: Combat OR action directed at a single Methuselah\nOrder after acting passes:\n1) Defending Methuselah first\n2) Then every other Methuselah in clockwise order\n(5-player example: A -> D -> next clockwise after D -> ... -> last)"];
+    IMP_COMBAT_DEF_NOTE [shape=note, label="Combat-only clarification:\nIn combat, \"defending Methuselah\" = the controller of the opposing combatant.\nOther Methuselahs only get impulse if the current window allows them to play something (e.g., a combat card explicitly playable by a minion not involved)."];
+    IMP_ORDER_SET [label="Context B: Action directed at a SET of Methuselahs\nOrder after acting passes:\n1) Those targeted Methuselahs in clockwise order\n2) Then every other Methuselah in clockwise order\n(Exclude acting from the pass list)"];
+    IMP_ORDER_UNDIR [label="Context C: Undirected action\nOrder after acting passes:\n1) Prey first\n2) Predator second\n3) Then every other Methuselah in clockwise order\n(5-player example: A -> Prey -> Predator -> Cross1 -> Cross2)"];
+    IMP_NEXT [label="Give impulse to next Methuselah in the chosen order\n(if that Methuselah plays, impulse snaps back to acting)"];
+    IMP_ALLPASSED [shape=diamond, label="Has EVERY Methuselah passed\nconsecutively in the CURRENT window?"];
+    IMP_CLOSE [shape=oval, label="CLOSE WINDOW\nReturn to parent FSM step (advance state)"];
+
+    IMPULSE_WINDOW -> IMP_ACTING -> IMP_POLL;
+
+    IMP_POLL -> IMP_PLAY [label="PLAY"];
+    IMP_PLAY -> IMP_ACTING;
+
+    IMP_POLL -> IMP_PASS [label="PASS / timeout"];
+    IMP_PASS -> IMP_CTX;
+
+    IMP_CTX -> IMP_ORDER_SINGLE [label="combat OR directed@1"];
+    IMP_CTX -> IMP_ORDER_SET [label="directed@set"];
+    IMP_CTX -> IMP_ORDER_UNDIR [label="undirected action"];
+    IMP_ORDER_SINGLE -> IMP_NEXT;
+    IMP_ORDER_SET -> IMP_NEXT;
+    IMP_ORDER_UNDIR -> IMP_NEXT;
+
+    IMP_NEXT -> IMP_ALLPASSED;
+    IMP_ALLPASSED -> IMP_CLOSE [label="yes"];
+    IMP_ALLPASSED -> IMP_POLL [label="no (next player gets impulse)"];
+  }
+
+  // -------------------- CARD DATASET INTEGRATION (ENGINE BUILD-TIME) --------------------
+  subgraph cluster_DATASET {
+    label="ENGINE BUILD-TIME: Card Dataset Integration (vtes_v5.json) — non-gameplay loop";
+    color="#2f2f2f";
+
+    DS_LOAD [label="Load vtes_v5.json"];
+    DS_SPLIT [label="Split by card type\n(master/action/modifier/reaction/combat/...)\n(already done: vtes_v5_split_v1/)"];
+    DS_HOOKS [label="Infer timing hooks per card\n(type defaults + text patterns)\nExport mapping JSON"];
+    DS_OVERRIDE [label="Manual override list\nfor ambiguous timing / exceptions\n(rule-level only; no card flows)"];
+    DS_EXPORT [label="Export artifacts:\n• card_timing_hooks.json\n• hook counts\n• uncertain list"];
+
+    DS_LOAD -> DS_SPLIT -> DS_HOOKS -> DS_OVERRIDE -> DS_EXPORT -> DS_HOOKS;
+  }
+
+  // -------------------- CARD HOOKS (runtime bridge) --------------------
+  subgraph cluster_HOOKS {
+    label="RUNTIME: Card Timing Hooks (generalized, used to open impulse windows)";
+    color="#4c4c4c";
+
+    HK_UNLOCK [label="HOOK: TURN_UNLOCK"];
+    HK_MASTER [label="HOOK: TURN_MASTER"];
+    HK_INFLUENCE [label="HOOK: TURN_INFLUENCE"];
+    HK_DISCARD [label="HOOK: TURN_DISCARD"];
+    HK_ASANN [label="HOOK: ACTION_AS_ANNOUNCED"];
+    HK_AMOD [label="HOOK: ACTION_MOD_WINDOW"];
+    HK_REACT [label="HOOK: REACTION_WINDOW"];
+    HK_BLOCK [label="HOOK: BLOCK_ATTEMPT_WINDOW"];
+    HK_REF [label="HOOK: REFERENDUM_POLLING/GENERAL"];
+    HK_BLEED [label="HOOK: BLEED_SPECIFIC"];
+    HK_CMB_RANGE [label="HOOK: COMBAT_RANGE"];
+    HK_CMB_STRIKE [label="HOOK: COMBAT_STRIKE"];
+    HK_CMB_PRESS [label="HOOK: COMBAT_PRESS"];
+    HK_CMB_END [label="HOOK: COMBAT_END"];
+    HK_OOT [label="HOOK: OOT_MASTER"];
+    HK_INPLAY [label="HOOK: IN_PLAY_ABILITY"];
+    HK_ASPLAYED [label="HOOK: CARD_AS_PLAYED\n(cancel-as-played + wake only)"];
+
+    // bridge: hook -> open impulse window
+    HK_UNLOCK -> IMPULSE_WINDOW [style=dotted];
+    HK_MASTER -> IMPULSE_WINDOW [style=dotted];
+    HK_INFLUENCE -> IMPULSE_WINDOW [style=dotted];
+    HK_DISCARD -> IMPULSE_WINDOW [style=dotted];
+    HK_ASANN -> IMPULSE_WINDOW [style=dotted];
+    HK_AMOD -> IMPULSE_WINDOW [style=dotted];
+    HK_REACT -> IMPULSE_WINDOW [style=dotted];
+    HK_BLOCK -> IMPULSE_WINDOW [style=dotted];
+    HK_REF -> IMPULSE_WINDOW [style=dotted];
+    HK_BLEED -> IMPULSE_WINDOW [style=dotted];
+    HK_CMB_RANGE -> IMPULSE_WINDOW [style=dotted];
+    HK_CMB_STRIKE -> IMPULSE_WINDOW [style=dotted];
+    HK_CMB_PRESS -> IMPULSE_WINDOW [style=dotted];
+    HK_CMB_END -> IMPULSE_WINDOW [style=dotted];
+    HK_OOT -> IMPULSE_WINDOW [style=dotted];
+    HK_INPLAY -> IMPULSE_WINDOW [style=dotted];
+    HK_ASPLAYED -> CP_ASPLAYED [style=dotted];
+  }
+
+  // hook attachments to the main FSM (dashed = "window exists here")
+  PH_UNLOCK -> HK_UNLOCK [style=dashed];
+  PH_MASTER -> HK_MASTER [style=dashed];
+  INF_START -> HK_INFLUENCE [style=dashed];
+  DIS_START -> HK_DISCARD [style=dashed];
+  ACTION_ASANN -> HK_ASANN [style=dashed];
+  ACTION_DECLARE -> HK_AMOD [style=dashed, label="during action"];
+  ACTION_DECLARE -> HK_REACT [style=dashed, label="during action"];
+  BLOCK_START -> HK_BLOCK [style=dashed];
+  REF_POLL_OPEN -> HK_REF [style=dashed];
+  BLEED_START -> HK_BLEED [style=dashed];
+  COMBAT_S2_DETERMINE_RANGE -> HK_CMB_RANGE [style=dashed];
+  COMBAT_S4_STRIKE -> HK_CMB_STRIKE [style=dashed];
+  COMBAT_S6_PRESS -> HK_CMB_PRESS [style=dashed];
+  COMBAT_END_NODE -> HK_CMB_END [style=dashed];
+  ACTION_DECLARE -> HK_OOT [style=dashed, label="other players' turns"];
+  PH_MINION -> HK_INPLAY [style=dashed, label="activated abilities"];
+  CP_ASPLAYED -> HK_ASPLAYED [style=dashed];
+
+  // global draw/hand rule is always applicable
+  META_SETUP -> HAND_RULE [style=dashed];
+  META_SETUP -> DRAW_REPLACE [style=dashed];
+  DRAW_REPLACE -> HAND_RULE [style=dashed];
+}

@@ -3,6 +3,10 @@
 **Status:** direction set (2026-07-20), no implementation yet. Additive feature, beyond
 vdb parity — the same "additive, not vdb parity" class as offline semantic search.
 
+**Source assets** (committed): [`docs/gameloop/`](gameloop/) — the owner's authored DOT
+FSM (canonical) plus its SVG/PDF renders. **Implementation plan for codex:**
+[`docs/gameloop/DEV-PLAN.md`](gameloop/DEV-PLAN.md).
+
 ## Decision (2026-07-20)
 
 The product owner asked for two things: their existing game-loop work should **continue
@@ -41,7 +45,7 @@ tournament/community-data scope exclusion.
 ## The source artifact (what already exists)
 
 A Graphviz DOT finite-state machine of the **full** v5 game loop
-(`vtes_v5_full_gameloop_with_hooks_v2_14.dot`, ~510 lines). It is genuinely thorough —
+([`docs/gameloop/vtes-v5-gameloop.dot`](gameloop/vtes-v5-gameloop.dot), ~510 lines). It is genuinely thorough —
 it models, in nested `subgraph cluster_*` blocks:
 
 - **Meta loop** (session, VP scoring, oust/withdraw)
