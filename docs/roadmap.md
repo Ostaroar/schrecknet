@@ -221,6 +221,9 @@ design, decisions, and visualization options in
   196 transitions, 17 hooks, three structured impulse orders). Golden tests lock
   the five turn phases, seven combat steps, impulse orderings, representative
   transitions, and exact DOT→JSON structural equality
+- ☑ M2 readable turn-stepper at `#/rules`: five source-derived phase controls,
+  authored phase detail, immediate sub-loop entry previews, responsive horizontal
+  navigation, and explicit PWA precaching of the statechart JSON
 - ☐ Interactive, decomposed game-loop explainer (drill-down statechart, not one flat
   FSM): turn stepper → action / combat / block / referendum sub-views; Basic vs
   Advanced/Judge complexity toggle. Sourced from the existing full-game-loop DOT FSM,

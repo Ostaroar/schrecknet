@@ -97,7 +97,7 @@ the committed JSON structurally with a fresh distillation. Three machine-readabl
 `impulse_*` attributes were added to the order nodes, and validation repaired the
 source's previously undefined `ACTION_BLOCKED_PATH` endpoint.
 
-### M2 — Turn-stepper view (the readable 90%)
+### M2 — Turn-stepper view (the readable 90%)  ☑ complete
 - New route `#/rules` (add to `frontend/src/lib/route.ts` + a nav entry). Render the 5
   phases from `gameloop.json` as a horizontal stepper; clicking a phase reveals its
   `detail` and an entry point into its sub-loop.
@@ -107,6 +107,11 @@ source's previously undefined `ACTION_BLOCKED_PATH` endpoint.
 - **Readability gate + verify live:** open it in the browser and confirm someone who has
   never seen the FSM can follow a full turn. Screenshot it.
 - **DoD:** build green, live-verified, offline-safe, nav entry present.
+
+Implemented at `#/rules`: the five phases and their order are derived from the M1
+statechart rather than duplicated in React. Phase selection reveals the authored detail
+and immediate sub-loop entry states; the static JSON is explicitly precached by the PWA
+service worker. Readability and offline behavior were verified in the built app.
 
 ### M3 — Drill-down sub-views + Basic/Advanced toggle
 - Action-resolution **decision tree** (declare → announce → block eligibility →

@@ -31,6 +31,7 @@ const CACHE_NAME = 'schrecknet-shell-v1'
 // to download the optional ~24 MB model again.
 const SEMANTIC_MODEL_CACHE = 'transformers-cache'
 const CARD_TEXT_SYMBOL_ASSETS = [
+  '/gameloop.json',
   ...[
     'animalism',
     'auspex',

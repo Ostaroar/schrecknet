@@ -8,13 +8,14 @@ import ProxySheet from './components/ProxySheet'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
 import PreconBrowser from './components/PreconBrowser'
+import RulesPage from './components/RulesPage'
 import CommandPalette from './components/CommandPalette'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { useHashRoute, navigate } from './lib/route'
 
-const TABS = ['crypt', 'library', 'decks', 'precons', 'help', 'about'] as const
+const TABS = ['crypt', 'library', 'decks', 'precons', 'rules', 'help', 'about'] as const
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
@@ -38,7 +39,8 @@ export default function App() {
     route.page === 'proxy' ||
     route.page === 'share' ||
     route.page === 'diff' ||
-    route.page === 'precons'
+    route.page === 'precons' ||
+    route.page === 'rules'
 
   return (
     <div className={'mx-auto flex min-h-screen flex-col px-3 sm:px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
@@ -108,6 +110,8 @@ export default function App() {
           <DeckDiff />
         ) : route.page === 'precons' ? (
           <PreconBrowser />
+        ) : route.page === 'rules' ? (
+          <RulesPage />
         ) : route.page === 'help' ? (
           <HelpPage />
         ) : route.page === 'about' ? (

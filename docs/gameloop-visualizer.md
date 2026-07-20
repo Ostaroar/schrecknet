@@ -1,6 +1,7 @@
 # VTES v5 Game-Loop Visualizer — vision & design options
 
-**Status:** M1 source/schema complete (2026-07-20); readable UI milestones remain.
+**Status:** M1 source/schema and M2 turn-stepper complete (2026-07-20); drill-down,
+impulse, and card-window milestones remain.
 Additive feature, beyond vdb parity — the same "additive, not vdb parity" class as
 offline semantic search.
 
