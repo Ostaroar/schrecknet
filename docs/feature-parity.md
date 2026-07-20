@@ -239,4 +239,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)
 - ☐ Keyboard-first UX on desktop, touch-first on mobile
-- ☐ Dark Pack legal notice on every page footer ✎
+- ☐ Dark Pack legal notice on every page footer ✎ — required elements per the
+      [Dark Pack Agreement](https://www.paradoxinteractive.com/games/world-of-darkness/community/dark-pack-agreement):
+      Dark Pack logo, copyright/trademark notice (already in README.md), and a
+      "not official World of Darkness material" disclaimer. Blocking for any
+      future monetization (donations/sponsorships).
