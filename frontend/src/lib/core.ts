@@ -13,6 +13,7 @@ import init, {
   compare_decks as compareDecksWasm,
   draw_opening_hand as drawOpeningHandWasm,
   plan_crypt_search as planCryptSearchWasm,
+  plan_library_search as planLibrarySearchWasm,
   sort_crypt_cards as sortCryptCardsWasm,
   sort_library_cards as sortLibraryCardsWasm,
   capacity_stats as capacityStatsWasm,
@@ -38,6 +39,12 @@ export interface QueryPlan {
 export async function planCryptSearch(input: unknown): Promise<QueryPlan> {
   await ensureReady()
   return JSON.parse(planCryptSearchWasm(JSON.stringify(input))) as QueryPlan
+}
+
+/** Builds library SQL and bound values in the shared Rust core. */
+export async function planLibrarySearch(input: unknown): Promise<QueryPlan> {
+  await ensureReady()
+  return JSON.parse(planLibrarySearchWasm(JSON.stringify(input))) as QueryPlan
 }
 
 /** Deck-construction violations as human-readable strings (empty = legal). */

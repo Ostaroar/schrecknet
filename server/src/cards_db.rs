@@ -220,16 +220,6 @@ pub enum CapacityRequirementMode {
     AtLeast,
 }
 
-impl CostMode {
-    fn as_sql_value(self) -> &'static str {
-        match self {
-            Self::AtMost => "at_most",
-            Self::Exact => "exact",
-            Self::AtLeast => "at_least",
-        }
-    }
-}
-
 /// Release-date relation used by set filters, matching vdb's age qualifiers.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -245,18 +235,6 @@ pub enum SetAgeMode {
     NotNewer,
     /// Has no V5 printing older than the selected set.
     NotOlder,
-}
-
-impl SetAgeMode {
-    fn as_sql_value(self) -> &'static str {
-        match self {
-            Self::Exact => "exact",
-            Self::OrNewer => "or_newer",
-            Self::OrOlder => "or_older",
-            Self::NotNewer => "not_newer",
-            Self::NotOlder => "not_older",
-        }
-    }
 }
 
 /// Printing-history qualifier used alongside a selected set.
@@ -326,17 +304,6 @@ where
                 })
             })
             .collect(),
-    }
-}
-
-impl SetPrintMode {
-    fn as_sql_value(self) -> &'static str {
-        match self {
-            Self::Any => "any",
-            Self::Only => "only",
-            Self::First => "first",
-            Self::Reprint => "reprint",
-        }
     }
 }
 
@@ -671,250 +638,6 @@ fn register_regexp(conn: &Connection) -> rusqlite::Result<()> {
     )
 }
 
-/// Adds one ANDed requirement group whose entries are OR alternatives. A
-/// one-entry group is therefore a normal required discipline. Values are
-/// always bound; only placeholder indexes are written into the SQL string.
-fn push_discipline_group(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    requirements: &[DisciplineRequirement],
-) {
-    if requirements.is_empty() {
-        return;
-    }
-    sql.push_str(" AND (");
-    for (index, requirement) in requirements.iter().enumerate() {
-        if index > 0 {
-            sql.push_str(" OR ");
-        }
-        sql.push_str(&discipline_exists_expression(bound, requirement));
-    }
-    sql.push(')');
-}
-
-fn discipline_exists_expression(
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    requirement: &DisciplineRequirement,
-) -> String {
-    let expression = format!(
-        "EXISTS (SELECT 1 FROM card_disciplines cdx
-            WHERE cdx.card_id = c.id AND cdx.discipline = ?{n} AND cdx.superior >= ?{m})",
-        n = bound.len() + 1,
-        m = bound.len() + 2,
-    );
-    bound.push(Box::new(requirement.code.to_lowercase()));
-    bound.push(Box::new(requirement.superior as i64));
-    expression
-}
-
-fn push_library_discipline_filter(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    params: &LibrarySearchParams,
-) {
-    let requirements = params
-        .disciplines
-        .iter()
-        .map(|code| DisciplineRequirement {
-            code: code.to_lowercase(),
-            superior: params.disciplines_superior,
-        })
-        .collect::<Vec<_>>();
-    let no_requirement = "NOT EXISTS (SELECT 1 FROM card_disciplines cdn WHERE cdn.card_id = c.id)";
-
-    match params.discipline_logic {
-        DisciplineLogic::All => {
-            for requirement in &requirements {
-                push_discipline_group(sql, bound, std::slice::from_ref(requirement));
-            }
-            if params.include_no_discipline {
-                if requirements.is_empty() {
-                    sql.push_str(&format!(" AND {no_requirement}"));
-                } else {
-                    sql.push_str(" AND 0");
-                }
-            }
-        }
-        DisciplineLogic::Any | DisciplineLogic::None => {
-            let mut alternatives = requirements
-                .iter()
-                .map(|requirement| discipline_exists_expression(bound, requirement))
-                .collect::<Vec<_>>();
-            if params.include_no_discipline {
-                alternatives.push(no_requirement.into());
-            }
-            if !alternatives.is_empty() {
-                if params.discipline_logic == DisciplineLogic::None {
-                    sql.push_str(" AND NOT (");
-                } else {
-                    sql.push_str(" AND (");
-                }
-                sql.push_str(&alternatives.join(" OR "));
-                sql.push(')');
-            }
-        }
-        DisciplineLogic::Only => {
-            if params.include_no_discipline {
-                if requirements.is_empty() {
-                    sql.push_str(&format!(" AND {no_requirement}"));
-                } else {
-                    sql.push_str(" AND 0");
-                }
-                return;
-            }
-            if requirements.is_empty() {
-                return;
-            }
-            for requirement in &requirements {
-                push_discipline_group(sql, bound, std::slice::from_ref(requirement));
-            }
-            sql.push_str(&format!(
-                " AND (SELECT COUNT(DISTINCT cdo.discipline) FROM card_disciplines cdo
-                    WHERE cdo.card_id = c.id) = ?{}",
-                bound.len() + 1
-            ));
-            bound.push(Box::new(requirements.len() as i64));
-        }
-    }
-}
-
-fn requirement_token_expression(
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    requirement: &str,
-) -> String {
-    let index = bound.len() + 1;
-    bound.push(Box::new(requirement.to_lowercase()));
-    format!(
-        "EXISTS (SELECT 1 FROM card_requirements cre
-            WHERE cre.card_id = c.id AND cre.requirement = ?{index})"
-    )
-}
-
-fn requirement_family_absent_expression(
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    kind: &str,
-) -> String {
-    let index = bound.len() + 1;
-    bound.push(Box::new(kind.to_owned()));
-    format!(
-        "NOT EXISTS (SELECT 1 FROM card_requirements crn
-            WHERE crn.card_id = c.id AND crn.kind = ?{index})"
-    )
-}
-
-fn push_library_requirement_filter(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    requirements: &[String],
-    logic: RequirementLogic,
-    include_no_requirement: bool,
-    family_kind: &str,
-) {
-    if logic == RequirementLogic::All {
-        for requirement in requirements {
-            let expression = requirement_token_expression(bound, requirement);
-            sql.push_str(&format!(" AND {expression}"));
-        }
-        if include_no_requirement {
-            if requirements.is_empty() {
-                let expression = requirement_family_absent_expression(bound, family_kind);
-                sql.push_str(&format!(" AND {expression}"));
-            } else {
-                sql.push_str(" AND 0");
-            }
-        }
-        return;
-    }
-
-    let mut alternatives = requirements
-        .iter()
-        .map(|requirement| requirement_token_expression(bound, requirement))
-        .collect::<Vec<_>>();
-    if include_no_requirement {
-        alternatives.push(requirement_family_absent_expression(bound, family_kind));
-    }
-    if alternatives.is_empty() {
-        return;
-    }
-    if logic == RequirementLogic::None {
-        sql.push_str(" AND NOT (");
-    } else {
-        sql.push_str(" AND (");
-    }
-    sql.push_str(&alternatives.join(" OR "));
-    sql.push(')');
-}
-
-fn push_trait_filters(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    traits: &[String],
-) {
-    for trait_name in traits {
-        sql.push_str(&format!(
-            " AND EXISTS (SELECT 1 FROM card_traits ct
-                WHERE ct.card_id = c.id AND ct.trait = ?{})",
-            bound.len() + 1
-        ));
-        bound.push(Box::new(trait_name.clone()));
-    }
-}
-
-fn push_exact_precon_filter(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    precons: &[PreconSelection],
-    print_mode: SetPrintMode,
-) {
-    let selections: Vec<_> = precons
-        .iter()
-        .filter_map(|selection| {
-            let set = selection.set.trim();
-            let precon = selection.precon.trim();
-            (!set.is_empty() && !precon.is_empty()).then_some((set, precon))
-        })
-        .collect();
-    if selections.is_empty() {
-        return;
-    }
-
-    bound.push(Box::new(print_mode.as_sql_value()));
-    let print_index = bound.len();
-    sql.push_str(" AND (");
-    for (index, (set, precon)) in selections.into_iter().enumerate() {
-        if index > 0 {
-            sql.push_str(" OR ");
-        }
-        bound.push(Box::new(set.to_owned()));
-        let set_index = bound.len();
-        bound.push(Box::new(precon.to_owned()));
-        let precon_index = bound.len();
-        sql.push_str(&format!(
-            "EXISTS (SELECT 1 FROM printings pp
-              JOIN sets sp ON sp.id = pp.set_id
-              WHERE pp.card_id = c.id
-                AND sp.name = ?{set_index}
-                AND pp.precon = ?{precon_index}
-                AND (?{print_index} = 'any'
-                  OR (?{print_index} = 'only'
-                    AND 1 = (SELECT COUNT(DISTINCT po.set_id) FROM printings po
-                             WHERE po.card_id = c.id)
-                    AND 1 = (SELECT COUNT(DISTINCT COALESCE(po.precon, ''))
-                             FROM printings po
-                             WHERE po.card_id = c.id AND po.set_id = pp.set_id))
-                  OR (?{print_index} = 'first'
-                    AND sp.release_date = (SELECT MIN(sf.release_date)
-                      FROM printings pf JOIN sets sf ON sf.id = pf.set_id
-                      WHERE pf.card_id = c.id))
-                  OR (?{print_index} = 'reprint'
-                    AND sp.release_date > (SELECT MIN(sr.release_date)
-                      FROM printings pr JOIN sets sr ON sr.id = pr.set_id
-                      WHERE pr.card_id = c.id))))"
-        ));
-    }
-    sql.push(')');
-}
-
 pub fn search_crypt(
     conn: &Connection,
     params: &CryptSearchParams,
@@ -1087,6 +810,87 @@ pub fn search_library(
     search_library_inner(conn, params, true)
 }
 
+fn library_plan_input(
+    params: &LibrarySearchParams,
+) -> schrecknet_core::search_plan::LibraryPlanInput {
+    use schrecknet_core::search_plan as plan;
+
+    let requirement_logic = |logic| match logic {
+        RequirementLogic::All => plan::RequirementLogic::All,
+        RequirementLogic::Any => plan::RequirementLogic::Any,
+        RequirementLogic::None => plan::RequirementLogic::None,
+    };
+    let cost_mode = |mode| match mode {
+        CostMode::AtMost => plan::CostMode::AtMost,
+        CostMode::Exact => plan::CostMode::Exact,
+        CostMode::AtLeast => plan::CostMode::AtLeast,
+    };
+    let set_print_mode = |mode| match mode {
+        SetPrintMode::Any => plan::SetPrintMode::Any,
+        SetPrintMode::Only => plan::SetPrintMode::Only,
+        SetPrintMode::First => plan::SetPrintMode::First,
+        SetPrintMode::Reprint => plan::SetPrintMode::Reprint,
+    };
+
+    plan::LibraryPlanInput {
+        text: params.text.clone(),
+        text_mode: match params.text_mode {
+            TextMode::Any => plan::TextMode::Any,
+            TextMode::Name => plan::TextMode::Name,
+            TextMode::Text => plan::TextMode::Text,
+        },
+        text_regex: params.text_regex,
+        card_type: params.card_type.clone(),
+        clan: params.clan.clone(),
+        sect_requirements: params.sect_requirements.clone(),
+        sect_requirement_logic: requirement_logic(params.sect_requirement_logic),
+        include_no_sect_requirement: params.include_no_sect_requirement,
+        title_requirements: params.title_requirements.clone(),
+        title_requirement_logic: requirement_logic(params.title_requirement_logic),
+        disciplines: params.disciplines.clone(),
+        disciplines_superior: params.disciplines_superior,
+        discipline_logic: match params.discipline_logic {
+            DisciplineLogic::All => plan::DisciplineLogic::All,
+            DisciplineLogic::Any => plan::DisciplineLogic::Any,
+            DisciplineLogic::None => plan::DisciplineLogic::None,
+            DisciplineLogic::Only => plan::DisciplineLogic::Only,
+        },
+        include_no_discipline: params.include_no_discipline,
+        capacity_requirement: params.capacity_requirement,
+        capacity_requirement_mode: match params.capacity_requirement_mode {
+            CapacityRequirementMode::AtMost => plan::CapacityRequirementMode::AtMost,
+            CapacityRequirementMode::AtLeast => plan::CapacityRequirementMode::AtLeast,
+        },
+        blood_cost_max: params.blood_cost_max,
+        pool_cost_max: params.pool_cost_max,
+        blood_cost: params.blood_cost,
+        blood_cost_mode: cost_mode(params.blood_cost_mode),
+        pool_cost: params.pool_cost,
+        pool_cost_mode: cost_mode(params.pool_cost_mode),
+        traits: params.traits.clone(),
+        set: params.set.clone(),
+        set_age: match params.set_age {
+            SetAgeMode::Exact => plan::SetAgeMode::Exact,
+            SetAgeMode::OrNewer => plan::SetAgeMode::OrNewer,
+            SetAgeMode::OrOlder => plan::SetAgeMode::OrOlder,
+            SetAgeMode::NotNewer => plan::SetAgeMode::NotNewer,
+            SetAgeMode::NotOlder => plan::SetAgeMode::NotOlder,
+        },
+        set_print: set_print_mode(params.set_print),
+        precon: params.precon.clone(),
+        precons: params
+            .precons
+            .iter()
+            .map(|selection| plan::PreconSelection {
+                set: selection.set.clone(),
+                precon: selection.precon.clone(),
+            })
+            .collect(),
+        precon_print: set_print_mode(params.precon_print),
+        artist: params.artist.clone(),
+    }
+}
+
 pub(crate) fn filter_library(
     conn: &Connection,
     params: &LibrarySearchParams,
@@ -1099,181 +903,55 @@ fn search_library_inner(
     params: &LibrarySearchParams,
     limited: bool,
 ) -> rusqlite::Result<Vec<LibraryCard>> {
-    let type_pattern = params.card_type.as_ref().map(|t| format!("%\"{t}\"%"));
-    let legacy_precon = if params.precons.is_empty() {
-        params.precon.clone()
-    } else {
-        None
-    };
-    let blood_cost = params.blood_cost.or(params.blood_cost_max);
-    let blood_cost_mode = if params.blood_cost.is_some() {
-        params.blood_cost_mode
-    } else {
-        CostMode::AtMost
-    };
-    let pool_cost = params.pool_cost.or(params.pool_cost_max);
-    let pool_cost_mode = if params.pool_cost.is_some() {
-        params.pool_cost_mode
-    } else {
-        CostMode::AtMost
-    };
-    // Costs are stored as TEXT (e.g. "2"); CAST for numeric comparison. A
-    // NULL cost never matches a cost filter, and neither does the variable
-    // cost "X" (CAST('X') is 0, which would otherwise match every max —
-    // vdb.im treats X as a distinct value, not zero; e.g. Hidden Strength,
-    // Monkey Wrench). Per-discipline EXISTS clauses are built dynamically
-    // like search_crypt — every value is bound, never interpolated.
-    let mut sql = String::from(
-        "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
-                c.image_url, c.name_ascii, GROUP_CONCAT(cd.discipline) AS disc
-         FROM cards c
-         LEFT JOIN card_disciplines cd ON cd.card_id = c.id
-         WHERE c.kind = 'library'
-           AND (?1 = ''
-                OR (?2 AND (CASE WHEN ?13 THEN regexp_match(?1, c.name_ascii)
-                                 ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
-                OR (?3 AND (CASE WHEN ?13 THEN regexp_match(?1, c.card_text)
-                                 ELSE c.card_text LIKE '%' || ?1 || '%' END)))
-           AND (?4 IS NULL OR c.types LIKE ?4)
-           AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
-           AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X' AND
-                ((?7 = 'at_most' AND CAST(c.blood_cost AS INTEGER) <= ?6) OR
-                 (?7 = 'exact' AND CAST(c.blood_cost AS INTEGER) = ?6) OR
-                 (?7 = 'at_least' AND CAST(c.blood_cost AS INTEGER) >= ?6))))
-           AND (?8 IS NULL OR (c.pool_cost IS NOT NULL AND c.pool_cost != 'X' AND
-                ((?9 = 'at_most' AND CAST(c.pool_cost AS INTEGER) <= ?8) OR
-                 (?9 = 'exact' AND CAST(c.pool_cost AS INTEGER) = ?8) OR
-                 (?9 = 'at_least' AND CAST(c.pool_cost AS INTEGER) >= ?8))))
-           AND ((?10 IS NULL AND ?11 IS NULL) OR EXISTS (
-                SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-                WHERE p.card_id = c.id
-                  AND (?11 IS NULL OR p.precon LIKE '%' || ?11 || '%')
-                  AND (?10 IS NULL
-                    OR (?14 = 'exact' AND s.name = ?10)
-                    OR (?14 = 'or_newer' AND s.release_date >=
-                        (SELECT release_date FROM sets WHERE name = ?10))
-                    OR (?14 = 'or_older' AND s.release_date <=
-                        (SELECT release_date FROM sets WHERE name = ?10))
-                    OR (?14 = 'not_newer' AND NOT EXISTS (
-                        SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
-                        WHERE pn.card_id = c.id AND sn.release_date >
-                            (SELECT release_date FROM sets WHERE name = ?10)))
-                    OR (?14 = 'not_older' AND NOT EXISTS (
-                        SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
-                        WHERE po.card_id = c.id AND so.release_date <
-                            (SELECT release_date FROM sets WHERE name = ?10))))
-                  AND (?10 IS NULL OR ?15 = 'any'
-                    OR (?15 = 'only' AND 1 = (
-                        SELECT COUNT(DISTINCT px.set_id) FROM printings px
-                        WHERE px.card_id = c.id))
-                    OR (?15 = 'first' AND
-                        (SELECT release_date FROM sets WHERE name = ?10) = (
-                            SELECT MIN(sf.release_date) FROM printings pf
-                            JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
-                    OR (?15 = 'reprint' AND
-                        (SELECT release_date FROM sets WHERE name = ?10) > (
-                            SELECT MIN(sr.release_date) FROM printings pr
-                            JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
-           AND (?12 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?12 || '%'))",
-    );
-    let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
-        Box::new(params.text.trim().to_owned()),
-        Box::new(params.text_mode != TextMode::Text),
-        Box::new(params.text_mode != TextMode::Name),
-        Box::new(type_pattern),
-        Box::new(params.clan.clone()),
-        Box::new(blood_cost),
-        Box::new(blood_cost_mode.as_sql_value()),
-        Box::new(pool_cost),
-        Box::new(pool_cost_mode.as_sql_value()),
-        Box::new(params.set.clone()),
-        Box::new(legacy_precon),
-        Box::new(params.artist.clone()),
-        Box::new(params.text_regex as i64),
-        Box::new(params.set_age.as_sql_value()),
-        Box::new(params.set_print.as_sql_value()),
-    ];
-    push_library_discipline_filter(&mut sql, &mut bound, params);
-    push_exact_precon_filter(&mut sql, &mut bound, &params.precons, params.precon_print);
-    push_library_requirement_filter(
-        &mut sql,
-        &mut bound,
-        &params.sect_requirements,
-        params.sect_requirement_logic,
-        params.include_no_sect_requirement,
-        "sect",
-    );
-    push_library_requirement_filter(
-        &mut sql,
-        &mut bound,
-        &params.title_requirements,
-        params.title_requirement_logic,
-        false,
-        "title",
-    );
-    push_trait_filters(&mut sql, &mut bound, &params.traits);
-    if let Some(capacity) = params.capacity_requirement {
-        let (column, operator) = match params.capacity_requirement_mode {
-            CapacityRequirementMode::AtMost => ("max_capacity", "<="),
-            CapacityRequirementMode::AtLeast => ("min_capacity", ">="),
-        };
-        sql.push_str(&format!(
-            " AND EXISTS (SELECT 1 FROM card_capacity_requirements ccr
-                WHERE ccr.card_id = c.id AND ccr.{column} IS NOT NULL
-                  AND ccr.{column} {operator} ?{})",
-            bound.len() + 1
-        ));
-        bound.push(Box::new(capacity));
-    }
-    sql.push_str(" GROUP BY c.id");
-
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(
-        rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
-        |row| {
-            let id: i64 = row.get(0)?;
-            let name: String = row.get(1)?;
-            let types_json: String = row.get(2)?;
-            let types: Vec<String> = serde_json::from_str(&types_json).unwrap_or_default();
-            let disc: Option<String> = row.get(8)?;
-            let disciplines = disc
-                .map(|value| value.split(',').map(str::to_string).collect::<Vec<_>>())
-                .unwrap_or_default();
-            let clan: Option<String> = row.get(3)?;
-            let clan = clan.filter(|value| !value.is_empty());
-            let blood_cost: Option<String> = row.get(4)?;
-            let pool_cost: Option<String> = row.get(5)?;
-            let sort_id = u32::try_from(id).map_err(|error| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Integer,
-                    Box::new(error),
-                )
-            })?;
-            Ok((
-                LibraryCard {
-                    id,
-                    name,
-                    types: types.clone(),
-                    clan: clan.clone(),
-                    blood_cost: blood_cost.clone(),
-                    pool_cost: pool_cost.clone(),
-                    image_url: row.get(6)?,
-                    disciplines: disciplines.clone(),
-                },
-                schrecknet_core::search_sort::LibrarySortRecord {
-                    id: sort_id,
-                    name_ascii: row.get(7)?,
-                    types,
-                    clan: clan.unwrap_or_default(),
-                    disciplines,
-                    blood_cost,
-                    pool_cost,
-                },
-            ))
-        },
-    )?;
+    let plan = schrecknet_core::search_plan::library_plan(&library_plan_input(params));
+    let bound = plan
+        .params
+        .into_iter()
+        .map(sqlite_value)
+        .collect::<Vec<_>>();
+    let mut stmt = conn.prepare(&plan.sql)?;
+    let rows = stmt.query_map(rusqlite::params_from_iter(bound.iter()), |row| {
+        let id: i64 = row.get(0)?;
+        let name: String = row.get(1)?;
+        let types_json: String = row.get(2)?;
+        let types: Vec<String> = serde_json::from_str(&types_json).unwrap_or_default();
+        let disc: Option<String> = row.get(8)?;
+        let disciplines = disc
+            .map(|value| value.split(',').map(str::to_string).collect::<Vec<_>>())
+            .unwrap_or_default();
+        let clan: Option<String> = row.get(3)?;
+        let clan = clan.filter(|value| !value.is_empty());
+        let blood_cost: Option<String> = row.get(4)?;
+        let pool_cost: Option<String> = row.get(5)?;
+        let sort_id = u32::try_from(id).map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                0,
+                rusqlite::types::Type::Integer,
+                Box::new(error),
+            )
+        })?;
+        Ok((
+            LibraryCard {
+                id,
+                name,
+                types: types.clone(),
+                clan: clan.clone(),
+                blood_cost: blood_cost.clone(),
+                pool_cost: pool_cost.clone(),
+                image_url: row.get(6)?,
+                disciplines: disciplines.clone(),
+            },
+            schrecknet_core::search_sort::LibrarySortRecord {
+                id: sort_id,
+                name_ascii: row.get(7)?,
+                types,
+                clan: clan.unwrap_or_default(),
+                disciplines,
+                blood_cost,
+                pool_cost,
+            },
+        ))
+    })?;
     let mut rows = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     rows.sort_by(|left, right| {
         schrecknet_core::search_sort::compare_library(&left.1, &right.1, params.sort.as_core())

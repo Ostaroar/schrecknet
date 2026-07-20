@@ -18,7 +18,7 @@ wide, brittle function signature.
 ## Decision
 
 - `core::search_plan` owns a platform-neutral `QueryPlan { sql, params }` and the
-  crypt filter model. All user-derived values remain bound parameters.
+  crypt and library filter models. All user-derived values remain bound parameters.
 - The native server constructs the Rust input directly and converts plan values to
   `rusqlite::types::Value`.
 - The browser sends and receives JSON through one thin WASM binding. We use the
@@ -37,8 +37,9 @@ wide, brittle function signature.
 
 ## Consequences
 
-- Crypt exact-search planning is implemented once in Rust and exercised by both
-  platforms.
+- Crypt and library exact-search planning are implemented once in Rust and
+  exercised by both platforms.
 - The core WASM artifact grows modestly due to `serde_json`; this is accepted in
   exchange for a typed, extensible boundary and removal of duplicated query logic.
-- Library planning can migrate to the same contract incrementally.
+- TypeScript search modules are reduced to UI-state translation, SQLite execution,
+  and row mapping; they no longer assemble card-filter SQL.

@@ -12,6 +12,15 @@ pub fn plan_crypt_search(input_json: &str) -> Result<String, JsError> {
         .map_err(|error| JsError::new(&error.to_string()))
 }
 
+/// Builds the shared bound-parameter library query plan for the browser.
+#[wasm_bindgen]
+pub fn plan_library_search(input_json: &str) -> Result<String, JsError> {
+    let input =
+        serde_json::from_str(input_json).map_err(|error| JsError::new(&error.to_string()))?;
+    serde_json::to_string(&crate::search_plan::library_plan(&input))
+        .map_err(|error| JsError::new(&error.to_string()))
+}
+
 #[wasm_bindgen]
 pub fn crypt_groups_legal(groups: &[u8]) -> bool {
     crate::legality::crypt_groups_legal(groups)

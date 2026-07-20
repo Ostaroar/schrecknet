@@ -55,17 +55,3 @@ export async function listCardTraits(kind: CardKind): Promise<string[]> {
   )
   return rows.map((row) => row.trait)
 }
-
-/** Adds VDB's AND-across-selected-traits semantics to a card query. */
-export function appendTraitFilters(
-  sql: string,
-  params: Array<string | number | null>,
-  traits: string[],
-): string {
-  for (const trait of traits) {
-    params.push(trait)
-    sql += ` AND EXISTS (SELECT 1 FROM card_traits ct
-              WHERE ct.card_id = c.id AND ct.trait = ?${params.length})`
-  }
-  return sql
-}

@@ -41,10 +41,10 @@ docs/feature-parity.md's scope note).
 - ☑ Shared native/WASM result ordering: crypt and library sort modes now use
   `core/src/search_sort.rs` on both server and browser, replacing duplicated
   TypeScript and SQL `ORDER BY` implementations
-- ☑ Shared native/WASM crypt query planning: `core/src/search_plan.rs` now owns
-  every crypt filter and bound parameter; the server executes the Rust plan
-  directly and the browser receives the same plan through WASM (ADR 0007).
-  Library query planning is the next Rust-core migration boundary
+- ☑ Shared native/WASM exact-search planning: `core/src/search_plan.rs` owns
+  every crypt and library filter plus every bound parameter; the server executes
+  Rust plans directly and the browser receives the same plans through WASM
+  (ADR 0007), removing both duplicated TypeScript/SQL query builders
 - ☑ Offline semantic card search (additive, not vdb parity): lazy local
   all-MiniLM-L6-v2 ONNX inference, checksum-pinned build assets, ~1 MB of
   precomputed vectors in `cards.sqlite`, exact cosine ranking in shared Rust,
