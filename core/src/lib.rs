@@ -12,6 +12,7 @@ pub mod draw;
 pub mod dtext;
 pub mod legality;
 pub mod requirements;
+pub mod search_plan;
 pub mod search_sort;
 pub mod semantic;
 #[cfg(not(target_arch = "wasm32"))]

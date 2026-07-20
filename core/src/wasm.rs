@@ -2,6 +2,16 @@
 
 use wasm_bindgen::prelude::{wasm_bindgen, JsError};
 
+/// Builds the shared bound-parameter crypt query plan from a JSON filter
+/// object and returns `{ sql, params }` as JSON for the browser SQLite adapter.
+#[wasm_bindgen]
+pub fn plan_crypt_search(input_json: &str) -> Result<String, JsError> {
+    let input =
+        serde_json::from_str(input_json).map_err(|error| JsError::new(&error.to_string()))?;
+    serde_json::to_string(&crate::search_plan::crypt_plan(&input))
+        .map_err(|error| JsError::new(&error.to_string()))
+}
+
 #[wasm_bindgen]
 pub fn crypt_groups_legal(groups: &[u8]) -> bool {
     crate::legality::crypt_groups_legal(groups)

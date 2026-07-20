@@ -1,22 +1,17 @@
-// Crypt search query builder — mirrors server/src/cards_db.rs::search_crypt
-// exactly (same filters, same dynamically-built EXISTS clauses per required
-// discipline and trait) so the browser and server agree.
+// Crypt search adapter. Filter/query planning lives in shared Rust and reaches
+// this browser adapter through WASM; this module executes the plan and maps rows.
 
 import { query } from './db'
-import {
-  appendDisciplineFilters,
-  type DisciplineRequirement,
-} from './disciplineFilter'
+import type { DisciplineRequirement } from './disciplineFilter'
 import { defaultSetAge, defaultSetPrint, type SetAgeMode, type SetPrintMode } from './setFilter'
 import type { RequirementLogic } from './requirementFilter'
-import { appendTraitFilters, listCardTraits } from './cardTraits'
+import { listCardTraits } from './cardTraits'
 import {
-  appendExactPreconFilter,
   listSearchPrecons,
   type PreconOption,
   type PreconSelection,
 } from './preconFilter'
-import { orderCryptCards } from './core'
+import { orderCryptCards, planCryptSearch } from './core'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
@@ -116,23 +111,6 @@ interface CryptRow {
   disc: string | null
 }
 
-function appendCryptSectFilter(
-  sql: string,
-  params: Array<string | number | null>,
-  sects: string[],
-  logic: RequirementLogic,
-): string {
-  if (sects.length === 0) return sql
-  const expressions = sects.map((sect) => {
-    params.push(sect)
-    return `lower(coalesce(c.sect, '')) = lower(?${params.length})`
-  })
-  if (logic === 'all') {
-    return sql + expressions.map((expression) => ` AND ${expression}`).join('')
-  }
-  return `${sql} AND ${logic === 'none' ? 'NOT ' : ''}(${expressions.join(' OR ')})`
-}
-
 function parseDisciplines(disc: string | null): Discipline[] {
   if (!disc) return []
   return disc
@@ -155,98 +133,32 @@ export async function filterCrypt(filters: CryptFilters): Promise<CryptCard[]> {
 }
 
 async function searchCryptInner(filters: CryptFilters, limited: boolean): Promise<CryptCard[]> {
-  const singleGroup = filters.groups.length === 0 ? filters.group : null
-  const legacyPrecon = filters.precons.length === 0 ? filters.precon : null
-  let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
-            c.image_url, c.name_ascii,
-            GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
-     FROM cards c
-     LEFT JOIN card_disciplines cd ON cd.card_id = c.id
-     WHERE c.kind = 'crypt'
-       AND (?1 = ''
-            OR (?2 AND (CASE WHEN ?12 THEN regexp_match(?1, c.name_ascii)
-                             ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
-            OR (?3 AND (CASE WHEN ?12 THEN regexp_match(?1, c.card_text)
-                             ELSE c.card_text LIKE '%' || ?1 || '%' END)))
-       AND (?4 IS NULL OR c.clan LIKE '%' || ?4 || '%')
-       AND (?5 IS NULL OR c.grp = ?5)
-       AND (?6 IS NULL OR c.capacity >= ?6)
-       AND (?7 IS NULL OR c.capacity <= ?7)
-       AND (?8 IS NULL
-            OR (lower(?8) = 'non-titled' AND c.title IS NULL)
-            OR lower(c.title) = lower(?8))
-       AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
-            SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-            WHERE p.card_id = c.id
-              AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')
-              AND (?9 IS NULL
-                OR (?13 = 'exact' AND s.name = ?9)
-                OR (?13 = 'or_newer' AND s.release_date >=
-                    (SELECT release_date FROM sets WHERE name = ?9))
-                OR (?13 = 'or_older' AND s.release_date <=
-                    (SELECT release_date FROM sets WHERE name = ?9))
-                OR (?13 = 'not_newer' AND NOT EXISTS (
-                    SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
-                    WHERE pn.card_id = c.id AND sn.release_date >
-                        (SELECT release_date FROM sets WHERE name = ?9)))
-                OR (?13 = 'not_older' AND NOT EXISTS (
-                    SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
-                    WHERE po.card_id = c.id AND so.release_date <
-                        (SELECT release_date FROM sets WHERE name = ?9))))
-              AND (?9 IS NULL OR ?14 = 'any'
-                OR (?14 = 'only' AND 1 = (
-                    SELECT COUNT(DISTINCT px.set_id) FROM printings px
-                    WHERE px.card_id = c.id))
-                OR (?14 = 'first' AND
-                    (SELECT release_date FROM sets WHERE name = ?9) = (
-                        SELECT MIN(sf.release_date) FROM printings pf
-                        JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
-                OR (?14 = 'reprint' AND
-                    (SELECT release_date FROM sets WHERE name = ?9) > (
-                        SELECT MIN(sr.release_date) FROM printings pr
-                        JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
-       AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-            WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))
-       AND (?15 IS NULL
-            OR (?15 = 0 AND c.votes = 0)
-            OR (?15 > 0 AND c.votes >= ?15))`
-  const params: (string | number | null)[] = [
-    filters.text.trim(),
-    filters.textMode !== 'text' ? 1 : 0,
-    filters.textMode !== 'name' ? 1 : 0,
-    filters.clan,
-    singleGroup,
-    filters.capacityMin,
-    filters.capacityMax,
-    filters.title,
-    filters.set,
-    legacyPrecon,
-    filters.artist,
-    filters.textRegex ? 1 : 0,
-    filters.setAge,
-    filters.setPrint,
-    filters.votes,
-  ]
-  if (filters.groups.length > 0) {
-    const placeholders: string[] = []
-    for (const group of filters.groups) {
-      placeholders.push(`?${params.length + 1}`)
-      params.push(group)
-    }
-    sql += ` AND c.grp IN (${placeholders.join(',')})`
-  }
-  sql = appendCryptSectFilter(sql, params, filters.sects, filters.sectLogic)
-  sql = appendTraitFilters(sql, params, filters.traits)
-  sql = appendExactPreconFilter(sql, params, filters.precons, filters.preconPrint)
-  sql = appendDisciplineFilters(
-    sql,
-    params,
-    filters.disciplineRequirements,
-    filters.disciplines,
-    filters.disciplinesSuperior,
-    filters.disciplineOr,
-  )
-  sql += ` GROUP BY c.id`
+  const { sql, params } = await planCryptSearch({
+    text: filters.text,
+    text_mode: filters.textMode,
+    text_regex: filters.textRegex,
+    clan: filters.clan,
+    title: filters.title,
+    sects: filters.sects,
+    sect_logic: filters.sectLogic,
+    votes: filters.votes,
+    traits: filters.traits,
+    group: filters.group,
+    groups: filters.groups,
+    capacity_min: filters.capacityMin,
+    capacity_max: filters.capacityMax,
+    disciplines: filters.disciplines,
+    disciplines_superior: filters.disciplinesSuperior,
+    discipline_requirements: filters.disciplineRequirements,
+    discipline_or: filters.disciplineOr,
+    set: filters.set,
+    set_age: filters.setAge,
+    set_print: filters.setPrint,
+    precon: filters.precon,
+    precons: filters.precons,
+    precon_print: filters.preconPrint,
+    artist: filters.artist,
+  })
 
   const rows = await query<CryptRow>(sql, params)
   const cards = rows.map(({ name_ascii: _sortName, disc, ...row }) => ({

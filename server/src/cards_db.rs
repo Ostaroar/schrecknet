@@ -671,23 +671,6 @@ fn register_regexp(conn: &Connection) -> rusqlite::Result<()> {
     )
 }
 
-fn effective_discipline_requirements(
-    requirements: &[DisciplineRequirement],
-    legacy_codes: &[String],
-    legacy_superior: bool,
-) -> Vec<DisciplineRequirement> {
-    if !requirements.is_empty() {
-        return requirements.to_vec();
-    }
-    legacy_codes
-        .iter()
-        .map(|code| DisciplineRequirement {
-            code: code.to_lowercase(),
-            superior: legacy_superior,
-        })
-        .collect()
-}
-
 /// Adds one ANDed requirement group whose entries are OR alternatives. A
 /// one-entry group is therefore a normal required discipline. Values are
 /// always bound; only placeholder indexes are written into the SQL string.
@@ -862,64 +845,6 @@ fn push_library_requirement_filter(
     sql.push(')');
 }
 
-fn push_group_filter(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    groups: &[i64],
-) {
-    if groups.is_empty() {
-        return;
-    }
-    sql.push_str(" AND c.grp IN (");
-    for (index, group) in groups.iter().enumerate() {
-        if index > 0 {
-            sql.push(',');
-        }
-        sql.push_str(&format!("?{}", bound.len() + 1));
-        bound.push(Box::new(*group));
-    }
-    sql.push(')');
-}
-
-fn push_crypt_sect_filter(
-    sql: &mut String,
-    bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
-    sects: &[String],
-    logic: RequirementLogic,
-) {
-    if sects.is_empty() {
-        return;
-    }
-
-    if logic == RequirementLogic::All {
-        for sect in sects {
-            sql.push_str(&format!(
-                " AND lower(coalesce(c.sect, '')) = lower(?{})",
-                bound.len() + 1
-            ));
-            bound.push(Box::new(sect.clone()));
-        }
-        return;
-    }
-
-    sql.push_str(" AND ");
-    if logic == RequirementLogic::None {
-        sql.push_str("NOT ");
-    }
-    sql.push('(');
-    for (index, sect) in sects.iter().enumerate() {
-        if index > 0 {
-            sql.push_str(" OR ");
-        }
-        sql.push_str(&format!(
-            "lower(coalesce(c.sect, '')) = lower(?{})",
-            bound.len() + 1
-        ));
-        bound.push(Box::new(sect.clone()));
-    }
-    sql.push(')');
-}
-
 fn push_trait_filters(
     sql: &mut String,
     bound: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
@@ -1004,159 +929,147 @@ pub(crate) fn filter_crypt(
     search_crypt_inner(conn, params, false)
 }
 
+fn crypt_plan_input(params: &CryptSearchParams) -> schrecknet_core::search_plan::CryptPlanInput {
+    use schrecknet_core::search_plan as plan;
+
+    plan::CryptPlanInput {
+        text: params.text.clone(),
+        text_mode: match params.text_mode {
+            TextMode::Any => plan::TextMode::Any,
+            TextMode::Name => plan::TextMode::Name,
+            TextMode::Text => plan::TextMode::Text,
+        },
+        text_regex: params.text_regex,
+        clan: params.clan.clone(),
+        title: params.title.clone(),
+        sects: params.sects.clone(),
+        sect_logic: match params.sect_logic {
+            RequirementLogic::All => plan::RequirementLogic::All,
+            RequirementLogic::Any => plan::RequirementLogic::Any,
+            RequirementLogic::None => plan::RequirementLogic::None,
+        },
+        votes: params.votes,
+        traits: params.traits.clone(),
+        group: params.group,
+        groups: params.groups.clone(),
+        capacity_min: params.capacity_min,
+        capacity_max: params.capacity_max,
+        disciplines: params.disciplines.clone(),
+        disciplines_superior: params.disciplines_superior,
+        discipline_requirements: params
+            .discipline_requirements
+            .iter()
+            .map(|requirement| plan::DisciplineRequirement {
+                code: requirement.code.clone(),
+                superior: requirement.superior,
+            })
+            .collect(),
+        discipline_or: params
+            .discipline_or
+            .iter()
+            .map(|group| {
+                group
+                    .iter()
+                    .map(|requirement| plan::DisciplineRequirement {
+                        code: requirement.code.clone(),
+                        superior: requirement.superior,
+                    })
+                    .collect()
+            })
+            .collect(),
+        set: params.set.clone(),
+        set_age: match params.set_age {
+            SetAgeMode::Exact => plan::SetAgeMode::Exact,
+            SetAgeMode::OrNewer => plan::SetAgeMode::OrNewer,
+            SetAgeMode::OrOlder => plan::SetAgeMode::OrOlder,
+            SetAgeMode::NotNewer => plan::SetAgeMode::NotNewer,
+            SetAgeMode::NotOlder => plan::SetAgeMode::NotOlder,
+        },
+        set_print: match params.set_print {
+            SetPrintMode::Any => plan::SetPrintMode::Any,
+            SetPrintMode::Only => plan::SetPrintMode::Only,
+            SetPrintMode::First => plan::SetPrintMode::First,
+            SetPrintMode::Reprint => plan::SetPrintMode::Reprint,
+        },
+        precon: params.precon.clone(),
+        precons: params
+            .precons
+            .iter()
+            .map(|selection| plan::PreconSelection {
+                set: selection.set.clone(),
+                precon: selection.precon.clone(),
+            })
+            .collect(),
+        precon_print: match params.precon_print {
+            SetPrintMode::Any => plan::SetPrintMode::Any,
+            SetPrintMode::Only => plan::SetPrintMode::Only,
+            SetPrintMode::First => plan::SetPrintMode::First,
+            SetPrintMode::Reprint => plan::SetPrintMode::Reprint,
+        },
+        artist: params.artist.clone(),
+    }
+}
+
+fn sqlite_value(value: schrecknet_core::search_plan::SqlValue) -> rusqlite::types::Value {
+    match value {
+        schrecknet_core::search_plan::SqlValue::Null => rusqlite::types::Value::Null,
+        schrecknet_core::search_plan::SqlValue::Integer(value) => {
+            rusqlite::types::Value::Integer(value)
+        }
+        schrecknet_core::search_plan::SqlValue::Text(value) => rusqlite::types::Value::Text(value),
+    }
+}
+
 fn search_crypt_inner(
     conn: &Connection,
     params: &CryptSearchParams,
     limited: bool,
 ) -> rusqlite::Result<Vec<CryptCard>> {
-    // The per-discipline EXISTS clauses are built dynamically (the count
-    // varies) but every value is bound — no string interpolation of input.
-    // set + precon are ANDed inside ONE EXISTS on the same printing row, not
-    // two separate EXISTS clauses — a card can have printing A in set X with
-    // no precon and printing B in set Y with a precon, and two independent
-    // clauses would wrongly match set=X + precon=<B's precon> even though no
-    // single printing has both (found live via the precon browser, which
-    // was the first caller to combine the two).
-    let single_group = if params.groups.is_empty() {
-        params.group
-    } else {
-        None
-    };
-    let legacy_precon = if params.precons.is_empty() {
-        params.precon.clone()
-    } else {
-        None
-    };
-    let mut sql = String::from(
-        "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
-                c.image_url, c.name_ascii,
-                GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
-         FROM cards c
-         LEFT JOIN card_disciplines cd ON cd.card_id = c.id
-         WHERE c.kind = 'crypt'
-           AND (?1 = ''
-                OR (?2 AND (CASE WHEN ?12 THEN regexp_match(?1, c.name_ascii)
-                                 ELSE c.name_ascii LIKE '%' || ?1 || '%' END))
-                OR (?3 AND (CASE WHEN ?12 THEN regexp_match(?1, c.card_text)
-                                 ELSE c.card_text LIKE '%' || ?1 || '%' END)))
-           AND (?4 IS NULL OR c.clan LIKE '%' || ?4 || '%')
-           AND (?5 IS NULL OR c.grp = ?5)
-           AND (?6 IS NULL OR c.capacity >= ?6)
-           AND (?7 IS NULL OR c.capacity <= ?7)
-           AND (?8 IS NULL
-                OR (lower(?8) = 'non-titled' AND c.title IS NULL)
-                OR lower(c.title) = lower(?8))
-           AND ((?9 IS NULL AND ?10 IS NULL) OR EXISTS (
-                SELECT 1 FROM printings p JOIN sets s ON s.id = p.set_id
-                WHERE p.card_id = c.id
-                  AND (?10 IS NULL OR p.precon LIKE '%' || ?10 || '%')
-                  AND (?9 IS NULL
-                    OR (?13 = 'exact' AND s.name = ?9)
-                    OR (?13 = 'or_newer' AND s.release_date >=
-                        (SELECT release_date FROM sets WHERE name = ?9))
-                    OR (?13 = 'or_older' AND s.release_date <=
-                        (SELECT release_date FROM sets WHERE name = ?9))
-                    OR (?13 = 'not_newer' AND NOT EXISTS (
-                        SELECT 1 FROM printings pn JOIN sets sn ON sn.id = pn.set_id
-                        WHERE pn.card_id = c.id AND sn.release_date >
-                            (SELECT release_date FROM sets WHERE name = ?9)))
-                    OR (?13 = 'not_older' AND NOT EXISTS (
-                        SELECT 1 FROM printings po JOIN sets so ON so.id = po.set_id
-                        WHERE po.card_id = c.id AND so.release_date <
-                            (SELECT release_date FROM sets WHERE name = ?9))))
-                  AND (?9 IS NULL OR ?14 = 'any'
-                    OR (?14 = 'only' AND 1 = (
-                        SELECT COUNT(DISTINCT px.set_id) FROM printings px
-                        WHERE px.card_id = c.id))
-                    OR (?14 = 'first' AND
-                        (SELECT release_date FROM sets WHERE name = ?9) = (
-                            SELECT MIN(sf.release_date) FROM printings pf
-                            JOIN sets sf ON sf.id = pf.set_id WHERE pf.card_id = c.id))
-                    OR (?14 = 'reprint' AND
-                        (SELECT release_date FROM sets WHERE name = ?9) > (
-                            SELECT MIN(sr.release_date) FROM printings pr
-                            JOIN sets sr ON sr.id = pr.set_id WHERE pr.card_id = c.id)))))
-           AND (?11 IS NULL OR EXISTS (SELECT 1 FROM card_artists ca JOIN artists a ON a.id = ca.artist_id
-                WHERE ca.card_id = c.id AND a.name LIKE '%' || ?11 || '%'))
-           AND (?15 IS NULL
-                OR (?15 = 0 AND c.votes = 0)
-                OR (?15 > 0 AND c.votes >= ?15))",
-    );
-    let mut bound: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
-        Box::new(params.text.trim().to_owned()),
-        Box::new(params.text_mode != TextMode::Text),
-        Box::new(params.text_mode != TextMode::Name),
-        Box::new(params.clan.clone()),
-        Box::new(single_group),
-        Box::new(params.capacity_min),
-        Box::new(params.capacity_max),
-        Box::new(params.title.clone()),
-        Box::new(params.set.clone()),
-        Box::new(legacy_precon),
-        Box::new(params.artist.clone()),
-        Box::new(params.text_regex as i64),
-        Box::new(params.set_age.as_sql_value()),
-        Box::new(params.set_print.as_sql_value()),
-        Box::new(params.votes),
-    ];
-    push_group_filter(&mut sql, &mut bound, &params.groups);
-    push_crypt_sect_filter(&mut sql, &mut bound, &params.sects, params.sect_logic);
-    push_trait_filters(&mut sql, &mut bound, &params.traits);
-    push_exact_precon_filter(&mut sql, &mut bound, &params.precons, params.precon_print);
-    for requirement in effective_discipline_requirements(
-        &params.discipline_requirements,
-        &params.disciplines,
-        params.disciplines_superior,
-    ) {
-        push_discipline_group(&mut sql, &mut bound, std::slice::from_ref(&requirement));
-    }
-    for group in &params.discipline_or {
-        push_discipline_group(&mut sql, &mut bound, group);
-    }
-    sql.push_str(" GROUP BY c.id");
-
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(
-        rusqlite::params_from_iter(bound.iter().map(|b| b.as_ref())),
-        |row| {
-            let id: i64 = row.get(0)?;
-            let name: String = row.get(1)?;
-            let clan: String = row.get(2)?;
-            let capacity: i64 = row.get(3)?;
-            let group: i64 = row.get(4)?;
-            let sect: Option<String> = row.get(6)?;
-            let sort_id = u32::try_from(id).map_err(|error| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Integer,
-                    Box::new(error),
-                )
-            })?;
-            let disc: Option<String> = row.get(10)?;
-            Ok((
-                CryptCard {
-                    id,
-                    name,
-                    clan: clan.clone(),
-                    capacity,
-                    group,
-                    title: row.get(5)?,
-                    sect: sect.clone(),
-                    votes: row.get(7)?,
-                    image_url: row.get(8)?,
-                    disciplines: parse_disciplines(disc),
-                },
-                schrecknet_core::search_sort::CryptSortRecord {
-                    id: sort_id,
-                    name_ascii: row.get(9)?,
-                    clan,
-                    capacity,
-                    group,
-                    sect: sect.unwrap_or_default(),
-                },
-            ))
-        },
-    )?;
+    let plan = schrecknet_core::search_plan::crypt_plan(&crypt_plan_input(params));
+    let bound = plan
+        .params
+        .into_iter()
+        .map(sqlite_value)
+        .collect::<Vec<_>>();
+    let mut stmt = conn.prepare(&plan.sql)?;
+    let rows = stmt.query_map(rusqlite::params_from_iter(bound.iter()), |row| {
+        let id: i64 = row.get(0)?;
+        let name: String = row.get(1)?;
+        let clan: String = row.get(2)?;
+        let capacity: i64 = row.get(3)?;
+        let group: i64 = row.get(4)?;
+        let sect: Option<String> = row.get(6)?;
+        let sort_id = u32::try_from(id).map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                0,
+                rusqlite::types::Type::Integer,
+                Box::new(error),
+            )
+        })?;
+        let disc: Option<String> = row.get(10)?;
+        Ok((
+            CryptCard {
+                id,
+                name,
+                clan: clan.clone(),
+                capacity,
+                group,
+                title: row.get(5)?,
+                sect: sect.clone(),
+                votes: row.get(7)?,
+                image_url: row.get(8)?,
+                disciplines: parse_disciplines(disc),
+            },
+            schrecknet_core::search_sort::CryptSortRecord {
+                id: sort_id,
+                name_ascii: row.get(9)?,
+                clan,
+                capacity,
+                group,
+                sect: sect.unwrap_or_default(),
+            },
+        ))
+    })?;
     let mut rows = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     rows.sort_by(|left, right| {
         schrecknet_core::search_sort::compare_crypt(&left.1, &right.1, params.sort.as_core())

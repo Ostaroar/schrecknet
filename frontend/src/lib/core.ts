@@ -12,6 +12,7 @@ import init, {
   format_deck_text as formatDeckTextWasm,
   compare_decks as compareDecksWasm,
   draw_opening_hand as drawOpeningHandWasm,
+  plan_crypt_search as planCryptSearchWasm,
   sort_crypt_cards as sortCryptCardsWasm,
   sort_library_cards as sortLibraryCardsWasm,
   capacity_stats as capacityStatsWasm,
@@ -24,6 +25,19 @@ let ready: Promise<void> | null = null
 function ensureReady(): Promise<void> {
   if (!ready) ready = init().then(() => undefined)
   return ready
+}
+
+export type SqlParameter = string | number | null
+
+export interface QueryPlan {
+  sql: string
+  params: SqlParameter[]
+}
+
+/** Builds crypt SQL and bound values in the shared Rust core. */
+export async function planCryptSearch(input: unknown): Promise<QueryPlan> {
+  await ensureReady()
+  return JSON.parse(planCryptSearchWasm(JSON.stringify(input))) as QueryPlan
 }
 
 /** Deck-construction violations as human-readable strings (empty = legal). */
