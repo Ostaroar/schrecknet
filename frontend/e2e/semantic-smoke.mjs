@@ -141,15 +141,25 @@ try {
   await page.waitForSelector('main')
 
   async function waitForExactIds(expectedIds) {
-    await page.waitForFunction(
-      (expected) => {
-        const actual = [...document.querySelectorAll('main button[data-card-id]')].map((row) =>
-          Number(row.getAttribute('data-card-id')),
-        )
-        return JSON.stringify(actual) === JSON.stringify(expected)
-      },
-      expectedIds,
-    )
+    try {
+      await page.waitForFunction(
+        (expected) => {
+          const actual = [...document.querySelectorAll('main button[data-card-id]')].map((row) =>
+            Number(row.getAttribute('data-card-id')),
+          )
+          return JSON.stringify(actual) === JSON.stringify(expected)
+        },
+        expectedIds,
+      )
+    } catch (error) {
+      const actual = await page.locator('main button[data-card-id]').evaluateAll((rows) =>
+        rows.map((row) => Number(row.getAttribute('data-card-id'))),
+      )
+      throw new Error(
+        `exact browser ids diverged: expected ${expectedIds.join(',')}; got ${actual.join(',')}`,
+        { cause: error },
+      )
+    }
   }
 
   // Golden exact-search parity for the VDB composition grammar. This checks
@@ -298,6 +308,63 @@ try {
       const rows = await exactRestSearch(kind, `traits=${encodeURIComponent(trait)}`)
       assert.equal(rows.length, expectedCount, `${kind} trait count drifted: ${trait}`)
     }
+  }
+
+  // VDB-compatible result sorting is a machine API parameter and the same
+  // browser control. Lock every mode to real-V5 ids and require search rows to
+  // carry the image URL used by hover/tap previews.
+  for (const [kind, sortFixture] of Object.entries(searchFixture.result_sort)) {
+    for (const [sort, expectedIds] of Object.entries(sortFixture.orders)) {
+      const rows = await exactRestSearch(kind, `${sortFixture.base_query}&sort=${sort}`)
+      assert.deepEqual(
+        rows.map((card) => card.id),
+        expectedIds,
+        `${kind} ${sort} result order drifted`,
+      )
+      assert.ok(
+        rows.every((card) => card.image_url?.startsWith('https://')),
+        `${kind} ${sort} omitted a card image URL`,
+      )
+    }
+  }
+
+  const searchDeckName = 'Search bridge e2e'
+  await page.goto(`${baseUrl}/#/decks`, { waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('New deck name').fill(searchDeckName)
+  await page.getByRole('button', { name: 'Create deck', exact: true }).click()
+  await page.waitForFunction(() => /^#\/decks\/\d+$/.test(location.hash))
+
+  for (const kind of ['crypt', 'library']) {
+    const sortFixture = searchFixture.result_sort[kind]
+    await page.goto(`${baseUrl}/#/${kind}`, { waitUntil: 'domcontentloaded' })
+    await page.getByPlaceholder('Name / text').waitFor()
+    await page.getByLabel(`Trait ${sortFixture.trait_control}`, { exact: true }).click()
+    await page.getByLabel(`Sort ${kind} results`, { exact: true }).selectOption(sortFixture.control)
+    await waitForExactIds(sortFixture.orders[sortFixture.control])
+
+    const previewButton = page.getByRole('button', { name: /^Preview image for / }).first()
+    await previewButton.click()
+    await page.locator('[role="tooltip"]:visible img').waitFor()
+    await previewButton.click()
+
+    const firstResult = page.locator('main button[data-card-id]').first()
+    const addButton = firstResult.locator('..').locator('button[aria-label^="Add "]')
+    await addButton.click()
+    await page.waitForFunction(
+      ({ cardId, deckName }) => {
+        const row = document.querySelector(`main button[data-card-id="${cardId}"]`)?.parentElement
+        return [...(row?.querySelectorAll('button') ?? [])].some(
+          (button) => button.getAttribute('aria-label')?.includes(`${deckName}; currently 1`),
+        )
+      },
+      { cardId: sortFixture.orders[sortFixture.control][0], deckName: searchDeckName },
+    )
+
+    const deckPanel = page.getByLabel('Search deck', { exact: true })
+    await deckPanel.getByRole('button', { name: 'Show Deck', exact: true }).click()
+    const expectedTotals =
+      kind === 'crypt' ? '1 crypt · 0 library · 1 total' : '1 crypt · 1 library · 2 total'
+    await deckPanel.getByText(expectedTotals, { exact: true }).waitFor()
   }
 
   // The semantic golden queries intentionally start with no structured

@@ -31,6 +31,8 @@ export default function App() {
   }, [availableLanguages, language, meta, setLanguage])
 
   const wide =
+    route.page === 'crypt' ||
+    route.page === 'library' ||
     route.page === 'deck' ||
     route.page === 'decks' ||
     route.page === 'proxy' ||
@@ -39,8 +41,8 @@ export default function App() {
     route.page === 'precons'
 
   return (
-    <div className={'mx-auto flex min-h-screen flex-col px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
-      <header className="flex items-center gap-3 py-6">
+    <div className={'mx-auto flex min-h-screen flex-col px-3 sm:px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
+      <header className="flex flex-wrap items-center gap-3 py-4 sm:py-6">
         <span className="grid size-8 place-items-center rounded-lg bg-blood font-display text-lg font-bold text-white">
           S
         </span>
@@ -77,13 +79,13 @@ export default function App() {
         route.page !== 'proxy' &&
         route.page !== 'share' &&
         route.page !== 'diff' && (
-        <nav className="mb-4 flex flex-wrap gap-1">
+        <nav className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
           {TABS.map((t) => (
             <button
               key={t}
               onClick={() => navigate({ page: t })}
               className={
-                'rounded-lg px-3 py-1.5 font-display text-sm capitalize ' +
+                'shrink-0 rounded-lg px-3 py-1.5 font-display text-sm capitalize ' +
                 (route.page === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
               }
             >

@@ -4,19 +4,20 @@ import type { SearchDeckController } from '../lib/useSearchDeck'
 
 export interface AddToDeckButtonProps {
   cardId: number
+  cardName: string
   deck: SearchDeckController
   className?: string
 }
 
 /** Compact search-row action that never triggers the row's detail interaction. */
-export function AddToDeckButton({ cardId, deck, className = '' }: AddToDeckButtonProps) {
+export function AddToDeckButton({ cardId, cardName, deck, className = '' }: AddToDeckButtonProps) {
   const qty = deck.quantities.get(cardId) ?? 0
   const disabled = deck.activeDeck === null || deck.loading
   const label = deck.activeDeck
     ? qty > 0
-      ? `Add another copy to ${deck.activeDeck.name}; currently ${qty}`
-      : `Add card to ${deck.activeDeck.name}`
-    : 'Create or select a deck before adding cards'
+      ? `Add another ${cardName} to ${deck.activeDeck.name}; currently ${qty}`
+      : `Add ${cardName} to ${deck.activeDeck.name}`
+    : `Create or select a deck before adding ${cardName}`
 
   const add = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
@@ -179,7 +180,7 @@ export function SearchDeckPanel({ deck, defaultOpen = false, className = '' }: S
               {cryptCount} crypt · {libraryCount} library · {cryptCount + libraryCount} total
             </span>
           </div>
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3">
             <DeckGroup label="Crypt" cards={cryptCards} deck={deck} />
             <DeckGroup label="Library" cards={libraryCards} deck={deck} />
           </div>

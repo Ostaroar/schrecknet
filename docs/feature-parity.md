@@ -83,8 +83,11 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       surfaces); ☐ still missing: exact-match / multi-select modes
 - ☑ Artist filter — substring match against credited artist name, any-artist
       semantics (`artist` param on all three surfaces)
-- ☐ Results: sortable list, card image preview on hover/tap, inline add-to-deck when a
-      deck is active ("Show Deck" split view)
+- ☑ Results: VDB sort modes on browser, REST, and MCP (capacity/clan/group/name/
+      sect for crypt; requirement/cost/name/type for library), card-image preview
+      on hover or tap, and inline add-to-deck with remembered active local deck,
+      quantity feedback, and a responsive "Show Deck" split panel. Every sort
+      mode and image URL is locked to real-V5 browser/REST fixtures ✎
 
 ## Library Card Search (`/library`)
 - ☑ Name / text search — MVP live (frontend/src/components/LibrarySearch.tsx);
@@ -127,6 +130,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       V5 Burn Option card) ✎
 - ☑ Set / Precon / Artist filters (same as crypt): full set age/printing
       modes plus precon and artist matching on all three surfaces
+- ☑ Results use the same responsive image-preview, active-deck, and machine-
+      mirrored sorting workflow documented under Crypt Card Search
 
 ## Card Detail (`/cards/:id`)
 - ☑ Full card text — inline expand panel on search results AND a routed page

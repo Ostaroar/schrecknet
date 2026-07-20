@@ -11,14 +11,17 @@ import {
   listPrecons,
   emptyLibraryFilters,
   type LibraryCard,
+  type LibrarySort,
   type TextMode,
   type CostMode,
   type CapacityRequirementMode,
 } from '../lib/librarySearch'
 import CardDetailPanel from './CardDetailPanel'
+import CardImagePreview from './CardImagePreview'
 import SemanticModeControl from './SemanticModeControl'
 import SetFilterControls from './SetFilterControls'
 import TraitFilterControls from './TraitFilterControls'
+import SearchDeckPanel, { AddToDeckButton } from './SearchDeckPanel'
 import {
   defaultSetAge,
   defaultSetPrint,
@@ -33,6 +36,8 @@ import {
 } from '../lib/semanticSearch'
 import type { LibraryDisciplineLogic } from '../lib/disciplineFilter'
 import type { RequirementLogic } from '../lib/requirementFilter'
+import { sortLibraryResults } from '../lib/searchSort'
+import { useSearchDeck } from '../lib/useSearchDeck'
 
 type DisciplineMode = 'off' | 'selected'
 
@@ -198,6 +203,8 @@ export default function LibrarySearch() {
   // See CryptSearch: a live invalid regex is a soft, recoverable state.
   const [searchError, setSearchError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [sort, setSort] = useState<LibrarySort | 'relevance'>('name')
+  const deck = useSearchDeck()
 
   useEffect(() => {
     Promise.all([
@@ -257,6 +264,7 @@ export default function LibrarySearch() {
       setPrint,
       precon,
       artist,
+      sort: sort === 'relevance' ? 'name' : sort,
       disciplines: active.map(([code]) => code),
       disciplineLogic,
       includeNoDiscipline,
@@ -287,7 +295,13 @@ export default function LibrarySearch() {
     discModes,
     disciplineLogic,
     includeNoDiscipline,
+    sort,
   ])
+
+  const displayResults = useMemo(
+    () => (sort === 'relevance' ? results : sortLibraryResults(results, sort)),
+    [results, sort],
+  )
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -376,7 +390,8 @@ export default function LibrarySearch() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-w-0 gap-4">
       <div className="flex flex-wrap gap-3">
         <input
           className="min-w-48 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
@@ -422,7 +437,11 @@ export default function LibrarySearch() {
           enabled={semanticMode}
           progress={semanticProgress}
           onToggle={() => {
-            setSemanticMode((enabled) => !enabled)
+            setSemanticMode((enabled) => {
+              const next = !enabled
+              setSort(next ? 'relevance' : 'name')
+              return next
+            })
             setSemanticProgress({ phase: 'idle' })
             setSearchError('')
           }}
@@ -668,48 +687,74 @@ export default function LibrarySearch() {
         <p className="text-sm text-ink-dim">Loading card database…</p>
       ) : (
         <>
-          <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
-            {searchError || `${results.length}${semanticMode ? ' semantic' : ''} library cards`}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
+              {searchError || `${displayResults.length}${semanticMode ? ' semantic' : ''} library cards`}
+            </p>
+            <label className="flex items-center gap-2 text-xs text-ink-dim">
+              Sort
+              <select
+                aria-label="Sort library results"
+                value={sort}
+                onChange={(event) => setSort(event.target.value as LibrarySort | 'relevance')}
+                className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink"
+              >
+                {semanticMode && <option value="relevance">Relevance</option>}
+                <option value="requirement">Clan / discipline</option>
+                <option value="cost_desc">Cost high–low</option>
+                <option value="cost_asc">Cost low–high</option>
+                <option value="name">Name</option>
+                <option value="type">Type</option>
+              </select>
+            </label>
+          </div>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
-            {results.map((c) => (
+            {displayResults.map((c) => (
               <div key={c.id}>
-                <button
-                  onClick={() => setExpanded(expanded === c.id ? null : c.id)}
-                  data-card-id={c.id}
-                  data-semantic-score={
-                    semanticMode && 'semanticScore' in c ? c.semanticScore : undefined
-                  }
-                  className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
-                >
-                  <span className="min-w-0 truncate">
-                    {c.name}
-                    {semanticMode && 'semanticScore' in c && (
-                      <span className="ml-2 font-mono text-[10px] text-gold">
-                        similarity {c.semanticScore.toFixed(3)}
+                <div className="flex items-stretch hover:bg-raised">
+                  <button
+                    onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                    data-card-id={c.id}
+                    data-semantic-score={
+                      semanticMode && 'semanticScore' in c ? c.semanticScore : undefined
+                    }
+                    className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-2 px-3 py-2 text-left text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_auto_auto]"
+                  >
+                    <span className="min-w-0 truncate">
+                      {c.name}
+                      {semanticMode && 'semanticScore' in c && (
+                        <span className="ml-2 font-mono text-[10px] text-gold">
+                          similarity {c.semanticScore.toFixed(3)}
+                        </span>
+                      )}
+                      <span className="mt-0.5 block truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
+                        {c.types.join(' / ')}
+                        {c.clan ? ` · ${c.clan}` : ''}
                       </span>
-                    )}
-                  </span>
-                  <span className="flex gap-1">
-                    {c.disciplines.map((d) => (
-                      <span
-                        key={d}
-                        className="inline-grid h-[17px] min-w-[26px] place-items-center rounded border border-line px-[3px] font-mono text-[9.5px] font-bold uppercase tracking-wide text-ink-muted"
-                      >
-                        {d}
-                      </span>
-                    ))}
-                    <CostPill blood={c.blood_cost} pool={c.pool_cost} />
-                  </span>
-                  <span className="text-right text-xs uppercase tracking-wide text-ink-muted">
-                    {c.types.join(' / ')}
-                    {c.clan ? ` · ${c.clan}` : ''}
-                  </span>
-                </button>
+                    </span>
+                    <span className="hidden gap-1 sm:flex">
+                      {c.disciplines.map((d) => (
+                        <span
+                          key={d}
+                          className="inline-grid h-[17px] min-w-[26px] place-items-center rounded border border-line px-[3px] font-mono text-[9.5px] font-bold uppercase tracking-wide text-ink-muted"
+                        >
+                          {d}
+                        </span>
+                      ))}
+                      <CostPill blood={c.blood_cost} pool={c.pool_cost} />
+                    </span>
+                    <span className="hidden text-right text-xs uppercase tracking-wide text-ink-muted lg:block">
+                      {c.types.join(' / ')}
+                      {c.clan ? ` · ${c.clan}` : ''}
+                    </span>
+                  </button>
+                  <CardImagePreview imageUrl={c.image_url} name={c.name} />
+                  <AddToDeckButton cardId={c.id} cardName={c.name} deck={deck} className="m-1 self-center" />
+                </div>
                 {expanded === c.id && <CardDetailPanel id={c.id} />}
               </div>
             ))}
-            {results.length === 0 && (
+            {displayResults.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-ink-dim">
                 {semanticMode && !text.trim()
                   ? 'Describe a concept to search the V5 library.'
@@ -719,6 +764,11 @@ export default function LibrarySearch() {
           </div>
         </>
       )}
+      </div>
+      <SearchDeckPanel
+        deck={deck}
+        className="order-first self-start xl:sticky xl:top-4 xl:order-last"
+      />
     </div>
   )
 }

@@ -13,6 +13,13 @@ import { appendTraitFilters, listCardTraits } from './cardTraits'
 
 /** Scope of the text filter: card name, card text, or either. */
 export type TextMode = 'any' | 'name' | 'text'
+export type CryptSort =
+  | 'capacity_desc'
+  | 'capacity_asc'
+  | 'clan'
+  | 'group'
+  | 'name'
+  | 'sect'
 
 export interface CryptFilters {
   text: string
@@ -37,6 +44,7 @@ export interface CryptFilters {
   setPrint: SetPrintMode
   precon: string | null
   artist: string | null
+  sort: CryptSort
 }
 
 export const emptyCryptFilters: CryptFilters = {
@@ -62,6 +70,7 @@ export const emptyCryptFilters: CryptFilters = {
   setPrint: defaultSetPrint,
   precon: null,
   artist: null,
+  sort: 'capacity_desc',
 }
 
 export interface Discipline {
@@ -78,6 +87,7 @@ export interface CryptCard {
   title: string | null
   sect: string | null
   votes: number
+  image_url: string | null
   disciplines: Discipline[]
 }
 
@@ -90,7 +100,25 @@ interface CryptRow {
   title: string | null
   sect: string | null
   votes: number
+  image_url: string | null
   disc: string | null
+}
+
+function cryptOrderBy(sort: CryptSort): string {
+  switch (sort) {
+    case 'capacity_asc':
+      return 'c.capacity ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
+    case 'clan':
+      return 'c.clan COLLATE NOCASE ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
+    case 'group':
+      return 'c.grp ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
+    case 'name':
+      return 'c.name_ascii COLLATE NOCASE ASC, c.id ASC'
+    case 'sect':
+      return 'c.sect COLLATE NOCASE ASC, c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
+    case 'capacity_desc':
+      return 'c.capacity DESC, c.name_ascii COLLATE NOCASE ASC, c.id ASC'
+  }
 }
 
 function appendCryptSectFilter(
@@ -134,6 +162,7 @@ export async function filterCrypt(filters: CryptFilters): Promise<CryptCard[]> {
 async function searchCryptInner(filters: CryptFilters, limited: boolean): Promise<CryptCard[]> {
   const singleGroup = filters.groups.length === 0 ? filters.group : null
   let sql = `SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
+            c.image_url,
             GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
      FROM cards c
      LEFT JOIN card_disciplines cd ON cd.card_id = c.id
@@ -220,7 +249,7 @@ async function searchCryptInner(filters: CryptFilters, limited: boolean): Promis
     filters.disciplinesSuperior,
     filters.disciplineOr,
   )
-  sql += ` GROUP BY c.id ORDER BY c.capacity DESC, c.name ASC`
+  sql += ` GROUP BY c.id ORDER BY ${cryptOrderBy(filters.sort)}`
   if (limited) sql += ` LIMIT 200`
 
   const rows = await query<CryptRow>(sql, params)

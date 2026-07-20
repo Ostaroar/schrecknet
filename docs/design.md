@@ -49,6 +49,10 @@ ships as re-stepped tokens; dark is the definitive reading.
 - **Charts**: single crimson hue, direct value labels, no legends; tooltips on hover.
   Semantic green/amber only for status, never as series colors.
 - **⌘K palette**: global quick card search (replaces vdb's lightning search).
+- **Search result actions**: a compact image-preview control and quantity-aware
+  add button sit outside the row's detail target. The active local deck is a
+  sticky right rail on wide screens and an order-first collapsible panel on
+  narrow screens; card quantities remain in OPFS.
 
 ## Screens covered by R1 mockups
 

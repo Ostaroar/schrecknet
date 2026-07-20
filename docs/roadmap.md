@@ -69,6 +69,9 @@ docs/feature-parity.md's scope note).
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
 - ☑ Card images and rulings source links
+- ☑ VDB search-result workflow: explicit stable sort modes on browser/REST/MCP,
+  hotlinked image previews on hover/tap, responsive rows, and a remembered local
+  active-deck rail with inline quantity-aware add controls and "Show Deck"
 - ☑ Card-text language switcher: build-time pool-derived options from
   `cards.meta.json`, a persisted global preference, and English fallback per
   card (currently EN/ES/FR; future source languages appear automatically)
@@ -180,6 +183,9 @@ docs/feature-parity.md's scope note).
   dependency, no ADR needed. Verified live: a 3-copy card correctly renders
   3 identical images, `@media print` rule confirmed present in the built
   stylesheet with the app chrome scoped out via `.proxy-sheet-wrapper`
+- ☑ Search-to-deck bridge: crypt/library results add directly to a selected
+  anonymous OPFS deck, serialize fast quantity changes, remember only the active
+  deck id in localStorage, and expose the live deck in a responsive split panel
 - ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
   are local-only; becomes relevant with Phase 3 server sync
 

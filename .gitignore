@@ -10,3 +10,4 @@ frontend/src/wasm/
 data/cache/
 .cache/
 .claude/
+.codex/

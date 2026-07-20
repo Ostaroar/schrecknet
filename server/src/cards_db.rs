@@ -562,7 +562,7 @@ impl LibrarySort {
                 " ORDER BY ",
                 "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
                 "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
-                "disc_sort COLLATE NOCASE ASC, c.types COLLATE NOCASE ASC, ",
+                "disc_sort COLLATE NOCASE ASC, type_sort COLLATE NOCASE ASC, ",
                 "c.name_ascii COLLATE NOCASE ASC, c.id ASC"
             ),
             Self::CostDesc => concat!(
@@ -577,7 +577,7 @@ impl LibrarySort {
                 "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
                 "AND c.pool_cost NOT GLOB '*[^0-9]*' ",
                 "THEN CAST(c.pool_cost AS INTEGER) END DESC, ",
-                "c.types COLLATE NOCASE ASC, ",
+                "type_sort COLLATE NOCASE ASC, ",
                 "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
                 "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
                 "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
@@ -594,14 +594,14 @@ impl LibrarySort {
                 "CASE WHEN c.pool_cost IS NOT NULL AND c.pool_cost != '' ",
                 "AND c.pool_cost NOT GLOB '*[^0-9]*' ",
                 "THEN CAST(c.pool_cost AS INTEGER) END ASC, ",
-                "c.types COLLATE NOCASE ASC, ",
+                "type_sort COLLATE NOCASE ASC, ",
                 "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
                 "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
                 "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
             ),
             Self::Name => " ORDER BY c.name_ascii COLLATE NOCASE ASC, c.id ASC",
             Self::Type => concat!(
-                " ORDER BY c.types COLLATE NOCASE ASC, ",
+                " ORDER BY type_sort COLLATE NOCASE ASC, ",
                 "CASE WHEN NULLIF(TRIM(c.clan), '') IS NULL THEN 1 ELSE 0 END ASC, ",
                 "c.clan COLLATE NOCASE ASC, disc_sort IS NULL ASC, ",
                 "disc_sort COLLATE NOCASE ASC, c.name_ascii COLLATE NOCASE ASC, c.id ASC"
@@ -1108,7 +1108,9 @@ fn search_library_inner(
                 (SELECT GROUP_CONCAT(ordered.discipline, ',') FROM (
                     SELECT d2.discipline FROM card_disciplines d2
                     WHERE d2.card_id = c.id ORDER BY d2.discipline
-                ) ordered) AS disc_sort
+                ) ordered) AS disc_sort,
+                (SELECT GROUP_CONCAT(type_entry.value, '/')
+                 FROM json_each(c.types) type_entry) AS type_sort
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'library'
