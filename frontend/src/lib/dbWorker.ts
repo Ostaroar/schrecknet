@@ -12,7 +12,7 @@
 // cards.sqlite once and import it into the pool. If the network is down but
 // a local DB exists, serve it — that is the offline path.
 
-import sqlite3InitModule from '@sqlite.org/sqlite-wasm'
+import { initSqlite } from './sqlite'
 
 type OpenMsg = { id: number; kind: 'open' }
 type QueryMsg = { id: number; kind: 'query'; sql: string; params: (string | number | null)[] }
@@ -43,7 +43,7 @@ function versionOf(meta: { schema_version: number; data_version: number }): stri
 }
 
 async function open(): Promise<Record<string, unknown>> {
-  const sqlite3 = await sqlite3InitModule()
+  const sqlite3 = await initSqlite()
   const pool = await sqlite3.installOpfsSAHPoolVfs({})
 
   let serverMeta: { schema_version: number; data_version: number } | null = null

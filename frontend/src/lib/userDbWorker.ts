@@ -8,7 +8,7 @@
 //   in:  { id, kind: 'query', sql, params }           → { id, ok, rows?, error? }
 //   in:  { id, kind: 'run', sql, params }             → { id, ok, lastInsertRowid?, changes?, error? }
 
-import sqlite3InitModule from '@sqlite.org/sqlite-wasm'
+import { initSqlite } from './sqlite'
 import migration001 from '../../../migrations/0001_user_data.sql?raw'
 import migration002 from '../../../migrations/0002_deck_author.sql?raw'
 
@@ -24,7 +24,7 @@ const MIGRATIONS = [migration001, migration002]
 let db: any = null
 
 async function open(): Promise<void> {
-  const sqlite3 = await sqlite3InitModule()
+  const sqlite3 = await initSqlite()
   const pool = await sqlite3.installOpfsSAHPoolVfs({ name: 'schrecknet-user-pool' })
   db = new pool.OpfsSAHPoolDb(DB_NAME)
   const currentVersion = Number(db.selectValue('PRAGMA user_version'))

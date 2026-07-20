@@ -42,6 +42,35 @@ for phases and [docs/architecture.md](docs/architecture.md) for the system desig
 | [docs/design.md](docs/design.md) | Design system |
 | [AGENTS.md](AGENTS.md) | Instructions for AI coding agents |
 
+## Run locally
+
+From the repository root:
+
+```bash
+./scripts/dev.sh
+```
+
+This starts the Rust server at <http://localhost:8000>, starts Vite at
+<http://localhost:5173>, and opens the Vite URL. Vite proxies `/api`, `/data`,
+and `/models` to the Rust server. Press `Ctrl-C` once to stop both processes.
+
+The script installs frontend packages and rebuilds the Rust WASM bindings when
+needed. It expects `dist/cards.sqlite` to exist; generate the database first if
+the script reports it missing:
+
+```bash
+cargo run -p schrecknet-data -- build --out dist
+```
+
+To exercise the production-style single-server build instead:
+
+```bash
+./scripts/dev.sh --prod --rebuild
+```
+
+That builds the frontend and serves it from <http://localhost:8000>. Node 22 LTS
+is recommended if Vite hangs on a newer Node release.
+
 ## Acknowledgments & legal
 
 - Built on the shoulders of [smeea/vdb](https://github.com/smeea/vdb) (MIT) and the

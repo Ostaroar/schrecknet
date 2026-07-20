@@ -25,7 +25,7 @@ export {}
 
 declare const self: ServiceWorkerGlobalScope
 
-const CACHE_NAME = 'schrecknet-shell-v1'
+const CACHE_NAME = 'schrecknet-shell-v2'
 // Owned by Transformers.js (see semanticSearch.ts). Keep it across shell SW
 // upgrades; otherwise installing a new app build would silently force users
 // to download the optional ~24 MB model again.
@@ -102,7 +102,12 @@ self.addEventListener('fetch', (event) => {
 
       const network = fetch(request)
         .then((response) => {
-          if (response && response.ok) {
+          // A missing hashed asset can be answered by the SPA's HTML fallback
+          // with status 200. Never poison the static cache with that response:
+          // feeding HTML to WebAssembly.instantiate produces a misleading
+          // "failed to match magic number" error on every later reload.
+          const isUnexpectedHtml = response.headers.get('content-type')?.includes('text/html')
+          if (response && response.ok && !isUnexpectedHtml) {
             cache.put(request, response.clone())
           }
           return response

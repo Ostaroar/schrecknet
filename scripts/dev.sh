@@ -2,13 +2,12 @@
 # Start SchreckNet locally (backend server + frontend).
 #
 # Flags:
-#   ./scripts/dev.sh              Start with Vite dev server on :5173 (default)
-#   ./scripts/dev.sh --prod       Build frontend to dist/ and serve via Rust on :8000
-#   ./scripts/dev.sh --rebuild    With --prod: force rebuild even if dist/ exists
+#   ./scripts/dev.sh                   Start with Vite dev server on :5173 (default)
+#   ./scripts/dev.sh --prod            Serve the existing production build on :8000
+#   ./scripts/dev.sh --prod --rebuild  Rebuild and serve production on :8000
 #
-# WARNING: Vite may hang on Node v26.5.0. If the Vite dev server hangs, use
-# `--prod` to build the frontend once and serve via the Rust server instead.
-# Rebuilding may also hang — you may need to downgrade to Node 22 LTS.
+# Node 22 LTS is recommended. If Vite hangs on a newer Node release, use
+# `--prod` with an existing build or switch to Node 22 before `--rebuild`.
 #
 # Requires: rust toolchain, node, wasm-pack, and a built dist/cards.sqlite
 # (run `schrecknet-data build` once if missing).
@@ -60,7 +59,14 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # 1. wasm bindings (frontend imports these; gitignored build artifact)
-if [ ! -f frontend/src/wasm/schrecknet_core_bg.wasm ]; then
+WASM_ARTIFACT="frontend/src/wasm/schrecknet_core_bg.wasm"
+WASM_NEEDED=false
+if [ ! -f "$WASM_ARTIFACT" ]; then
+  WASM_NEEDED=true
+elif find core/src core/Cargo.toml -type f -newer "$WASM_ARTIFACT" -print -quit | grep -q .; then
+  WASM_NEEDED=true
+fi
+if [ "$WASM_NEEDED" = true ]; then
   echo "→ Building wasm bindings…"
   wasm-pack build core --target web --out-dir ../frontend/src/wasm
 fi
@@ -69,6 +75,11 @@ fi
 if [ ! -d frontend/node_modules ]; then
   echo "→ Installing frontend deps…"
   (cd frontend && npm install)
+fi
+
+NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+if [ "$NODE_MAJOR" -gt 22 ]; then
+  echo "⚠ Node $(node --version) detected; Node 22 LTS is recommended if Vite hangs."
 fi
 
 # 3. card data (server serves this at /data/*)
