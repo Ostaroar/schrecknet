@@ -71,7 +71,7 @@ migration status:
 | Semantic result validation/ranking | Live in native + WASM |
 | Opening-hand sizes, seeded shuffle, quantity expansion | Live in native + WASM; MCP + REST mirror |
 | Exact-search result sorting | Live in native + WASM through `core/src/search_sort.rs` |
-| Exact-search filter normalization and query planning | Migration pending; browser and server still have separate SQL adapters |
+| Exact-search filter normalization and query planning | Live in native + WASM through `core/src/search_plan.rs`; platform adapters only execute plans and map rows |
 | Card-text token parsing and structured symbol metadata | Migration pending |
 
 Moving code merely to reduce the TypeScript line count is not a goal. Moving a
