@@ -206,8 +206,11 @@ docs/feature-parity.md's scope note).
 ## Phase 5 — VTES v5 game-loop / rules reference (additive, beyond vdb parity)
 _Independent of Phases 3–4; could be pulled earlier. Additive reference tooling in the
 spirit of "card research" — rules-level and card-agnostic, not a play server, so it
-stays clear of the tournament/community-data scope exclusion. Full design + the
-"is there a better way to visualize it?" options in
+stays clear of the tournament/community-data scope exclusion. **Direction set
+(2026-07-20):** serve both a human teaching aid and a formal/engine spec from **one
+source of truth** (a statechart JSON distilled from the owner's existing game-loop DOT —
+preserved, not replaced), with **readability as the primary success criterion**. Full
+design, decisions, and visualization options in
 [docs/gameloop-visualizer.md](gameloop-visualizer.md)._
 - ☐ Interactive, decomposed game-loop explainer (drill-down statechart, not one flat
   FSM): turn stepper → action / combat / block / referendum sub-views; Basic vs

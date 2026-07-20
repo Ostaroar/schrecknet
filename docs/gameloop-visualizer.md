@@ -1,7 +1,31 @@
 # VTES v5 Game-Loop Visualizer — vision & design options
 
-**Status:** planning only (no implementation yet). Additive feature, beyond vdb
-parity — the same "additive, not vdb parity" class as offline semantic search.
+**Status:** direction set (2026-07-20), no implementation yet. Additive feature, beyond
+vdb parity — the same "additive, not vdb parity" class as offline semantic search.
+
+## Decision (2026-07-20)
+
+The product owner asked for two things: their existing game-loop work should **continue
+in a readable way**, and it should be **useful in both ways** — as a human teaching aid
+*and* as the seed of a formal/executable rules spec. Direction:
+
+1. **Both goals, one source of truth.** Model the loop **once** as structured data — a
+   statechart JSON distilled from the existing DOT FSM — and render it into the human
+   teaching views while keeping the same definition usable as the engine-spec seed.
+   Never hand-maintain two representations. The DOT is the *origin*, preserved and
+   credited; it is not thrown away, it is promoted to a maintained, machine-readable
+   form.
+2. **Readability is the primary success criterion.** Every design choice is judged
+   first on "can a person actually follow this?" — hence decomposition + drill-down
+   over one flat render (see below). If a view isn't readable, it isn't done.
+3. **Resolved sub-calls** (owner delegated these): combat ships a **simplified learner
+   loop** in v1 with the full 7-step detail behind the Basic/Advanced toggle; the
+   **card-DB integration is a committed goal** (it's the differentiator and the reason
+   to build this *inside* SchreckNet) but staged *after* the v1 explainer, not
+   v1-blocking; the executable-statechart path stays optional and gets its own ADR when
+   picked up.
+
+The rest of this doc is the supporting design rationale.
 
 ## Why this fits SchreckNet
 
@@ -155,12 +179,14 @@ above) is fundamentally more usable than any single image.
 4. **(Optional, own ADR) executable statechart** — if the engine-spec ambition is in
    scope.
 
-## Open questions for the product owner
+## Resolved (see Decision, top of doc)
 
-- Is the near-term goal the **teaching aid** (ship a great explainer) or the
-  **engine spec** (executable rules model)? The MVP serves the former; the statechart
-  path serves the latter. They can share a source of truth but differ in effort.
-- How deep should **combat** go in v1 — full 7-step with additional-strike/press
-  cycles, or a simplified "round → damage → press → repeat" for learners?
-- Is the **card-DB integration** (deck-aware "when can I play this?") a must-have that
-  justifies building this inside SchreckNet, or is a standalone reference page enough?
+- **Teaching aid or engine spec?** → *Both*, via one source-of-truth statechart JSON
+  distilled from the DOT. The MVP ships the teaching aid; the same definition seeds the
+  optional executable spec later.
+- **Combat depth in v1?** → *Simplified learner loop* (round → strike → damage → press →
+  repeat) by default, with the full 7-step / additional-strike / press detail behind the
+  Basic ↔ Advanced/Judge toggle.
+- **Card-DB integration — must-have or nice-to-have?** → *Committed goal*, staged after
+  the v1 explainer. It's the reason to build this inside SchreckNet rather than ship the
+  static PDF, but it does not block the first readable explainer.
