@@ -74,7 +74,7 @@ edges); `(Adv)` anywhere in a label → `level:"advanced"`. Expand chained edges
 
 ## Milestones (vertical slices)
 
-### M1 — Source of truth + schema  ← start here
+### M1 — Source of truth + schema  ☑ complete
 - **Preferred:** a small build-time distiller that parses `vtes-v5-gameloop.dot` and
   emits `gameloop.json` (so the DOT stays the authored source). A hand-rolled parser for
   *this* constrained DOT subset is enough; a DOT-parsing crate would be a new dep → ADR.
@@ -90,6 +90,12 @@ edges); `(Adv)` anywhere in a label → `level:"advanced"`. Expand chained edges
   predator → clockwise). Spot-check a handful of transitions round-trip from the DOT.
 - **DoD:** workspace build green, golden test passes, `gameloop.json` generated/committed,
   schema documented.
+
+Implemented by `data/src/gameloop.rs` and the `schrecknet-data gameloop` subcommand.
+The dependency-free constrained DOT parser keeps the owner's DOT canonical; CI compares
+the committed JSON structurally with a fresh distillation. Three machine-readable
+`impulse_*` attributes were added to the order nodes, and validation repaired the
+source's previously undefined `ACTION_BLOCKED_PATH` endpoint.
 
 ### M2 — Turn-stepper view (the readable 90%)
 - New route `#/rules` (add to `frontend/src/lib/route.ts` + a nav entry). Render the 5

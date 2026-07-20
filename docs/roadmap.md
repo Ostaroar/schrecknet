@@ -216,6 +216,11 @@ source of truth** (a statechart JSON distilled from the owner's existing game-lo
 preserved, not replaced), with **readability as the primary success criterion**. Full
 design, decisions, and visualization options in
 [docs/gameloop-visualizer.md](gameloop-visualizer.md)._
+- ☑ M1 source/schema: dependency-free Rust distiller converts the canonical DOT
+  into a typed, committed `frontend/public/gameloop.json` (18 regions, 136 states,
+  196 transitions, 17 hooks, three structured impulse orders). Golden tests lock
+  the five turn phases, seven combat steps, impulse orderings, representative
+  transitions, and exact DOT→JSON structural equality
 - ☐ Interactive, decomposed game-loop explainer (drill-down statechart, not one flat
   FSM): turn stepper → action / combat / block / referendum sub-views; Basic vs
   Advanced/Judge complexity toggle. Sourced from the existing full-game-loop DOT FSM,

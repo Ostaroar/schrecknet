@@ -10,6 +10,16 @@ artifact** for the Phase 5 game-loop visualizer.
 | `vtes-v5-gameloop.svg` | Full Graphviz render | Reference only (the "hairball" that motivates a better visualization) |
 | `vtes-v5-gameloop.pdf` | Same render, print form | Reference / archival |
 
+`cargo run -p schrecknet-data -- gameloop` parses the constrained DOT grammar and
+regenerates [`../../frontend/public/gameloop.json`](../../frontend/public/gameloop.json).
+The DOT remains canonical; a Rust golden test fails if the committed JSON drifts.
+The stable output contract is documented in [`schema.md`](schema.md).
+
+The three `IMP_ORDER_*` nodes carry `impulse_*` Graphviz attributes. They do not
+change the archival render; they make context and seat-order roles explicit for the
+future interactive widget. The distiller also validates that every transition endpoint
+is defined, which caught and repaired the original missing `ACTION_BLOCKED_PATH` node.
+
 - **Design + decisions:** [`../gameloop-visualizer.md`](../gameloop-visualizer.md)
 - **Implementation plan for codex:** [`DEV-PLAN.md`](DEV-PLAN.md)
 

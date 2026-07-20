@@ -95,6 +95,7 @@ digraph VTES_V5_FULL_GAMELOOP_FSM {
     ACTION_BLOCK_LOOP [label="Resolve block attempts (clockwise)\nEach eligible player may attempt with a ready, unlocked minion\n(see Block Attempt FSM)"];
     ACTION_BLOCKED [label="Action blocked?\nYES -> blocked path\nNO  -> successful path"];
     ACTION_SUCCESS [label="Successful action resolves\nBranch by action type:\n• Bleed -> Bleed subloop\n• Hunt -> Hunt subloop\n• Political -> Referendum subloop\n• Other -> Resolve per card/effect"];
+    ACTION_BLOCKED_PATH [label="Blocked action cleanup\nAction is unsuccessful; resolve blocked-action consequences, then end the action"];
     ACTION_END [label="Action ends\nIf a minion unlocks during this phase (effect), it may act again"];
 
     PH_MINION -> MINION_READY -> MINION_MANDATORY -> ACTION_DECLARE -> ACTION_ASANN -> ACTION_BLOCK_WHO -> ACTION_BLOCK_LOOP -> ACTION_BLOCKED;
@@ -401,10 +402,10 @@ Not an action (cannot be blocked)"];
     IMP_PLAY [label="If PLAY:\n1) run Card Play Micro-FSM (declare -> as played -> resolve -> replace)\n2) acting immediately regains impulse"];
     IMP_PASS [label="If PASS (or timeout):\nadvance impulse to the next Methuselah\naccording to the context-specific order below."];
     IMP_CTX [shape=diamond, label="Context for impulse order\n(after acting passes)?"];
-    IMP_ORDER_SINGLE [label="Context A: Combat OR action directed at a single Methuselah\nOrder after acting passes:\n1) Defending Methuselah first\n2) Then every other Methuselah in clockwise order\n(5-player example: A -> D -> next clockwise after D -> ... -> last)"];
+    IMP_ORDER_SINGLE [label="Context A: Combat OR action directed at a single Methuselah\nOrder after acting passes:\n1) Defending Methuselah first\n2) Then every other Methuselah in clockwise order\n(5-player example: A -> D -> next clockwise after D -> ... -> last)", impulse_id="single", impulse_contexts="combat,directed_single", impulse_order="defender,clockwise_others"];
     IMP_COMBAT_DEF_NOTE [shape=note, label="Combat-only clarification:\nIn combat, \"defending Methuselah\" = the controller of the opposing combatant.\nOther Methuselahs only get impulse if the current window allows them to play something (e.g., a combat card explicitly playable by a minion not involved)."];
-    IMP_ORDER_SET [label="Context B: Action directed at a SET of Methuselahs\nOrder after acting passes:\n1) Those targeted Methuselahs in clockwise order\n2) Then every other Methuselah in clockwise order\n(Exclude acting from the pass list)"];
-    IMP_ORDER_UNDIR [label="Context C: Undirected action\nOrder after acting passes:\n1) Prey first\n2) Predator second\n3) Then every other Methuselah in clockwise order\n(5-player example: A -> Prey -> Predator -> Cross1 -> Cross2)"];
+    IMP_ORDER_SET [label="Context B: Action directed at a SET of Methuselahs\nOrder after acting passes:\n1) Those targeted Methuselahs in clockwise order\n2) Then every other Methuselah in clockwise order\n(Exclude acting from the pass list)", impulse_id="set", impulse_contexts="directed_set", impulse_order="targeted_clockwise,clockwise_others"];
+    IMP_ORDER_UNDIR [label="Context C: Undirected action\nOrder after acting passes:\n1) Prey first\n2) Predator second\n3) Then every other Methuselah in clockwise order\n(5-player example: A -> Prey -> Predator -> Cross1 -> Cross2)", impulse_id="undirected", impulse_contexts="undirected", impulse_order="prey,predator,clockwise_others"];
     IMP_NEXT [label="Give impulse to next Methuselah in the chosen order\n(if that Methuselah plays, impulse snaps back to acting)"];
     IMP_ALLPASSED [shape=diamond, label="Has EVERY Methuselah passed\nconsecutively in the CURRENT window?"];
     IMP_CLOSE [shape=oval, label="CLOSE WINDOW\nReturn to parent FSM step (advance state)"];

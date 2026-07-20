@@ -1,7 +1,8 @@
 # VTES v5 Game-Loop Visualizer — vision & design options
 
-**Status:** direction set (2026-07-20), no implementation yet. Additive feature, beyond
-vdb parity — the same "additive, not vdb parity" class as offline semantic search.
+**Status:** M1 source/schema complete (2026-07-20); readable UI milestones remain.
+Additive feature, beyond vdb parity — the same "additive, not vdb parity" class as
+offline semantic search.
 
 **Source assets** (committed): [`docs/gameloop/`](gameloop/) — the owner's authored DOT
 FSM (canonical) plus its SVG/PDF renders. **Implementation plan for codex:**

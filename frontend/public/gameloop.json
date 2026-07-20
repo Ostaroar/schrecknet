@@ -1,0 +1,3107 @@
+{
+  "version": "1",
+  "source": "docs/gameloop/vtes-v5-gameloop.dot",
+  "meta": {
+    "title": "VTES v5 — Full Game Loop FSM (5 players) — rules-level, card-agnostic",
+    "players": 5
+  },
+  "regions": [
+    {
+      "id": "META",
+      "label": "META LOOP: Game continues until one Methuselah remains (VP scoring)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "HAND",
+      "label": "GLOBAL: Hand / Draw Management (library)",
+      "level": "basic",
+      "orthogonal": true
+    },
+    {
+      "id": "TURN",
+      "label": "TURN STRUCTURE (5 phases in order)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "CONTEST",
+      "label": "ADVANCED: Contest (unique cards & titles) — paid each unlock phase",
+      "level": "advanced",
+      "orthogonal": false
+    },
+    {
+      "id": "INFLUENCE",
+      "label": "Influence Phase Subloop (transfers)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "DISCARD",
+      "label": "Discard Phase Subloop (DPA)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "MINION",
+      "label": "Minion Phase Core Loop (actions resolve one-by-one)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "BLEED",
+      "label": "Bleed Subloop (directed at prey by default; Edge handling)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "HUNT",
+      "label": "Hunt Subloop (basic hunt action)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "BLOCK",
+      "label": "Block Attempt + Block Resolution FSM (stealth/intercept + impulse + post-block exceptions)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "COMBAT",
+      "label": "Combat FSM (7-step rounds per v5 rulebook; card-agnostic)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "REF",
+      "label": "Referendum FSM (political actions & blood hunts)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "TORPOR",
+      "label": "Torpor / Diablerie / Blood Hunt (rule-level)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "OUST",
+      "label": "Oust / Withdraw / Removal",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "CARDPLAY",
+      "label": "Card Play Micro-FSM (rule-level, applies to any card/effect)",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "IMPULSE",
+      "label": "Shared Impulse Window (play/pass loop; timers are ENV-defined) — EXPLICIT ORDER",
+      "level": "basic",
+      "orthogonal": false
+    },
+    {
+      "id": "DATASET",
+      "label": "ENGINE BUILD-TIME: Card Dataset Integration (vtes_v5.json) — non-gameplay loop",
+      "level": "advanced",
+      "orthogonal": false
+    },
+    {
+      "id": "HOOKS",
+      "label": "RUNTIME: Card Timing Hooks (generalized, used to open impulse windows)",
+      "level": "advanced",
+      "orthogonal": false
+    }
+  ],
+  "states": [
+    {
+      "id": "META_START",
+      "label": "Start game session",
+      "detail": "(choose 5 seats clockwise)\nPredator=right, Prey=left",
+      "kind": "state",
+      "level": "basic",
+      "parent": "META",
+      "hooks": []
+    },
+    {
+      "id": "META_SETUP",
+      "label": "Setup:",
+      "detail": "• Build crypt+library decks\n• Shuffle both decks, cut by predator\n• Draw 7 library cards (starting hand)\n• Deal 4 crypt cards to uncontrolled region face down\n• Initial pool + Edge setup (per rules)\n• Choose first Methuselah",
+      "kind": "state",
+      "level": "basic",
+      "parent": "META",
+      "hooks": []
+    },
+    {
+      "id": "META_TURN_CLOCK",
+      "label": "Turn passes clockwise to next Methuselah",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "META",
+      "hooks": []
+    },
+    {
+      "id": "META_ENDCHECK",
+      "label": "Check end condition:",
+      "detail": "only 1 Methuselah remains\n(or table ends)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "META",
+      "hooks": []
+    },
+    {
+      "id": "META_SCORING",
+      "label": "Victory Points (VP) update:",
+      "detail": "• Gain 1 VP when prey is ousted\n• Gain +1 VP if last remaining\nWinner = highest VP (even if ousted)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "META",
+      "hooks": []
+    },
+    {
+      "id": "HAND_RULE",
+      "label": "Hand size baseline = 7",
+      "detail": "Whenever hand size changes or cards are added/removed:\nImmediately draw up to, or discard down to, hand size",
+      "kind": "state",
+      "level": "basic",
+      "parent": "HAND",
+      "hooks": []
+    },
+    {
+      "id": "DRAW_REPLACE",
+      "label": "Drawing cards (replacement):",
+      "detail": "Whenever you play a card from hand,\ndraw 1 from library to replace it\n(unless card text says otherwise).\nIf library empty: you continue playing, but don't draw.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "HAND",
+      "hooks": []
+    },
+    {
+      "id": "TURN_BEGIN",
+      "label": "Active Methuselah turn begins",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": []
+    },
+    {
+      "id": "PH_UNLOCK",
+      "label": "1) Unlock Phase",
+      "detail": "• Unlock all your cards\n• Resolve unlock-phase effects\n• Handle contests / yields\n• (Adv) Optional: burn 1 pool per Infernal minion to unlock\n• If you have the Edge, you may gain 1 pool from blood bank",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": [
+        "HK_UNLOCK"
+      ]
+    },
+    {
+      "id": "PH_MASTER",
+      "label": "2) Master Phase",
+      "detail": "• Receive master phase actions (MPA)\n• Use MPAs (e.g., play master cards)\n• Choose ordering vs other master-phase effects\n• Unused MPAs are lost",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": [
+        "HK_MASTER"
+      ]
+    },
+    {
+      "id": "PH_MINION",
+      "label": "3) Minion Phase",
+      "detail": "• Ready, unlocked minions may take actions\n• Mandatory actions first\n• Each action fully resolves before next",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": [
+        "HK_INPLAY"
+      ]
+    },
+    {
+      "id": "PH_INFLUENCE",
+      "label": "4) Influence Phase",
+      "detail": "• Receive transfers (normally 4)\n• Early-game balancing (5 players):\n  seat1 gets 1, seat2 gets 2, seat3 gets 3 transfers on their first influence phase\n  (seats 4-5 reach their first influence phase after this)\n• Spend transfers to influence/reveal vampires etc.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": []
+    },
+    {
+      "id": "PH_DISCARD",
+      "label": "5) Discard Phase",
+      "detail": "• Receive discard phase action (DPA)\n• Use DPA to discard+replace\n• (Adv) Use DPA to play event (≤1 per phase; each event only once per game)\n• Unused DPA lost",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": []
+    },
+    {
+      "id": "TURN_END",
+      "label": "End of turn",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TURN",
+      "hooks": []
+    },
+    {
+      "id": "CONTEST_CHECK",
+      "label": "If unique card/title duplicates enter play -> contest begins",
+      "detail": "All contested copies turn face down (out of play)",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "CONTEST",
+      "hooks": []
+    },
+    {
+      "id": "CONTEST_PAY",
+      "label": "During your unlock phase:",
+      "detail": "• Pay cost to contest (card: 1 pool; title: 1 blood)\nOR\n• Yield (burn yielded card / lose title)\n• Vampires in torpor must yield contested titles",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "CONTEST",
+      "hooks": []
+    },
+    {
+      "id": "CONTEST_RESOLVE",
+      "label": "If all others yield:",
+      "detail": "• Your copy unlocks & turns face up during your next unlock\n• Contest ends",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "CONTEST",
+      "hooks": []
+    },
+    {
+      "id": "INF_START",
+      "label": "Start Influence Phase",
+      "detail": "Set transfers by seat/turn",
+      "kind": "state",
+      "level": "basic",
+      "parent": "INFLUENCE",
+      "hooks": [
+        "HK_INFLUENCE"
+      ]
+    },
+    {
+      "id": "INF_SPEND",
+      "label": "Repeat until transfers = 0 (player choice):",
+      "detail": "• 1 transfer: move 1 pool -> uncontrolled vampire (adds blood)\n• 2 transfers: move 1 blood from uncontrolled vampire -> your pool\n• 4 transfers + burn 1 pool: move vampire from crypt -> uncontrolled\n(plus any other allowed transfer options)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "INFLUENCE",
+      "hooks": []
+    },
+    {
+      "id": "INF_REVEAL",
+      "label": "At any time in this phase:",
+      "detail": "If uncontrolled vampire blood ≥ capacity:\n• move to ready region face up, unlocked\n• excess blood returns to blood bank",
+      "kind": "state",
+      "level": "basic",
+      "parent": "INFLUENCE",
+      "hooks": []
+    },
+    {
+      "id": "INF_END",
+      "label": "End Influence Phase",
+      "detail": "unused transfers lost",
+      "kind": "state",
+      "level": "basic",
+      "parent": "INFLUENCE",
+      "hooks": []
+    },
+    {
+      "id": "DIS_START",
+      "label": "Start Discard Phase",
+      "detail": "Gain DPA",
+      "kind": "state",
+      "level": "basic",
+      "parent": "DISCARD",
+      "hooks": [
+        "HK_DISCARD"
+      ]
+    },
+    {
+      "id": "DIS_USE",
+      "label": "Use DPA (optional):",
+      "detail": "A) Discard 1 card -> draw 1\nB) (Adv) Play 1 event card (≤1 per phase)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "DISCARD",
+      "hooks": []
+    },
+    {
+      "id": "DIS_END",
+      "label": "End Discard Phase",
+      "detail": "unused DPA lost",
+      "kind": "state",
+      "level": "basic",
+      "parent": "DISCARD",
+      "hooks": []
+    },
+    {
+      "id": "MINION_READY",
+      "label": "Select your next action",
+      "detail": "(only ready, unlocked minion)\nOR end minion phase",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "MINION_MANDATORY",
+      "label": "Mandatory actions gate:",
+      "detail": "• If any of your ready, unlocked vampires have 0 blood,\n  they have mandatory HUNT actions.\n• While mandatory actions remain, you cannot take non-mandatory actions.\n• If multiple mandatory actions exist, choose order.\n(Other mandatory actions can exist via card text.)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "ACTION_DECLARE",
+      "label": "Announce action & lock acting minion",
+      "detail": "• Basic bleed / basic hunt / action card in hand / effect in play\n• Set targets (directed/undirected)\n• Pay costs (if any)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": [
+        "HK_AMOD",
+        "HK_REACT",
+        "HK_OOT"
+      ]
+    },
+    {
+      "id": "ACTION_ASANN",
+      "label": "Window: 'as action is announced'",
+      "detail": "(only effects explicitly allowed here)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": [
+        "HK_ASANN"
+      ]
+    },
+    {
+      "id": "ACTION_BLOCK_WHO",
+      "label": "Block eligibility (rule-level):",
+      "detail": "• Directed at a Methuselah (e.g., bleed prey): that Methuselah may attempt to block\n• Directed at a minion: that minion's controller may attempt to block\n• Undirected: prey and predator may attempt to block\n(Other cases require card-specific rules; excluded here)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "ACTION_BLOCK_LOOP",
+      "label": "Resolve block attempts (clockwise)",
+      "detail": "Each eligible player may attempt with a ready, unlocked minion\n(see Block Attempt FSM)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "ACTION_BLOCKED",
+      "label": "Action blocked?",
+      "detail": "YES -> blocked path\nNO  -> successful path",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "ACTION_SUCCESS",
+      "label": "Successful action resolves",
+      "detail": "Branch by action type:\n• Bleed -> Bleed subloop\n• Hunt -> Hunt subloop\n• Political -> Referendum subloop\n• Other -> Resolve per card/effect",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "ACTION_BLOCKED_PATH",
+      "label": "Blocked action cleanup",
+      "detail": "Action is unsuccessful; resolve blocked-action consequences, then end the action",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "ACTION_END",
+      "label": "Action ends",
+      "detail": "If a minion unlocks during this phase (effect), it may act again",
+      "kind": "state",
+      "level": "basic",
+      "parent": "MINION",
+      "hooks": []
+    },
+    {
+      "id": "BLEED_START",
+      "label": "If action is BLEED and is unblocked:",
+      "detail": "• default bleed amount = 1 (modifiable)\n• action modifiers & reactions may modify/redirect/reduce (card-agnostic here)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLEED",
+      "hooks": [
+        "HK_BLEED"
+      ]
+    },
+    {
+      "id": "BLEED_FINAL",
+      "label": "Set final bleed amount B (B ≥ 0)",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLEED",
+      "hooks": []
+    },
+    {
+      "id": "BLEED_BURN",
+      "label": "Prey burns B pool (if possible)",
+      "detail": "If pool reaches 0 -> oust check",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLEED",
+      "hooks": []
+    },
+    {
+      "id": "EDGE_GAIN",
+      "label": "If B ≥ 1, bleed is successful:",
+      "detail": "Acting controller gets the Edge\n(take from current holder if any)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLEED",
+      "hooks": []
+    },
+    {
+      "id": "BLEED_DONE",
+      "label": "Bleed subloop ends -> return to action end",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLEED",
+      "hooks": []
+    },
+    {
+      "id": "HUNT_START",
+      "label": "If action is HUNT and is unblocked:",
+      "detail": "• undirected action\n• default stealth +1\n• hunt is mandatory at 0 blood",
+      "kind": "state",
+      "level": "basic",
+      "parent": "HUNT",
+      "hooks": []
+    },
+    {
+      "id": "HUNT_GAIN",
+      "label": "If successful:",
+      "detail": "Acting vampire gains hunt amount blood\nfrom blood bank",
+      "kind": "state",
+      "level": "basic",
+      "parent": "HUNT",
+      "hooks": []
+    },
+    {
+      "id": "HUNT_DONE",
+      "label": "Hunt subloop ends -> return to action end",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "HUNT",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_START",
+      "label": "Potential blocker chosen",
+      "detail": "(ready, unlocked minion)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": [
+        "HK_BLOCK"
+      ]
+    },
+    {
+      "id": "BLOCK_WINDOW",
+      "label": "Window: action modifiers + reactions",
+      "detail": "• Stealth/Intercept added only if needed\n• Same minion cannot play same reaction/modifier more than once per action\n• Impulse cycles; any effect returns impulse to acting",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_COMPARE",
+      "label": "Compare:",
+      "detail": "if Intercept ≥ Stealth => block succeeds\nelse => block fails",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_FAIL",
+      "label": "Block fails",
+      "detail": "• return to next blocker opportunity\n• action continues",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_SUCCESS",
+      "label": "Block attempt succeeds",
+      "detail": "(Intercept ≥ Stealth)\n=> action becomes blocked (unsuccessful)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_RESOLUTION",
+      "label": "Block resolution (rule)",
+      "detail": "If action is blocked:\n• Any card played to perform the action is burned\n• Two simultaneous consequences:\n  A) blocking minion locks\n  B) blocking minion enters combat with acting minion\nException (rule-level):\nIf an effect ends the action before block resolution\nOR before consequence B (entering combat),\nthen neither consequence occurs.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_ENDED_EARLY_Q",
+      "label": "Did an effect end the action",
+      "detail": "before block resolution or\nbefore entering combat?",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCK_ENDED_EARLY",
+      "label": "Action ended early (rule-level)",
+      "detail": "• Not treated as blocked resolution\n• No lock + no combat\n• Cleanup per the ending effect",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "PRE_COMBAT_WINDOW",
+      "label": "Post-block / pre-combat window",
+      "detail": "(only effects usable 'when action is blocked'\nor 'before combat begins')\nUse shared IMPULSE_WINDOW\nContext A (combat/directed@1)\nENV timeouts => auto-PASS",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_HAPPENS_Q",
+      "label": "Enter combat as a result",
+      "detail": "of the successful block?",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCKED_NO_COMBAT",
+      "label": "Blocked, no combat",
+      "detail": "(Action unsuccessful)\n• blocker locks (already)\n• no action effects\n• no action cost paid\nContinue to blocked-action cleanup",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "BLOCKED_TORPOR_SPECIAL",
+      "label": "Special rule: Leave Torpor is blocked",
+      "detail": "No combat (minions in torpor cannot enter combat).\nIf blocker is a vampire: optional immediate diablerie opportunity.\nIf blocker is an ally or declines: action simply fails.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "BLOCK",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_START_NODE",
+      "label": "Combat begins",
+      "detail": "(acting minion vs opposing minion)\nCombat occurs in 1+ rounds.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_CARD_LIMIT",
+      "label": "Combat card limit:",
+      "detail": "• The only minion cards that can be played during combat are combat cards.\nADV: Some combat cards are played by minions \"not involved in the current combat\"; minions controlled by ANY Methuselah can play those cards.\n(Non-combatants can play ONLY if the combat card text explicitly allows it.)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_OOC_NOTE",
+      "label": "Non-combatant combat-card play (ADV):",
+      "detail": "A minion not involved in the current combat may play a combat card ONLY if that combat card explicitly says so.\nSequencing is still by impulse during combat:\nActing Methuselah first; once they pass, defending Methuselah; then remaining Methuselahs clockwise (5-player).\nIf any Methuselah plays an effect, impulse snaps back to the acting Methuselah.",
+      "kind": "note",
+      "level": "advanced",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_ROUND_BEGIN",
+      "label": "Start of combat round",
+      "detail": "(Each round has 7 steps)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S1_BEFORE_RANGE",
+      "label": "1) Before Range",
+      "detail": "Play cards/effects usable before range is chosen.\nNOTE: 'before range is determined' effects must be played\nbefore the acting minion decides whether to play a maneuver.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S2_DETERMINE_RANGE",
+      "label": "2) Determine Range",
+      "detail": "Default = close.\nUse maneuvers to change/offset to close or long.\nNo minion may play two maneuvers in a row.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": [
+        "HK_CMB_RANGE"
+      ]
+    },
+    {
+      "id": "COMBAT_RANGE_LOOP",
+      "label": "Maneuver cycle:",
+      "detail": "Any combatant play a maneuver (alternate)?",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_RANGE_SET",
+      "label": "Range is set for this round",
+      "detail": "(close or long)\n(If maneuver came from strike card/weapon:\nthat also sets the initial strike choice constraint.)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S3_BEFORE_STRIKES",
+      "label": "3) Before Strikes",
+      "detail": "Play cards/effects usable after range is set\nbut before strikes are chosen.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S4_STRIKE",
+      "label": "4) Strike",
+      "detail": "Resolve 1+ strike pairs at the same range.\nEach pair:\n- Acting minion chooses strike\n- Opposing minion chooses strike\n- Resolve simultaneously (except special cases)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": [
+        "HK_CMB_STRIKE"
+      ]
+    },
+    {
+      "id": "STRIKE_TARGET_NOTE",
+      "label": "Strike targeting note:",
+      "detail": "At long range, a ranged strike may target an opposing retainer\n(instead of the opposing minion) if announced when strike is announced.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_PAIR_BEGIN",
+      "label": "Strike Pair: Choose & Resolve",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_CHOOSE_ACTING",
+      "label": "Choose Strike (acting)",
+      "detail": "From: hand strike / weapon / combat card / other strike source.\nIf maneuver was used from a strike card/weapon this round:\nno other strike for the initial strike.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_CHOOSE_OPP",
+      "label": "Choose Strike (opposing)",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_RESOLVE",
+      "label": "Resolve Strike Pair",
+      "detail": "Apply strike effects.\nThen proceed to damage resolution.\nIf a combatant becomes not ready at any point:\nround & combat end immediately.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_ADDITIONAL_Q",
+      "label": "Additional strikes this round?",
+      "detail": "",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_GAIN_ADDITIONAL",
+      "label": "Additional Strikes (Adv):",
+      "detail": "Announced/performed only after the first pair.\nActing decides to gain additional strikes before opposing.\nOnly 1 card/effect to gain additional strikes per round ('limited').\nResolve by repeating Choose+Resolve steps\n(only minions with remaining additional strikes act).\nAll additional strikes occur at the same range.",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "STRIKE_ADDITIONAL_LOOP",
+      "label": "More additional strikes to resolve?",
+      "detail": "",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S5_DAMAGE_RES",
+      "label": "5) Damage Resolution",
+      "detail": "Two substeps:\nA) Prevent damage (play prevention combat cards)\nB) Mend damage:\n- Vampires burn 1 blood per unprevented damage\n- Allies/retainers burn 1 life per unprevented damage",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_EARLY_END_Q",
+      "label": "Any combatant not ready?",
+      "detail": "",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_END_IMMEDIATE",
+      "label": "Combat ends immediately",
+      "detail": "(if a combatant is no longer ready)\nReturn to action flow after resolving required steps.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S6_PRESS",
+      "label": "6) Press",
+      "detail": "If both combatants still ready:\nUse presses to continue into another round or to end combat.\nCombatants may continue playing presses to offset opponent's last press.\nNo minion may play two presses in a row.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": [
+        "HK_CMB_PRESS"
+      ]
+    },
+    {
+      "id": "COMBAT_PRESS_LOOP",
+      "label": "Press cycle:",
+      "detail": "Uncancelled press to continue exists?",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S7_END_ROUND",
+      "label": "7) End of Round",
+      "detail": "Play end-of-round cards/effects\n(after the press step).\nNote: This step also occurs even if combat ends prematurely.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_S7_END_ROUND_PREMATURE",
+      "label": "7) End of Round (premature)",
+      "detail": "Play end-of-round cards/effects\n(after the press step).\nNote: Occurs even if combat ends prematurely.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_CONTINUE_Q",
+      "label": "Continue into another round?",
+      "detail": "",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "COMBAT_END_NODE",
+      "label": "Combat ends",
+      "detail": "Return to action resolution flow",
+      "kind": "state",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": [
+        "HK_CMB_END"
+      ]
+    },
+    {
+      "id": "COMBAT_PRIORITY_NOTE",
+      "label": "Priority within combat steps:",
+      "detail": "At every combat stage, the acting minion gets first opportunity\nbefore the opposing minion.\nOperationally this is handled by impulse:\n• Acting Methuselah keeps impulse until they pass.\n• Then the defending Methuselah gets impulse.\n• Then the remaining Methuselahs get impulse clockwise (5-player).\nOther Methuselahs can only act if a card/effect explicitly allows it\n(e.g., combat cards playable by minions not involved in the current combat).",
+      "kind": "note",
+      "level": "basic",
+      "parent": "COMBAT",
+      "hooks": []
+    },
+    {
+      "id": "REF_START",
+      "label": "Referendum starts",
+      "detail": "• Terms set/declared (if political action)\n• Then proceed to polling",
+      "kind": "state",
+      "level": "basic",
+      "parent": "REF",
+      "hooks": []
+    },
+    {
+      "id": "REF_POLL_OPEN",
+      "label": "Polling step",
+      "detail": "Impulse cycles; votes/ballots cast in order\n• Acting may delay casting until they choose to cast\n• Edge holder may burn Edge to gain 1 vote",
+      "kind": "state",
+      "level": "basic",
+      "parent": "REF",
+      "hooks": [
+        "HK_REF"
+      ]
+    },
+    {
+      "id": "REF_TALLY",
+      "label": "Tally votes & determine pass/fail",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "REF",
+      "hooks": []
+    },
+    {
+      "id": "REF_RESOLVE",
+      "label": "If passes: apply terms/effects",
+      "detail": "If fails: no effect\nNote: political action still 'successful' if unblocked even if referendum fails",
+      "kind": "state",
+      "level": "basic",
+      "parent": "REF",
+      "hooks": []
+    },
+    {
+      "id": "REF_END",
+      "label": "Referendum ends -> return to action resolution flow",
+      "detail": "",
+      "kind": "state",
+      "level": "basic",
+      "parent": "REF",
+      "hooks": []
+    },
+    {
+      "id": "TORPOR_ENTER",
+      "label": "Minion enters torpor",
+      "detail": "(typically from combat damage)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "TORPOR_LEAVE",
+      "label": "Leave Torpor action",
+      "detail": "(only action torpor vampire may take)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "DIABLERIE_ACTION",
+      "label": "Diablerie (directed action)",
+      "detail": "Burn vampire in torpor\nDiablerie steps are a single unit:\nno interruption; effects before/after only",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "DIABLERIE_IMMEDIATE",
+      "label": "Immediate diablerie opportunity",
+      "detail": "(from blocked Leave Torpor)\nNot an action (cannot be blocked)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "BLOOD_HUNT_REF",
+      "label": "Blood Hunt referendum",
+      "detail": "Automatic & immediate after diablerie\nNot an action (cannot be blocked)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "DIABLERIST_BURN",
+      "label": "If blood hunt passes:",
+      "detail": "Diablerist burned",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "TROPHY_DISCIPLINE",
+      "label": "If victim older / Red List:",
+      "detail": "May gain Discipline / trophies\n(handled before blood hunt if applicable)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "TORPOR",
+      "hooks": []
+    },
+    {
+      "id": "POOL_ZERO",
+      "label": "If Methuselah pool reaches 0 -> ousted",
+      "detail": "Remove all cards they control from game\nReturn rivals' owned cards they controlled at end",
+      "kind": "state",
+      "level": "basic",
+      "parent": "OUST",
+      "hooks": []
+    },
+    {
+      "id": "PREY_OUST",
+      "label": "If your prey is ousted:",
+      "detail": "Gain 1 VP\nIf you are not ousted at same time, gain 6 pool",
+      "kind": "state",
+      "level": "basic",
+      "parent": "OUST",
+      "hooks": []
+    },
+    {
+      "id": "WITHDRAW",
+      "label": "(Optional) Withdraw",
+      "detail": "Announce intention to withdraw\n(handled per rules/advanced summary)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "OUST",
+      "hooks": []
+    },
+    {
+      "id": "CP_DECLARE",
+      "label": "Declare effect fully:",
+      "detail": "• announce targets/costs/choices\n• show card/effect\n• card may be temporarily out-of-play until resolution",
+      "kind": "state",
+      "level": "basic",
+      "parent": "CARDPLAY",
+      "hooks": []
+    },
+    {
+      "id": "CP_ASPLAYED",
+      "label": "Timing: 'as card is played'",
+      "detail": "ONLY cancel-as-played + wake effects legal\nUse ABC sequencing until all pass\n(then continue)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "CARDPLAY",
+      "hooks": [
+        "HK_ASPLAYED"
+      ]
+    },
+    {
+      "id": "CP_RESOLVE",
+      "label": "Resolve or cancel:",
+      "detail": "• if canceled, card effect does not happen\n• move card to ash heap or into play upon resolution\n• acting regains impulse after any effect resolves",
+      "kind": "state",
+      "level": "basic",
+      "parent": "CARDPLAY",
+      "hooks": []
+    },
+    {
+      "id": "CP_REPLACE",
+      "label": "Replace/draw:",
+      "detail": "• after 'as played' window closes and card is resolved/canceled\n• draw 1 to replace (unless no-replace)\n• if library empty: no draw\n• enforce HAND_RULE immediately",
+      "kind": "state",
+      "level": "basic",
+      "parent": "CARDPLAY",
+      "hooks": []
+    },
+    {
+      "id": "IMPULSE_WINDOW",
+      "label": "OPEN IMPULSE WINDOW",
+      "detail": "A play window exists at specific FSM steps.\nENV sets a timer per polled player; timeout => auto-PASS.",
+      "kind": "window",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_ACTING",
+      "label": "Acting Methuselah ALWAYS has impulse first.",
+      "detail": "('Acting' = player who is currently resolving an action/card/effect)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_POLL",
+      "label": "Poll current impulse owner:",
+      "detail": "PLAY 0+ allowed effects/cards OR PASS\n(If PLAY happens: resolve it, then acting gets impulse back)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_PLAY",
+      "label": "If PLAY:",
+      "detail": "1) run Card Play Micro-FSM (declare -> as played -> resolve -> replace)\n2) acting immediately regains impulse",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_PASS",
+      "label": "If PASS (or timeout):",
+      "detail": "advance impulse to the next Methuselah\naccording to the context-specific order below.",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_CTX",
+      "label": "Context for impulse order",
+      "detail": "(after acting passes)?",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_ORDER_SINGLE",
+      "label": "Context A: Combat OR action directed at a single Methuselah",
+      "detail": "Order after acting passes:\n1) Defending Methuselah first\n2) Then every other Methuselah in clockwise order\n(5-player example: A -> D -> next clockwise after D -> ... -> last)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_COMBAT_DEF_NOTE",
+      "label": "Combat-only clarification:",
+      "detail": "In combat, \"defending Methuselah\" = the controller of the opposing combatant.\nOther Methuselahs only get impulse if the current window allows them to play something (e.g., a combat card explicitly playable by a minion not involved).",
+      "kind": "note",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_ORDER_SET",
+      "label": "Context B: Action directed at a SET of Methuselahs",
+      "detail": "Order after acting passes:\n1) Those targeted Methuselahs in clockwise order\n2) Then every other Methuselah in clockwise order\n(Exclude acting from the pass list)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_ORDER_UNDIR",
+      "label": "Context C: Undirected action",
+      "detail": "Order after acting passes:\n1) Prey first\n2) Predator second\n3) Then every other Methuselah in clockwise order\n(5-player example: A -> Prey -> Predator -> Cross1 -> Cross2)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_NEXT",
+      "label": "Give impulse to next Methuselah in the chosen order",
+      "detail": "(if that Methuselah plays, impulse snaps back to acting)",
+      "kind": "state",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_ALLPASSED",
+      "label": "Has EVERY Methuselah passed",
+      "detail": "consecutively in the CURRENT window?",
+      "kind": "decision",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "IMP_CLOSE",
+      "label": "CLOSE WINDOW",
+      "detail": "Return to parent FSM step (advance state)",
+      "kind": "window",
+      "level": "basic",
+      "parent": "IMPULSE",
+      "hooks": []
+    },
+    {
+      "id": "DS_LOAD",
+      "label": "Load vtes_v5.json",
+      "detail": "",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "DATASET",
+      "hooks": []
+    },
+    {
+      "id": "DS_SPLIT",
+      "label": "Split by card type",
+      "detail": "(master/action/modifier/reaction/combat/...)\n(already done: vtes_v5_split_v1/)",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "DATASET",
+      "hooks": []
+    },
+    {
+      "id": "DS_HOOKS",
+      "label": "Infer timing hooks per card",
+      "detail": "(type defaults + text patterns)\nExport mapping JSON",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "DATASET",
+      "hooks": []
+    },
+    {
+      "id": "DS_OVERRIDE",
+      "label": "Manual override list",
+      "detail": "for ambiguous timing / exceptions\n(rule-level only; no card flows)",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "DATASET",
+      "hooks": []
+    },
+    {
+      "id": "DS_EXPORT",
+      "label": "Export artifacts:",
+      "detail": "• card_timing_hooks.json\n• hook counts\n• uncertain list",
+      "kind": "state",
+      "level": "advanced",
+      "parent": "DATASET",
+      "hooks": []
+    },
+    {
+      "id": "HK_UNLOCK",
+      "label": "HOOK: TURN_UNLOCK",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_MASTER",
+      "label": "HOOK: TURN_MASTER",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_INFLUENCE",
+      "label": "HOOK: TURN_INFLUENCE",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_DISCARD",
+      "label": "HOOK: TURN_DISCARD",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_ASANN",
+      "label": "HOOK: ACTION_AS_ANNOUNCED",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_AMOD",
+      "label": "HOOK: ACTION_MOD_WINDOW",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_REACT",
+      "label": "HOOK: REACTION_WINDOW",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_BLOCK",
+      "label": "HOOK: BLOCK_ATTEMPT_WINDOW",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_REF",
+      "label": "HOOK: REFERENDUM_POLLING/GENERAL",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_BLEED",
+      "label": "HOOK: BLEED_SPECIFIC",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_CMB_RANGE",
+      "label": "HOOK: COMBAT_RANGE",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_CMB_STRIKE",
+      "label": "HOOK: COMBAT_STRIKE",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_CMB_PRESS",
+      "label": "HOOK: COMBAT_PRESS",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_CMB_END",
+      "label": "HOOK: COMBAT_END",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_OOT",
+      "label": "HOOK: OOT_MASTER",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_INPLAY",
+      "label": "HOOK: IN_PLAY_ABILITY",
+      "detail": "",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    },
+    {
+      "id": "HK_ASPLAYED",
+      "label": "HOOK: CARD_AS_PLAYED",
+      "detail": "(cancel-as-played + wake only)",
+      "kind": "hook",
+      "level": "advanced",
+      "parent": "HOOKS",
+      "hooks": []
+    }
+  ],
+  "transitions": [
+    {
+      "from": "META_START",
+      "to": "META_SETUP",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "META_SETUP",
+      "to": "TURN_BEGIN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "TURN_END",
+      "to": "META_TURN_CLOCK",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "META_TURN_CLOCK",
+      "to": "TURN_BEGIN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "META_ENDCHECK",
+      "to": "META_SCORING",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "META_SCORING",
+      "to": "META_ENDCHECK",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "TURN_BEGIN",
+      "to": "PH_UNLOCK",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_UNLOCK",
+      "to": "PH_MASTER",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_MASTER",
+      "to": "PH_MINION",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_MINION",
+      "to": "PH_INFLUENCE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_INFLUENCE",
+      "to": "PH_DISCARD",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_DISCARD",
+      "to": "TURN_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_UNLOCK",
+      "to": "CONTEST_CHECK",
+      "label": "if contest exists",
+      "guard": "if contest exists",
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "CONTEST_CHECK",
+      "to": "CONTEST_PAY",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "CONTEST_PAY",
+      "to": "CONTEST_RESOLVE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "CONTEST_RESOLVE",
+      "to": "PH_UNLOCK",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "PH_INFLUENCE",
+      "to": "INF_START",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "INF_START",
+      "to": "INF_SPEND",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "INF_SPEND",
+      "to": "INF_REVEAL",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "INF_REVEAL",
+      "to": "INF_SPEND",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "INF_SPEND",
+      "to": "INF_END",
+      "label": "no transfers left / pass",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "INF_END",
+      "to": "PH_DISCARD",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_DISCARD",
+      "to": "DIS_START",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "DIS_START",
+      "to": "DIS_USE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "DIS_USE",
+      "to": "DIS_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "DIS_END",
+      "to": "TURN_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_MINION",
+      "to": "MINION_READY",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "MINION_READY",
+      "to": "MINION_MANDATORY",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "MINION_MANDATORY",
+      "to": "ACTION_DECLARE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_DECLARE",
+      "to": "ACTION_ASANN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_ASANN",
+      "to": "ACTION_BLOCK_WHO",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_BLOCK_WHO",
+      "to": "ACTION_BLOCK_LOOP",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_BLOCK_LOOP",
+      "to": "ACTION_BLOCKED",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_BLOCKED",
+      "to": "ACTION_SUCCESS",
+      "label": "NO",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_BLOCKED",
+      "to": "ACTION_BLOCKED_PATH",
+      "label": "YES",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_SUCCESS",
+      "to": "ACTION_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_END",
+      "to": "MINION_READY",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_BLOCKED_PATH",
+      "to": "ACTION_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "MINION_READY",
+      "to": "PH_INFLUENCE",
+      "label": "end minion phase / no actions",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_SUCCESS",
+      "to": "BLEED_START",
+      "label": "if bleed",
+      "guard": "if bleed",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "BLEED_START",
+      "to": "BLEED_FINAL",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLEED_FINAL",
+      "to": "BLEED_BURN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLEED_BURN",
+      "to": "EDGE_GAIN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "EDGE_GAIN",
+      "to": "BLEED_DONE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLEED_DONE",
+      "to": "ACTION_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_SUCCESS",
+      "to": "HUNT_START",
+      "label": "if hunt",
+      "guard": "if hunt",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "HUNT_START",
+      "to": "HUNT_GAIN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "HUNT_GAIN",
+      "to": "HUNT_DONE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "HUNT_DONE",
+      "to": "ACTION_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_BLOCK_LOOP",
+      "to": "BLOCK_START",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_START",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (block context)",
+      "guard": "open window (block context)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "IMPULSE_WINDOW",
+      "to": "BLOCK_WINDOW",
+      "label": "represents repeated play/pass",
+      "guard": "represents repeated play/pass",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_WINDOW",
+      "to": "BLOCK_COMPARE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_COMPARE",
+      "to": "BLOCK_FAIL",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_COMPARE",
+      "to": "BLOCK_SUCCESS",
+      "label": "YES",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_COMPARE",
+      "to": "BLOCK_FAIL",
+      "label": "NO",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_FAIL",
+      "to": "ACTION_BLOCK_LOOP",
+      "label": "next eligible blocker / none",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_SUCCESS",
+      "to": "BLOCK_RESOLUTION",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_RESOLUTION",
+      "to": "BLOCK_ENDED_EARLY_Q",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_ENDED_EARLY_Q",
+      "to": "BLOCK_ENDED_EARLY",
+      "label": "YES",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_ENDED_EARLY",
+      "to": "ACTION_END",
+      "label": "cleanup",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCK_ENDED_EARLY_Q",
+      "to": "PRE_COMBAT_WINDOW",
+      "label": "NO (proceed)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PRE_COMBAT_WINDOW",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (post-block/pre-combat)",
+      "guard": "open window (post-block/pre-combat)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "PRE_COMBAT_WINDOW",
+      "to": "COMBAT_HAPPENS_Q",
+      "label": "window closes",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_HAPPENS_Q",
+      "to": "COMBAT_START_NODE",
+      "label": "YES (default)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_HAPPENS_Q",
+      "to": "BLOCKED_TORPOR_SPECIAL",
+      "label": "NO (acting minion in torpor)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_HAPPENS_Q",
+      "to": "BLOCKED_NO_COMBAT",
+      "label": "NO (combat canceled/replaced)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCKED_NO_COMBAT",
+      "to": "ACTION_BLOCKED_PATH",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCKED_TORPOR_SPECIAL",
+      "to": "DIABLERIE_IMMEDIATE",
+      "label": "blocker is vampire & chooses diablerie",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOCKED_TORPOR_SPECIAL",
+      "to": "ACTION_BLOCKED_PATH",
+      "label": "blocker declines / ally",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_START_NODE",
+      "to": "COMBAT_CARD_LIMIT",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_CARD_LIMIT",
+      "to": "COMBAT_ROUND_BEGIN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_ROUND_BEGIN",
+      "to": "COMBAT_S1_BEFORE_RANGE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_CARD_LIMIT",
+      "to": "COMBAT_OOC_NOTE",
+      "label": "ADV note",
+      "guard": null,
+      "kind": "annotation",
+      "level": "advanced"
+    },
+    {
+      "from": "COMBAT_S1_BEFORE_RANGE",
+      "to": "COMBAT_S2_DETERMINE_RANGE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S2_DETERMINE_RANGE",
+      "to": "COMBAT_RANGE_LOOP",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_RANGE_LOOP",
+      "to": "COMBAT_S2_DETERMINE_RANGE",
+      "label": "maneuver played (alternate)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_RANGE_LOOP",
+      "to": "COMBAT_RANGE_SET",
+      "label": "both decline / stop",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_RANGE_SET",
+      "to": "COMBAT_S3_BEFORE_STRIKES",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S3_BEFORE_STRIKES",
+      "to": "COMBAT_S4_STRIKE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S4_STRIKE",
+      "to": "STRIKE_TARGET_NOTE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_TARGET_NOTE",
+      "to": "STRIKE_PAIR_BEGIN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_PAIR_BEGIN",
+      "to": "STRIKE_CHOOSE_ACTING",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_CHOOSE_ACTING",
+      "to": "STRIKE_CHOOSE_OPP",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_CHOOSE_OPP",
+      "to": "STRIKE_RESOLVE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_RESOLVE",
+      "to": "COMBAT_S5_DAMAGE_RES",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S4_STRIKE",
+      "to": "STRIKE_ADDITIONAL_Q",
+      "label": "after first pair",
+      "guard": "after first pair",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_ADDITIONAL_Q",
+      "to": "COMBAT_S5_DAMAGE_RES",
+      "label": "NO",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_ADDITIONAL_Q",
+      "to": "STRIKE_GAIN_ADDITIONAL",
+      "label": "YES",
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "STRIKE_GAIN_ADDITIONAL",
+      "to": "STRIKE_PAIR_BEGIN",
+      "label": "resolve next additional pair",
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "STRIKE_PAIR_BEGIN",
+      "to": "STRIKE_ADDITIONAL_LOOP",
+      "label": "only for additional strikes",
+      "guard": "only for additional strikes",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_ADDITIONAL_LOOP",
+      "to": "STRIKE_PAIR_BEGIN",
+      "label": "YES (another pair)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "STRIKE_ADDITIONAL_LOOP",
+      "to": "COMBAT_S5_DAMAGE_RES",
+      "label": "NO (done)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S5_DAMAGE_RES",
+      "to": "COMBAT_EARLY_END_Q",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_EARLY_END_Q",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "YES",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_END_IMMEDIATE",
+      "to": "COMBAT_S7_END_ROUND_PREMATURE",
+      "label": "end-of-round step still occurs",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_EARLY_END_Q",
+      "to": "COMBAT_S6_PRESS",
+      "label": "NO",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S6_PRESS",
+      "to": "COMBAT_PRESS_LOOP",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_PRESS_LOOP",
+      "to": "COMBAT_S6_PRESS",
+      "label": "press played (alternate)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_PRESS_LOOP",
+      "to": "COMBAT_S7_END_ROUND",
+      "label": "pressing complete",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S7_END_ROUND",
+      "to": "COMBAT_CONTINUE_Q",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S7_END_ROUND_PREMATURE",
+      "to": "COMBAT_END_NODE",
+      "label": "combat already ended",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_CONTINUE_Q",
+      "to": "COMBAT_ROUND_BEGIN",
+      "label": "YES (uncancelled press to continue)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_CONTINUE_Q",
+      "to": "COMBAT_END_NODE",
+      "label": "NO (combat ends)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S1_BEFORE_RANGE",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S2_DETERMINE_RANGE",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S3_BEFORE_STRIKES",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S4_STRIKE",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S5_DAMAGE_RES",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S6_PRESS",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S7_END_ROUND",
+      "to": "COMBAT_END_IMMEDIATE",
+      "label": "if combatant not ready",
+      "guard": "if combatant not ready",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S1_BEFORE_RANGE",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 1)",
+      "guard": "open window (combat step 1)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S2_DETERMINE_RANGE",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 2)",
+      "guard": "open window (combat step 2)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S3_BEFORE_STRIKES",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 3)",
+      "guard": "open window (combat step 3)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S4_STRIKE",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 4)",
+      "guard": "open window (combat step 4)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S5_DAMAGE_RES",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 5)",
+      "guard": "open window (combat step 5)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S6_PRESS",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 6)",
+      "guard": "open window (combat step 6)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S7_END_ROUND",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (combat step 7)",
+      "guard": "open window (combat step 7)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_ROUND_BEGIN",
+      "to": "COMBAT_PRIORITY_NOTE",
+      "label": null,
+      "guard": null,
+      "kind": "annotation",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_END_NODE",
+      "to": "ACTION_BLOCKED_PATH",
+      "label": "after combat (from block)",
+      "guard": null,
+      "kind": "annotation",
+      "level": "basic"
+    },
+    {
+      "from": "ACTION_SUCCESS",
+      "to": "REF_START",
+      "label": "if action calls referendum / blood hunt",
+      "guard": "if action calls referendum / blood hunt",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "REF_START",
+      "to": "REF_POLL_OPEN",
+      "label": "open window (referendum polling)",
+      "guard": "open window (referendum polling)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "REF_POLL_OPEN",
+      "to": "IMPULSE_WINDOW",
+      "label": "open window (referendum polling)",
+      "guard": "open window (referendum polling)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "REF_POLL_OPEN",
+      "to": "REF_TALLY",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "REF_TALLY",
+      "to": "REF_RESOLVE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "REF_RESOLVE",
+      "to": "REF_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "REF_END",
+      "to": "ACTION_END",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "COMBAT_S5_DAMAGE_RES",
+      "to": "TORPOR_ENTER",
+      "label": "if torpor outcome",
+      "guard": "if torpor outcome",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "TORPOR_ENTER",
+      "to": "TORPOR_LEAVE",
+      "label": "future minion phase option",
+      "guard": "future minion phase option",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "TORPOR_ENTER",
+      "to": "DIABLERIE_ACTION",
+      "label": "if diablerie declared",
+      "guard": "if diablerie declared",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "DIABLERIE_IMMEDIATE",
+      "to": "TROPHY_DISCIPLINE",
+      "label": "if chosen",
+      "guard": "if chosen",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "DIABLERIE_ACTION",
+      "to": "TROPHY_DISCIPLINE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "TROPHY_DISCIPLINE",
+      "to": "BLOOD_HUNT_REF",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOOD_HUNT_REF",
+      "to": "REF_POLL_OPEN",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "BLOOD_HUNT_REF",
+      "to": "DIABLERIST_BURN",
+      "label": "if passes",
+      "guard": "if passes",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "META_ENDCHECK",
+      "to": "POOL_ZERO",
+      "label": "continuous check",
+      "guard": "continuous check",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "POOL_ZERO",
+      "to": "PREY_OUST",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PREY_OUST",
+      "to": "META_ENDCHECK",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "PH_UNLOCK",
+      "to": "WITHDRAW",
+      "label": "optional (advanced)",
+      "guard": "optional (advanced)",
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "IMPULSE_WINDOW",
+      "to": "IMP_ACTING",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_ACTING",
+      "to": "IMP_POLL",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_POLL",
+      "to": "IMP_PLAY",
+      "label": "PLAY",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_PLAY",
+      "to": "IMP_ACTING",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_POLL",
+      "to": "IMP_PASS",
+      "label": "PASS / timeout",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_PASS",
+      "to": "IMP_CTX",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_CTX",
+      "to": "IMP_ORDER_SINGLE",
+      "label": "combat OR directed@1",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_CTX",
+      "to": "IMP_ORDER_SET",
+      "label": "directed@set",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_CTX",
+      "to": "IMP_ORDER_UNDIR",
+      "label": "undirected action",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_ORDER_SINGLE",
+      "to": "IMP_NEXT",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_ORDER_SET",
+      "to": "IMP_NEXT",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_ORDER_UNDIR",
+      "to": "IMP_NEXT",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_NEXT",
+      "to": "IMP_ALLPASSED",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_ALLPASSED",
+      "to": "IMP_CLOSE",
+      "label": "yes",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "IMP_ALLPASSED",
+      "to": "IMP_POLL",
+      "label": "no (next player gets impulse)",
+      "guard": null,
+      "kind": "flow",
+      "level": "basic"
+    },
+    {
+      "from": "DS_LOAD",
+      "to": "DS_SPLIT",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "DS_SPLIT",
+      "to": "DS_HOOKS",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "DS_HOOKS",
+      "to": "DS_OVERRIDE",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "DS_OVERRIDE",
+      "to": "DS_EXPORT",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "DS_EXPORT",
+      "to": "DS_HOOKS",
+      "label": null,
+      "guard": null,
+      "kind": "flow",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_UNLOCK",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_MASTER",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_INFLUENCE",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_DISCARD",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_ASANN",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_AMOD",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_REACT",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_BLOCK",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_REF",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_BLEED",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_CMB_RANGE",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_CMB_STRIKE",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_CMB_PRESS",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_CMB_END",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_OOT",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_INPLAY",
+      "to": "IMPULSE_WINDOW",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "HK_ASPLAYED",
+      "to": "CP_ASPLAYED",
+      "label": null,
+      "guard": null,
+      "kind": "bridge",
+      "level": "advanced"
+    },
+    {
+      "from": "PH_UNLOCK",
+      "to": "HK_UNLOCK",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "PH_MASTER",
+      "to": "HK_MASTER",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "INF_START",
+      "to": "HK_INFLUENCE",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "DIS_START",
+      "to": "HK_DISCARD",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "ACTION_ASANN",
+      "to": "HK_ASANN",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "ACTION_DECLARE",
+      "to": "HK_AMOD",
+      "label": "during action",
+      "guard": "during action",
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "ACTION_DECLARE",
+      "to": "HK_REACT",
+      "label": "during action",
+      "guard": "during action",
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "BLOCK_START",
+      "to": "HK_BLOCK",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "REF_POLL_OPEN",
+      "to": "HK_REF",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "BLEED_START",
+      "to": "HK_BLEED",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "COMBAT_S2_DETERMINE_RANGE",
+      "to": "HK_CMB_RANGE",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "COMBAT_S4_STRIKE",
+      "to": "HK_CMB_STRIKE",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "COMBAT_S6_PRESS",
+      "to": "HK_CMB_PRESS",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "COMBAT_END_NODE",
+      "to": "HK_CMB_END",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "ACTION_DECLARE",
+      "to": "HK_OOT",
+      "label": "other players' turns",
+      "guard": "other players' turns",
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "PH_MINION",
+      "to": "HK_INPLAY",
+      "label": "activated abilities",
+      "guard": "activated abilities",
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "CP_ASPLAYED",
+      "to": "HK_ASPLAYED",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "advanced"
+    },
+    {
+      "from": "META_SETUP",
+      "to": "HAND_RULE",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "META_SETUP",
+      "to": "DRAW_REPLACE",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "basic"
+    },
+    {
+      "from": "DRAW_REPLACE",
+      "to": "HAND_RULE",
+      "label": null,
+      "guard": null,
+      "kind": "conditional",
+      "level": "basic"
+    }
+  ],
+  "hooks": [
+    {
+      "id": "HK_UNLOCK",
+      "label": "TURN_UNLOCK",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "PH_UNLOCK",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_MASTER",
+      "label": "TURN_MASTER",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "PH_MASTER",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_INFLUENCE",
+      "label": "TURN_INFLUENCE",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "INF_START",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_DISCARD",
+      "label": "TURN_DISCARD",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "DIS_START",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_ASANN",
+      "label": "ACTION_AS_ANNOUNCED",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "ACTION_ASANN",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_AMOD",
+      "label": "ACTION_MOD_WINDOW",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "ACTION_DECLARE",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_REACT",
+      "label": "REACTION_WINDOW",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "ACTION_DECLARE",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_BLOCK",
+      "label": "BLOCK_ATTEMPT_WINDOW",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "BLOCK_START",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_REF",
+      "label": "REFERENDUM_POLLING/GENERAL",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "REF_POLL_OPEN",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_BLEED",
+      "label": "BLEED_SPECIFIC",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "BLEED_START",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_CMB_RANGE",
+      "label": "COMBAT_RANGE",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "COMBAT_S2_DETERMINE_RANGE",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_CMB_STRIKE",
+      "label": "COMBAT_STRIKE",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "COMBAT_S4_STRIKE",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_CMB_PRESS",
+      "label": "COMBAT_PRESS",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "COMBAT_S6_PRESS",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_CMB_END",
+      "label": "COMBAT_END",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "COMBAT_END_NODE",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_OOT",
+      "label": "OOT_MASTER",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "ACTION_DECLARE",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_INPLAY",
+      "label": "IN_PLAY_ABILITY",
+      "window": "IMPULSE_WINDOW",
+      "anchor": "PH_MINION",
+      "cardTypes": []
+    },
+    {
+      "id": "HK_ASPLAYED",
+      "label": "CARD_AS_PLAYED",
+      "window": "CP_ASPLAYED",
+      "anchor": "CP_ASPLAYED",
+      "cardTypes": []
+    }
+  ],
+  "impulseOrders": [
+    {
+      "id": "single",
+      "state": "IMP_ORDER_SINGLE",
+      "contexts": [
+        "combat",
+        "directed_single"
+      ],
+      "actingFirst": true,
+      "afterActing": [
+        "defender",
+        "clockwise_others"
+      ]
+    },
+    {
+      "id": "set",
+      "state": "IMP_ORDER_SET",
+      "contexts": [
+        "directed_set"
+      ],
+      "actingFirst": true,
+      "afterActing": [
+        "targeted_clockwise",
+        "clockwise_others"
+      ]
+    },
+    {
+      "id": "undirected",
+      "state": "IMP_ORDER_UNDIR",
+      "contexts": [
+        "undirected"
+      ],
+      "actingFirst": true,
+      "afterActing": [
+        "prey",
+        "predator",
+        "clockwise_others"
+      ]
+    }
+  ]
+}

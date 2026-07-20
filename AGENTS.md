@@ -107,6 +107,9 @@ cargo run -p schrecknet-server -- --mcp-stdio
 # and emits browser-ready assets under dist/models/semantic/.
 cargo run -p schrecknet-data -- build --out dist
 
+# canonical V5 rules DOT -> typed frontend statechart data
+cargo run -p schrecknet-data -- gameloop
+
 # frontend — run wasm-pack (above) once, and the server first (`cargo run -p
 # schrecknet-server`, needs dist/cards.sqlite built above) so /api and /data
 # proxy correctly

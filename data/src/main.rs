@@ -5,6 +5,7 @@
 //! truth for "is this card V5-legal"), and emits `cards.sqlite` (schema per
 //! docs/data.md) + `cards.meta.json`.
 
+mod gameloop;
 mod ingest;
 mod krcg;
 mod semantic;
@@ -61,11 +62,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
         Some("build") => build(parse_out(&args)),
+        Some("gameloop") => gameloop::write(
+            &parse_path(&args, "--source", gameloop::DEFAULT_SOURCE),
+            &parse_path(&args, "--out", gameloop::DEFAULT_OUTPUT),
+        ),
         _ => {
-            eprintln!("usage: schrecknet-data build [--out <dir>]");
+            eprintln!(
+                "usage:\n  schrecknet-data build [--out <dir>]\n  \
+                 schrecknet-data gameloop [--source <dot>] [--out <json>]"
+            );
             std::process::exit(2);
         }
     }
+}
+
+fn parse_path(args: &[String], flag: &str, default: &str) -> PathBuf {
+    args.iter()
+        .position(|argument| argument == flag)
+        .and_then(|index| args.get(index + 1))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(default))
 }
 
 fn parse_out(args: &[String]) -> PathBuf {
