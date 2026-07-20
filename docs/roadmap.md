@@ -149,11 +149,11 @@ docs/feature-parity.md's scope note).
 - ☑ Responsive About and Help routes covering V5 scope, offline storage,
   credits/legal context, keyboard search, deck workflows, and MCP/REST access
 - ☑ Clone deck (name + card quantities) — live in both the deck list and editor
-- ☑ Draw simulator — live (frontend/src/lib/drawHand.ts): draws a crypt hand
-  of 4 / library hand of 7 respecting each card's quantity in the deck,
-  redrawable. Plain shuffle-and-take, not core/ domain logic (a random draw
-  has no legal/illegal outcome to validate) — Math.random is fine here, no
-  need for seeded/crypto-grade RNG for a personal test-hand tool
+- ☑ Draw simulator — shared `core/src/draw.rs` owns opening-hand sizes,
+  quantity expansion, seeded shuffle, and draw order for native + WASM callers.
+  The frontend adapter supplies a browser-generated seed and remains fully
+  offline; `draw_hand` exposes the same deterministic operation through MCP and
+  `POST /api/v1/decks/draw-hand` so a returned seed can reproduce a draw.
 - ☑ User tags — live (frontend/src/lib/deckStore.ts: listTags/addTag/removeTag,
   frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
   archetype tags and branches/revisions still not done (larger items, out of
@@ -193,8 +193,8 @@ docs/feature-parity.md's scope note).
 - ☑ Search-to-deck bridge: crypt/library results add directly to a selected
   anonymous OPFS deck, serialize fast quantity changes, remember only the active
   deck id in localStorage, and expose the live deck in a responsive split panel
-- ☐ MCP: deck tools (`create_deck` … `draw_hand`) — not needed yet since decks
-  are local-only; becomes relevant with Phase 3 server sync
+- ◐ MCP deck tools — `draw_hand` is live without requiring server-side deck
+  storage; authenticated create/update/import/export tools remain Phase 3 work
 
 ## Phase 3 — Accounts & sync
 - Register/login/reset (parity) + passkeys; server-synced decks & branches

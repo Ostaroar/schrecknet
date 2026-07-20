@@ -15,6 +15,7 @@ use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
+use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
 
 #[derive(Clone)]
@@ -129,6 +130,24 @@ impl SchreckNetMcp {
     async fn list_precons(&self) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open()?;
         json_result(cards_db::list_precons(&conn))
+    }
+
+    #[tool(
+        description = "Draw a reproducible VTES opening hand from card ids and quantities: four \
+        cards for crypt or seven for library. Supply the returned decimal seed to replay a draw."
+    )]
+    async fn draw_hand(
+        &self,
+        Parameters(params): Parameters<DrawHandParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        match draw_hand::draw_hand(&params) {
+            Ok(result) => json_value(&result),
+            Err(DrawHandError::InvalidSeed) => Err(rmcp::ErrorData::invalid_params(
+                "seed must be an unsigned 64-bit decimal string",
+                None,
+            )),
+            Err(error) => Err(rmcp::ErrorData::invalid_params(error.to_string(), None)),
+        }
     }
 
     fn open(&self) -> Result<rusqlite::Connection, rmcp::ErrorData> {
@@ -251,7 +270,7 @@ impl ServerHandler for SchreckNetMcp {
 
 #[cfg(test)]
 mod tests {
-    use super::card_id_from_uri;
+    use super::{card_id_from_uri, SchreckNetMcp};
 
     #[test]
     fn parses_only_strict_card_resource_uris() {
@@ -259,5 +278,18 @@ mod tests {
         assert_eq!(card_id_from_uri("card://"), None);
         assert_eq!(card_id_from_uri("card://12/extra"), None);
         assert_eq!(card_id_from_uri("https://example.com/12"), None);
+    }
+
+    #[test]
+    fn advertises_the_shared_draw_hand_tool() {
+        let tools = SchreckNetMcp::tool_router().list_all();
+        let tool = tools
+            .iter()
+            .find(|tool| tool.name.as_ref() == "draw_hand")
+            .expect("draw_hand tool");
+        let schema = serde_json::Value::Object((*tool.input_schema).clone());
+        assert!(schema["properties"]["section"].is_object());
+        assert!(schema["properties"]["cards"].is_object());
+        assert!(schema["properties"]["seed"].is_object());
     }
 }

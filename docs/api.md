@@ -23,7 +23,7 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |
 | `import_deck` / `export_deck` | Formats: plain text, Lackey, JOL, XLSX |
 | `diff_decks` | Structured diff of two decks/revisions |
-| `draw_hand` | Draw simulator: opening crypt/library hands with seeded RNG |
+| `draw_hand` | **Live.** Deterministic opening crypt (4) or library (7) hand from card-id/quantity rows. An optional unsigned 64-bit decimal `seed` reproduces a draw; REST mirror: `POST /api/v1/decks/draw-hand` |
 | `get_inventory` / `update_inventory` | Collection management |
 
 ### Resources
@@ -67,6 +67,21 @@ precon_print=reprint
 
 MCP uses the schema-native equivalents: number arrays, arrays of
 `{"code":"dom","superior":true}` objects, and nested arrays for OR rows.
+
+The draw endpoint accepts the same payload as the MCP tool:
+
+```json
+{
+  "section": "crypt",
+  "cards": [
+    {"id": 100001, "quantity": 2},
+    {"id": 100002, "quantity": 3}
+  ],
+  "seed": "42"
+}
+```
+
+The response contains `card_ids` in draw order and echoes the decimal seed.
 
 ## Design rule
 

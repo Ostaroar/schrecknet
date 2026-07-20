@@ -7,6 +7,7 @@ use axum::response::{IntoResponse, Json};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
+use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
 use crate::AppState;
 
@@ -26,6 +27,18 @@ pub async fn search_library(
 
 pub async fn list_precons(State(state): State<AppState>) -> impl IntoResponse {
     run(state, cards_db::list_precons).await
+}
+
+pub async fn draw_hand(Json(params): Json<DrawHandParams>) -> impl IntoResponse {
+    match draw_hand::draw_hand(&params) {
+        Ok(result) => Json(result).into_response(),
+        Err(DrawHandError::InvalidSeed) => (
+            StatusCode::BAD_REQUEST,
+            "seed must be an unsigned 64-bit decimal string",
+        )
+            .into_response(),
+        Err(error) => (StatusCode::BAD_REQUEST, error.to_string()).into_response(),
+    }
 }
 
 pub async fn semantic_search(

@@ -8,6 +8,7 @@
 pub mod capacity;
 pub mod crypt_metadata;
 pub mod diff;
+pub mod draw;
 pub mod dtext;
 pub mod legality;
 pub mod requirements;

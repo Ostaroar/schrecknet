@@ -54,6 +54,29 @@ from that pool.
    and material-order parity, size/latency budgets, and a true-offline reload. See
    docs/adr/0006-offline-semantic-card-search.md.
 
+## Language boundary
+
+TypeScript owns presentation and browser integration: React components, routing,
+accessibility, OPFS/worker/service-worker coordination, and typed adapters that
+marshal values across WASM. It must not decide VTES rules or reproduce behavior
+needed by native callers.
+
+Rust `core/` owns deterministic domain behavior. The browser calls it through
+`frontend/src/lib/core.ts`; the server links the same crate directly. Current
+migration status:
+
+| Domain behavior | Shared Rust status |
+| --- | --- |
+| Deck legality, text/share formats, diff, statistics | Live in native + WASM |
+| Semantic result validation/ranking | Live in native + WASM |
+| Opening-hand sizes, seeded shuffle, quantity expansion | Live in native + WASM; MCP + REST mirror |
+| Exact-search filter normalization/query planning and result sorting | Migration pending; browser and server still have separate adapters |
+| Card-text token parsing and structured symbol metadata | Migration pending |
+
+Moving code merely to reduce the TypeScript line count is not a goal. Moving a
+rule or deterministic transformation that could drift between browser and server
+is required.
+
 ## Repository layout
 
 ```
@@ -116,9 +139,9 @@ The server is only needed for accounts, cross-device sync, and the machine APIs.
 
 ## Key flows
 
-- **Card search**: filter UI state → query builder (TS) → SQL against local SQLite →
-  results. The same query builder runs server-side for the MCP `search_cards` tool
-  (generated from one shared filter-schema definition in `core/`).
+- **Card search**: filter UI state → platform SQL adapter → local SQLite → results.
+  Browser/server filter planning is the largest remaining Rust-core migration;
+  until it is centralized, golden composition tests guard the two implementations.
 - **Semantic card search**: structured filters select candidates → the
   local platform adapter embeds the query with the pinned ONNX model → shared
   native/WASM Rust ranks normalized vectors loaded from `cards.sqlite`. Browser and

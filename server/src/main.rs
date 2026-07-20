@@ -5,6 +5,7 @@
 mod api;
 mod card_detail;
 mod cards_db;
+mod draw_hand;
 mod mcp;
 mod semantic_search;
 mod user_db;
@@ -83,6 +84,7 @@ async fn main() {
         .route("/api/v1/cards/lookup", get(api::get_card_by_name))
         .route("/api/v1/cards/{id}", get(api::get_card))
         .route("/api/v1/precons", get(api::list_precons))
+        .route("/api/v1/decks/draw-hand", post(api::draw_hand))
         .with_state(state)
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.

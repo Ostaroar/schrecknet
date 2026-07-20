@@ -110,6 +110,25 @@ pub fn compare_decks(
         .join("\n"))
 }
 
+/// Draws a deterministic opening hand and returns the selected card ids.
+#[wasm_bindgen]
+pub fn draw_opening_hand(
+    card_ids: Vec<u32>,
+    quantities: Vec<u16>,
+    section: &str,
+    seed_high: u32,
+    seed_low: u32,
+) -> Result<Vec<u32>, JsError> {
+    let section = match section {
+        "crypt" => crate::draw::DeckSection::Crypt,
+        "library" => crate::draw::DeckSection::Library,
+        _ => return Err(JsError::new("section must be crypt or library")),
+    };
+    let seed = (u64::from(seed_high) << 32) | u64::from(seed_low);
+    crate::draw::opening_hand(&card_ids, &quantities, section, seed)
+        .map_err(|error| JsError::new(&error.to_string()))
+}
+
 /// Quantity-weighted crypt capacity stats as `count\tmin\tmax\taverage`.
 #[wasm_bindgen]
 pub fn capacity_stats(capacities: Vec<u8>, qtys: Vec<u16>) -> Result<String, JsError> {

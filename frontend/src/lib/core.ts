@@ -11,6 +11,7 @@ import init, {
   parse_deck_text as parseDeckTextWasm,
   format_deck_text as formatDeckTextWasm,
   compare_decks as compareDecksWasm,
+  draw_opening_hand as drawOpeningHandWasm,
   capacity_stats as capacityStatsWasm,
   category_distribution as categoryDistributionWasm,
   rank_semantic_cards as rankSemanticCardsWasm,
@@ -112,6 +113,31 @@ export async function compareCardQtys(a: CardQty[], b: CardQty[]): Promise<CardQ
     const [cardId, qtyA, qtyB, change] = line.split('\t')
     return { cardId: Number(cardId), qtyA: Number(qtyA), qtyB: Number(qtyB), change: change as DiffChange }
   })
+}
+
+export type DeckSection = 'crypt' | 'library'
+export type DrawSeed = readonly [high: number, low: number]
+
+function randomDrawSeed(): DrawSeed {
+  const words = crypto.getRandomValues(new Uint32Array(2))
+  return [words[0], words[1]]
+}
+
+/** Draws a seeded opening hand in the shared Rust core and returns card ids in draw order. */
+export async function drawOpeningHandIds(
+  cards: CardQty[],
+  section: DeckSection,
+  seed: DrawSeed = randomDrawSeed(),
+): Promise<{ cardIds: number[]; seed: DrawSeed }> {
+  await ensureReady()
+  const cardIds = drawOpeningHandWasm(
+    new Uint32Array(cards.map(([id]) => id)),
+    new Uint16Array(cards.map(([, quantity]) => quantity)),
+    section,
+    seed[0],
+    seed[1],
+  )
+  return { cardIds: Array.from(cardIds), seed }
 }
 
 export interface CapacityStats {

@@ -19,7 +19,7 @@ import {
   type DeckStats,
   type ImportResult,
 } from '../lib/deckStore'
-import { drawHand, CRYPT_HAND_SIZE, LIBRARY_HAND_SIZE } from '../lib/drawHand'
+import { drawHand } from '../lib/drawHand'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
@@ -236,26 +236,40 @@ function AddCardBox({
 function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetail[]; libraryCards: DeckCardDetail[] }) {
   const [cryptHand, setCryptHand] = useState<DeckCardDetail[] | null>(null)
   const [libraryHand, setLibraryHand] = useState<DeckCardDetail[] | null>(null)
+  const [drawError, setDrawError] = useState('')
+
+  async function draw(section: 'crypt' | 'library') {
+    setDrawError('')
+    try {
+      const cards = section === 'crypt' ? cryptCards : libraryCards
+      const hand = await drawHand(cards, section)
+      if (section === 'crypt') setCryptHand(hand)
+      else setLibraryHand(hand)
+    } catch (error) {
+      setDrawError(error instanceof Error ? error.message : 'Could not draw a test hand')
+    }
+  }
 
   return (
     <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xs uppercase tracking-wide text-ink-dim">Test hand</h2>
         <button
-          onClick={() => setCryptHand(drawHand(cryptCards, CRYPT_HAND_SIZE))}
+          onClick={() => void draw('crypt')}
           disabled={cryptCards.length === 0}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
         >
-          Draw crypt ({CRYPT_HAND_SIZE})
+          Draw crypt
         </button>
         <button
-          onClick={() => setLibraryHand(drawHand(libraryCards, LIBRARY_HAND_SIZE))}
+          onClick={() => void draw('library')}
           disabled={libraryCards.length === 0}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
         >
-          Draw library ({LIBRARY_HAND_SIZE})
+          Draw library
         </button>
       </div>
+      {drawError && <p className="text-xs text-blood-hi">{drawError}</p>}
       {(cryptHand || libraryHand) && (
         <div className="grid gap-3 sm:grid-cols-2">
           {cryptHand && (

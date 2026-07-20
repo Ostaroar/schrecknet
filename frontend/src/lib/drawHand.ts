@@ -1,26 +1,23 @@
-// Opening-hand draw simulator. Pure shuffle-and-take over the deck's actual
-// card list (respecting quantities) — not VTES rules logic (there's no legal/
-// illegal outcome to a random draw), so this stays in the frontend rather
-// than core/ (AGENTS.md hard rule #1 is about domain *rules*, not generic
-// algorithms). Uses Math.random: fine for "show me a plausible test hand",
-// no need for crypto-grade or seeded randomness here.
+// Browser adapter for the shared Rust/WASM opening-hand simulator.
 
 import type { DeckCardDetail } from './deckStore'
+import { drawOpeningHandIds, type DeckSection, type DrawSeed } from './core'
 
-export const CRYPT_HAND_SIZE = 4
-export const LIBRARY_HAND_SIZE = 7
-
-function shuffle<T>(items: T[]): T[] {
-  const arr = [...items]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
-
-/** Expands qty>1 cards into individual entries, then draws `size` at random (without replacement). */
-export function drawHand(cards: DeckCardDetail[], size: number): DeckCardDetail[] {
-  const pool = cards.flatMap((c) => Array<DeckCardDetail>(c.qty).fill(c))
-  return shuffle(pool).slice(0, size)
+/** Maps the Rust-selected card ids back to the browser's display records. */
+export async function drawHand(
+  cards: DeckCardDetail[],
+  section: DeckSection,
+  seed?: DrawSeed,
+): Promise<DeckCardDetail[]> {
+  const byId = new Map(cards.map((card) => [card.id, card]))
+  const result = await drawOpeningHandIds(
+    cards.map((card) => [card.id, card.qty]),
+    section,
+    seed,
+  )
+  return result.cardIds.map((id) => {
+    const card = byId.get(id)
+    if (!card) throw new Error(`draw returned unknown card id ${id}`)
+    return card
+  })
 }

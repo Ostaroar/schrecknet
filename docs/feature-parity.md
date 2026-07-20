@@ -190,7 +190,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       print-scoped CSS (`.proxy-grid`/`@media print` in index.css) that
       hides the app chrome and shows only the sheet
 - ☑ Draw simulator / test hand — live: crypt draw 4 / library draw 7,
-      redrawable, respects each card's quantity in the deck
+      redrawable, respects each card's quantity in the deck; seeded draw logic
+      lives in shared Rust and is available offline through WASM plus MCP/REST
 - ☑ Deck diff: compare two saved local decks card-by-card (`#/diff`), including
       additions, removals, quantity changes, and unchanged cards; comparison
       logic runs in the shared Rust core. Revision comparison follows when
