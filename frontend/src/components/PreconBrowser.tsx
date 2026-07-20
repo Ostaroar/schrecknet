@@ -3,6 +3,7 @@ import { listPrecons, type PreconSummary } from '../lib/precons'
 import { searchCrypt, emptyCryptFilters, type CryptCard } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters, type LibraryCard } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
+import { CardTypeSummary, DisciplineSymbol } from './VtesSymbol'
 
 function PreconDetail({ set, precon, onClose }: { set: string; precon: string; onClose: () => void }) {
   const [crypt, setCrypt] = useState<CryptCard[] | null>(null)
@@ -48,6 +49,16 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
                   >
                     <span className="w-6 text-right font-mono text-xs text-blood-hi">{c.capacity}</span>
                     <span className="flex-1 truncate">{c.name}</span>
+                    <span className="hidden items-center gap-0.5 sm:flex">
+                      {c.disciplines.map((discipline) => (
+                        <DisciplineSymbol
+                          key={discipline.code}
+                          code={discipline.code}
+                          superior={discipline.superior}
+                          className="size-3.5"
+                        />
+                      ))}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -64,7 +75,7 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
                     className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-raised"
                   >
                     <span className="flex-1 truncate">{c.name}</span>
-                    <span className="shrink-0 text-xs text-ink-dim">{c.types.join(' / ')}</span>
+                    <CardTypeSummary types={c.types} className="shrink-0 text-xs text-ink-dim" />
                   </button>
                 </li>
               ))}

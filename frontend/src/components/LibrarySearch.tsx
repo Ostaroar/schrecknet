@@ -40,6 +40,7 @@ import type { RequirementLogic } from '../lib/requirementFilter'
 import { sortLibraryResults } from '../lib/searchSort'
 import { useSearchDeck } from '../lib/useSearchDeck'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
+import { CardTypeSummary, DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
 
 type DisciplineMode = 'off' | 'selected'
 
@@ -587,12 +588,13 @@ export default function LibrarySearch() {
               aria-pressed={mode === 'selected'}
               title={`${code}: toggle this library discipline requirement`}
               className={
-                'inline-grid h-6 min-w-9 place-items-center rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
+                'inline-flex h-7 min-w-12 items-center justify-center gap-1 rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
                 (mode === 'selected'
                   ? 'bg-blood text-white'
                   : 'border border-line text-ink-dim hover:text-ink-muted')
               }
             >
+              <DisciplineSymbol code={code} className="size-4" decorative />
               {code}
             </button>
           )
@@ -729,24 +731,19 @@ export default function LibrarySearch() {
                         </span>
                       )}
                       <span className="mt-0.5 block truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
-                        {c.types.join(' / ')}
+                        <CardTypeSummary types={c.types} />
                         {c.clan ? ` · ${c.clan}` : ''}
                       </span>
                     </span>
                     <span className="hidden gap-1 sm:flex">
                       {c.disciplines.map((d) => (
-                        <span
-                          key={d}
-                          className="inline-grid h-[17px] min-w-[26px] place-items-center rounded border border-line px-[3px] font-mono text-[9.5px] font-bold uppercase tracking-wide text-ink-muted"
-                        >
-                          {d}
-                        </span>
+                        <DisciplineBadge key={d} code={d} compact />
                       ))}
                       <CostPill blood={c.blood_cost} pool={c.pool_cost} />
                     </span>
-                    <span className="hidden text-right text-xs uppercase tracking-wide text-ink-muted lg:block">
-                      {c.types.join(' / ')}
-                      {c.clan ? ` · ${c.clan}` : ''}
+                    <span className="hidden items-center justify-end gap-1 text-right text-xs uppercase tracking-wide text-ink-muted lg:flex">
+                      <CardTypeSummary types={c.types} />
+                      {c.clan && <span>· {c.clan}</span>}
                     </span>
                   </button>
                   <CardImagePreview imageUrl={c.image_url} name={c.name} />

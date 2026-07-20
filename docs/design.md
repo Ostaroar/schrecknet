@@ -44,7 +44,9 @@ ships as re-stepped tokens; dark is the definitive reading.
   and card-type glyphs, colorized with muted ink / superior gold / blood crimson.
   Each symbol retains a full accessible label,
   translated rules text keeps its original line breaks, and an unknown token is
-  shown verbatim so a future data update cannot silently remove rules text.
+  shown verbatim so a future data update cannot silently remove rules text. The
+  same local glyph registry is reused for structured discipline filters/badges,
+  library type summaries, card headers, precon lists, and deck statistics.
 - **Capacity**: number in a blood-tinted circle.
 - **Active filters**: echoed as removable chips above results.
 - **Semantic mode**: an explicit gold `◇ Semantic` toggle beside the text modes;

@@ -38,19 +38,7 @@ import type { RequirementLogic } from '../lib/requirementFilter'
 import { sortCryptResults } from '../lib/searchSort'
 import { useSearchDeck } from '../lib/useSearchDeck'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
-
-function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
-  return (
-    <span
-      className={
-        'inline-grid h-[17px] min-w-[26px] place-items-center rounded px-[3px] font-mono text-[9.5px] font-bold uppercase tracking-wide ' +
-        (superior ? 'bg-gold text-[#241a06]' : 'border border-line text-ink-muted')
-      }
-    >
-      {code}
-    </span>
-  )
-}
+import { DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
@@ -557,7 +545,7 @@ export default function CryptSearch() {
               onClick={() => cycle(code)}
               title={`${code}: click to require, again for superior only, again to clear`}
               className={
-                'inline-grid h-6 min-w-9 place-items-center rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
+                'inline-flex h-7 min-w-12 items-center justify-center gap-1 rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
                 (mode === 'superior'
                   ? 'bg-gold text-[#241a06]'
                   : mode === 'any'
@@ -565,6 +553,12 @@ export default function CryptSearch() {
                     : 'border border-line text-ink-dim hover:text-ink-muted')
               }
             >
+              <DisciplineSymbol
+                code={code}
+                superior={mode === 'superior'}
+                className="size-4"
+                decorative
+              />
               {code}
             </button>
           )
@@ -696,7 +690,7 @@ export default function CryptSearch() {
                     </span>
                     <span className="hidden gap-1 sm:flex">
                       {c.disciplines.map((d) => (
-                        <DisciplineBadge key={d.code} {...d} />
+                        <DisciplineBadge key={d.code} {...d} compact />
                       ))}
                     </span>
                     <span className="hidden text-right text-xs uppercase tracking-wide text-ink-muted lg:block">

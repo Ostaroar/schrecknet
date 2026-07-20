@@ -146,9 +146,10 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
       colorized through the SchreckNet design tokens and precached offline.
       English, Spanish, and French use the same safe parser; unknown future
       tokens remain verbatim rather than losing rules text. Clan/cost bracket
-      tokens do not occur in the current V5 export (their structured values are
-      already rendered in the card header); the pool-derived token inventory is
-      locked by a parser contract and representative browser fixtures ✎
+      tokens do not occur in the current V5 export. The same accessible local
+      glyphs also accompany structured discipline filters/results, library types,
+      card headers, precon lists, and deck statistics; the pool-derived token
+      inventory is locked by a parser contract and representative browser fixtures ✎
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text and authoritative source links live
 - ☑ Artist credit(s) — live

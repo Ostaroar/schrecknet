@@ -23,15 +23,26 @@ import { drawHand, CRYPT_HAND_SIZE, LIBRARY_HAND_SIZE } from '../lib/drawHand'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
+import { CardTypeSymbol, DisciplineSymbol } from './VtesSymbol'
 
-function StatsDistribution({ label, entries }: { label: string; entries: { label: string; count: number }[] }) {
+function StatsDistribution({
+  label,
+  entries,
+  symbols,
+}: {
+  label: string
+  entries: { label: string; count: number }[]
+  symbols?: 'card-type' | 'discipline'
+}) {
   if (entries.length === 0) return null
   return (
     <div className="grid gap-1">
       <span className="text-[10px] uppercase tracking-wide text-ink-dim">{label}</span>
       <span className="flex flex-wrap gap-1">
         {entries.map((entry) => (
-          <span key={entry.label} className="rounded-full border border-line-soft bg-raised px-2 py-0.5 text-[10px] text-ink-muted">
+          <span key={entry.label} className="inline-flex items-center gap-1 rounded-full border border-line-soft bg-raised px-2 py-0.5 text-[10px] text-ink-muted">
+            {symbols === 'card-type' && <CardTypeSymbol type={entry.label} className="size-3.5" decorative />}
+            {symbols === 'discipline' && <DisciplineSymbol code={entry.label} className="size-3.5" decorative />}
             {entry.label} <span className="font-mono text-ink">{entry.count}</span>
           </span>
         ))}
@@ -398,7 +409,12 @@ function LibraryCardGroups({ cards, onQty }: { cards: DeckCardDetail[]; onQty: (
       {groups.map(([type, typeCards]) => (
         <div key={type} className="overflow-hidden rounded-lg border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line-soft bg-raised px-3 py-1.5">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-ink-dim">{type}</h3>
+            <h3 className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-ink-dim">
+              {type.split('/').map((part) => (
+                <CardTypeSymbol key={part} type={part} className="size-3.5" decorative />
+              ))}
+              {type}
+            </h3>
             <span className="font-mono text-[10px] text-ink-dim">
               {typeCards.reduce((sum, card) => sum + card.qty, 0)}
             </span>
@@ -588,8 +604,8 @@ export default function DeckEditor({ id }: { id: number }) {
             )}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <StatsDistribution label="Library types" entries={stats.types} />
-            <StatsDistribution label="Disciplines" entries={stats.disciplines} />
+            <StatsDistribution label="Library types" entries={stats.types} symbols="card-type" />
+            <StatsDistribution label="Disciplines" entries={stats.disciplines} symbols="discipline" />
             <StatsDistribution label="Blood cost curve" entries={stats.bloodCosts} />
             <StatsDistribution label="Pool cost curve" entries={stats.poolCosts} />
           </div>

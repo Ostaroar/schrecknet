@@ -46,22 +46,34 @@ const CARD_TYPES: Record<string, { asset: string; label: string }> = {
   REACTION: { asset: 'reaction', label: 'Reaction' },
 }
 
+export function disciplineSymbol(
+  code: string,
+  superior = false,
+): CardTextDisciplineSegment | null {
+  const normalized = code.toLowerCase()
+  const discipline = DISCIPLINES[normalized]
+  if (!discipline) return null
+  return {
+    kind: 'discipline',
+    token: superior ? normalized.toUpperCase() : normalized,
+    code: normalized,
+    ...discipline,
+    superior,
+  }
+}
+
+export function cardTypeSymbol(type: string): CardTextTypeSegment | null {
+  const token = type.trim().toUpperCase()
+  const cardType = CARD_TYPES[token]
+  return cardType ? { kind: 'card-type', token, ...cardType } : null
+}
+
 function symbolFor(token: string): CardTextDisciplineSegment | CardTextTypeSegment | null {
   const code = token.toLowerCase()
-  const discipline = DISCIPLINES[code]
-  if (discipline && (token === code || token === token.toUpperCase())) {
-    return {
-      kind: 'discipline',
-      token,
-      code,
-      ...discipline,
-      superior: token === token.toUpperCase(),
-    }
-  }
+  if (DISCIPLINES[code] && (token === code || token === token.toUpperCase()))
+    return disciplineSymbol(code, token === token.toUpperCase())
 
-  const cardType = CARD_TYPES[token]
-  if (cardType) return { kind: 'card-type', token, ...cardType }
-  return null
+  return cardTypeSymbol(token)
 }
 
 /**

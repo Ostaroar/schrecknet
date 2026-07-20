@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { parseCardText } from '../src/lib/cardText.ts'
+import { cardTypeSymbol, disciplineSymbol, parseCardText } from '../src/lib/cardText.ts'
 
 const disciplines = [
   ['ani', 'Animalism', 'animalism'],
@@ -20,6 +20,7 @@ for (const [code, label, asset] of disciplines) {
   assert.deepEqual(basic, [
     { kind: 'discipline', token: code, code, label, asset, superior: false },
   ])
+  assert.deepEqual(disciplineSymbol(code), basic[0])
 
   const superior = parseCardText(`[${code.toUpperCase()}]`)
   assert.deepEqual(superior, [
@@ -32,6 +33,7 @@ for (const [code, label, asset] of disciplines) {
       superior: true,
     },
   ])
+  assert.deepEqual(disciplineSymbol(code.toUpperCase(), true), superior[0])
 }
 
 const cardTypes = {
@@ -43,10 +45,13 @@ const cardTypes = {
 }
 
 for (const [token, [asset, label]] of Object.entries(cardTypes)) {
-  assert.deepEqual(parseCardText(`[${token}]`), [
-    { kind: 'card-type', token, asset, label },
-  ])
+  const expected = { kind: 'card-type', token, asset, label }
+  assert.deepEqual(parseCardText(`[${token}]`), [expected])
+  assert.deepEqual(cardTypeSymbol(label), expected)
 }
+
+assert.equal(disciplineSymbol('future'), null)
+assert.equal(cardTypeSymbol('Master'), null)
 
 assert.deepEqual(parseCardText('before [FUTURE TOKEN]\nafter <b>safe</b>'), [
   { kind: 'text', value: 'before ' },

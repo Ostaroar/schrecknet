@@ -4,19 +4,7 @@ import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
 import { navigate } from '../lib/route'
 import CardText from './CardText'
-
-function DisciplineBadge({ code, superior }: { code: string; superior: boolean }) {
-  return (
-    <span
-      className={
-        'inline-grid h-[19px] min-w-[30px] place-items-center rounded px-1 font-mono text-[10px] font-bold uppercase tracking-wide ' +
-        (superior ? 'bg-gold text-[#241a06]' : 'border border-line text-ink-muted')
-      }
-    >
-      {code}
-    </span>
-  )
-}
+import { CardTypeSummary, DisciplineBadge } from './VtesSymbol'
 
 export default function CardPage({ id }: { id: number }) {
   const [card, setCard] = useState<CardDetail | null>(null)
@@ -82,7 +70,7 @@ export default function CardPage({ id }: { id: number }) {
             </>
           ) : (
             <>
-              <span>{card.types?.join(' / ')}</span>
+              <CardTypeSummary types={card.types ?? []} />
               {card.clan && <span>· requires {card.clan}</span>}
               {card.blood_cost && <span>· {card.blood_cost} blood</span>}
               {card.pool_cost && <span>· {card.pool_cost} pool</span>}
@@ -92,7 +80,7 @@ export default function CardPage({ id }: { id: number }) {
         {card.disciplines.length > 0 && (
           <div className="flex gap-1.5">
             {card.disciplines.map((d) => (
-              <DisciplineBadge key={d.code} {...d} />
+              <DisciplineBadge key={d.code} {...d} compact />
             ))}
           </div>
         )}
