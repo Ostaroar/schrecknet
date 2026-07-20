@@ -93,7 +93,7 @@ digraph VTES_V5_FULL_GAMELOOP_FSM {
     ACTION_ASANN [label="Window: 'as action is announced'\n(only effects explicitly allowed here)"];
     ACTION_BLOCK_WHO [label="Block eligibility (rule-level):\n• Directed at a Methuselah (e.g., bleed prey): that Methuselah may attempt to block\n• Directed at a minion: that minion's controller may attempt to block\n• Undirected: prey and predator may attempt to block\n(Other cases require card-specific rules; excluded here)"];
     ACTION_BLOCK_LOOP [label="Resolve block attempts (clockwise)\nEach eligible player may attempt with a ready, unlocked minion\n(see Block Attempt FSM)"];
-    ACTION_BLOCKED [label="Action blocked?\nYES -> blocked path\nNO  -> successful path"];
+    ACTION_BLOCKED [shape=diamond, label="Action blocked?\nYES -> blocked path\nNO  -> successful path"];
     ACTION_SUCCESS [label="Successful action resolves\nBranch by action type:\n• Bleed -> Bleed subloop\n• Hunt -> Hunt subloop\n• Political -> Referendum subloop\n• Other -> Resolve per card/effect"];
     ACTION_BLOCKED_PATH [label="Blocked action cleanup\nAction is unsuccessful; resolve blocked-action consequences, then end the action"];
     ACTION_END [label="Action ends\nIf a minion unlocks during this phase (effect), it may act again"];
@@ -146,7 +146,7 @@ digraph VTES_V5_FULL_GAMELOOP_FSM {
 • Stealth/Intercept added only if needed
 • Same minion cannot play same reaction/modifier more than once per action
 • Impulse cycles; any effect returns impulse to acting"];
-    BLOCK_COMPARE [label="Compare:
+    BLOCK_COMPARE [shape=diamond, label="Compare:
 if Intercept ≥ Stealth => block succeeds
 else => block fails"];
     BLOCK_FAIL [label="Block fails
@@ -200,7 +200,7 @@ If blocker is an ally or declines: action simply fails."];
     ACTION_BLOCK_LOOP -> BLOCK_START;
     BLOCK_START -> IMPULSE_WINDOW [style=dashed, label="open window (block context)"];
     IMPULSE_WINDOW -> BLOCK_WINDOW [style=dashed, label="represents repeated play/pass"];
-    BLOCK_WINDOW -> BLOCK_COMPARE -> BLOCK_FAIL;
+    BLOCK_WINDOW -> BLOCK_COMPARE;
     BLOCK_COMPARE -> BLOCK_SUCCESS [label="YES"];
     BLOCK_COMPARE -> BLOCK_FAIL [label="NO"];
     BLOCK_FAIL -> ACTION_BLOCK_LOOP [label="next eligible blocker / none"];
@@ -235,35 +235,35 @@ If blocker is an ally or declines: action simply fails."];
     color="#17becf";
 
     COMBAT_START_NODE [label="Combat begins\n(acting minion vs opposing minion)\nCombat occurs in 1+ rounds."];
-    COMBAT_CARD_LIMIT [label="Combat card limit:\n• The only minion cards that can be played during combat are combat cards.\nADV: Some combat cards are played by minions \"not involved in the current combat\"; minions controlled by ANY Methuselah can play those cards.\n(Non-combatants can play ONLY if the combat card text explicitly allows it.)"];
+    COMBAT_CARD_LIMIT [level=advanced, label="Combat card limit:\n• The only minion cards that can be played during combat are combat cards.\nADV: Some combat cards are played by minions \"not involved in the current combat\"; minions controlled by ANY Methuselah can play those cards.\n(Non-combatants can play ONLY if the combat card text explicitly allows it.)"];
 
     COMBAT_OOC_NOTE [shape=note, label="Non-combatant combat-card play (ADV):\nA minion not involved in the current combat may play a combat card ONLY if that combat card explicitly says so.\nSequencing is still by impulse during combat:\nActing Methuselah first; once they pass, defending Methuselah; then remaining Methuselahs clockwise (5-player).\nIf any Methuselah plays an effect, impulse snaps back to the acting Methuselah."];
 
     COMBAT_ROUND_BEGIN [label="Start of combat round\n(Each round has 7 steps)"];
 
-    COMBAT_S1_BEFORE_RANGE [label="1) Before Range\nPlay cards/effects usable before range is chosen.\nNOTE: 'before range is determined' effects must be played\nbefore the acting minion decides whether to play a maneuver."];
-    COMBAT_S2_DETERMINE_RANGE [label="2) Determine Range\nDefault = close.\nUse maneuvers to change/offset to close or long.\nNo minion may play two maneuvers in a row."];
-    COMBAT_RANGE_LOOP [shape=diamond, label="Maneuver cycle:\nAny combatant play a maneuver (alternate)?"];
-    COMBAT_RANGE_SET [label="Range is set for this round\n(close or long)\n(If maneuver came from strike card/weapon:\nthat also sets the initial strike choice constraint.)"];
+    COMBAT_S1_BEFORE_RANGE [level=advanced, label="1) Before Range\nPlay cards/effects usable before range is chosen.\nNOTE: 'before range is determined' effects must be played\nbefore the acting minion decides whether to play a maneuver."];
+    COMBAT_S2_DETERMINE_RANGE [level=advanced, label="2) Determine Range\nDefault = close.\nUse maneuvers to change/offset to close or long.\nNo minion may play two maneuvers in a row."];
+    COMBAT_RANGE_LOOP [shape=diamond, level=advanced, label="Maneuver cycle:\nAny combatant play a maneuver (alternate)?"];
+    COMBAT_RANGE_SET [level=advanced, label="Range is set for this round\n(close or long)\n(If maneuver came from strike card/weapon:\nthat also sets the initial strike choice constraint.)"];
 
-    COMBAT_S3_BEFORE_STRIKES [label="3) Before Strikes\nPlay cards/effects usable after range is set\nbut before strikes are chosen."];
+    COMBAT_S3_BEFORE_STRIKES [level=advanced, label="3) Before Strikes\nPlay cards/effects usable after range is set\nbut before strikes are chosen."];
     COMBAT_S4_STRIKE [label="4) Strike\nResolve 1+ strike pairs at the same range.\nEach pair:\n- Acting minion chooses strike\n- Opposing minion chooses strike\n- Resolve simultaneously (except special cases)"];
-    STRIKE_TARGET_NOTE [label="Strike targeting note:\nAt long range, a ranged strike may target an opposing retainer\n(instead of the opposing minion) if announced when strike is announced."];
-    STRIKE_PAIR_BEGIN [label="Strike Pair: Choose & Resolve"];
-    STRIKE_CHOOSE_ACTING [label="Choose Strike (acting)\nFrom: hand strike / weapon / combat card / other strike source.\nIf maneuver was used from a strike card/weapon this round:\nno other strike for the initial strike."];
-    STRIKE_CHOOSE_OPP [label="Choose Strike (opposing)"];
-    STRIKE_RESOLVE [label="Resolve Strike Pair\nApply strike effects.\nThen proceed to damage resolution.\nIf a combatant becomes not ready at any point:\nround & combat end immediately."];
-    STRIKE_ADDITIONAL_Q [shape=diamond, label="Additional strikes this round?"];
+    STRIKE_TARGET_NOTE [level=advanced, label="Strike targeting note:\nAt long range, a ranged strike may target an opposing retainer\n(instead of the opposing minion) if announced when strike is announced."];
+    STRIKE_PAIR_BEGIN [level=advanced, label="Strike Pair: Choose & Resolve"];
+    STRIKE_CHOOSE_ACTING [level=advanced, label="Choose Strike (acting)\nFrom: hand strike / weapon / combat card / other strike source.\nIf maneuver was used from a strike card/weapon this round:\nno other strike for the initial strike."];
+    STRIKE_CHOOSE_OPP [level=advanced, label="Choose Strike (opposing)"];
+    STRIKE_RESOLVE [level=advanced, label="Resolve Strike Pair\nApply strike effects.\nThen proceed to damage resolution.\nIf a combatant becomes not ready at any point:\nround & combat end immediately."];
+    STRIKE_ADDITIONAL_Q [shape=diamond, level=advanced, label="Additional strikes this round?"];
     STRIKE_GAIN_ADDITIONAL [label="Additional Strikes (Adv):\nAnnounced/performed only after the first pair.\nActing decides to gain additional strikes before opposing.\nOnly 1 card/effect to gain additional strikes per round ('limited').\nResolve by repeating Choose+Resolve steps\n(only minions with remaining additional strikes act).\nAll additional strikes occur at the same range."];
-    STRIKE_ADDITIONAL_LOOP [shape=diamond, label="More additional strikes to resolve?"];
+    STRIKE_ADDITIONAL_LOOP [shape=diamond, level=advanced, label="More additional strikes to resolve?"];
 
     COMBAT_S5_DAMAGE_RES [label="5) Damage Resolution\nTwo substeps:\nA) Prevent damage (play prevention combat cards)\nB) Mend damage:\n- Vampires burn 1 blood per unprevented damage\n- Allies/retainers burn 1 life per unprevented damage"];
-    COMBAT_EARLY_END_Q [shape=diamond, label="Any combatant not ready?"];
-    COMBAT_END_IMMEDIATE [label="Combat ends immediately\n(if a combatant is no longer ready)\nReturn to action flow after resolving required steps."];
+    COMBAT_EARLY_END_Q [shape=diamond, level=advanced, label="Any combatant not ready?"];
+    COMBAT_END_IMMEDIATE [level=advanced, label="Combat ends immediately\n(if a combatant is no longer ready)\nReturn to action flow after resolving required steps."];
     COMBAT_S6_PRESS [label="6) Press\nIf both combatants still ready:\nUse presses to continue into another round or to end combat.\nCombatants may continue playing presses to offset opponent's last press.\nNo minion may play two presses in a row."];
-    COMBAT_PRESS_LOOP [shape=diamond, label="Press cycle:\nUncancelled press to continue exists?"];
-    COMBAT_S7_END_ROUND [label="7) End of Round\nPlay end-of-round cards/effects\n(after the press step).\nNote: This step also occurs even if combat ends prematurely."];
-    COMBAT_S7_END_ROUND_PREMATURE [label="7) End of Round (premature)\nPlay end-of-round cards/effects\n(after the press step).\nNote: Occurs even if combat ends prematurely."];
+    COMBAT_PRESS_LOOP [shape=diamond, level=advanced, label="Press cycle:\nUncancelled press to continue exists?"];
+    COMBAT_S7_END_ROUND [level=advanced, label="7) End of Round\nPlay end-of-round cards/effects\n(after the press step).\nNote: This step also occurs even if combat ends prematurely."];
+    COMBAT_S7_END_ROUND_PREMATURE [level=advanced, label="7) End of Round (premature)\nPlay end-of-round cards/effects\n(after the press step).\nNote: Occurs even if combat ends prematurely."];
     COMBAT_CONTINUE_Q [shape=diamond, label="Continue into another round?"];
     COMBAT_END_NODE [label="Combat ends\nReturn to action resolution flow"];
 
@@ -323,7 +323,7 @@ If blocker is an ally or declines: action simply fails."];
 
     // Acting minion priority note
     COMBAT_ROUND_BEGIN -> COMBAT_PRIORITY_NOTE [style=dotted];
-    COMBAT_PRIORITY_NOTE [shape=note, label="Priority within combat steps:\nAt every combat stage, the acting minion gets first opportunity\nbefore the opposing minion.\nOperationally this is handled by impulse:\n• Acting Methuselah keeps impulse until they pass.\n• Then the defending Methuselah gets impulse.\n• Then the remaining Methuselahs get impulse clockwise (5-player).\nOther Methuselahs can only act if a card/effect explicitly allows it\n(e.g., combat cards playable by minions not involved in the current combat)."];
+    COMBAT_PRIORITY_NOTE [shape=note, level=advanced, label="Priority within combat steps:\nAt every combat stage, the acting minion gets first opportunity\nbefore the opposing minion.\nOperationally this is handled by impulse:\n• Acting Methuselah keeps impulse until they pass.\n• Then the defending Methuselah gets impulse.\n• Then the remaining Methuselahs get impulse clockwise (5-player).\nOther Methuselahs can only act if a card/effect explicitly allows it\n(e.g., combat cards playable by minions not involved in the current combat)."];
     COMBAT_END_NODE -> ACTION_BLOCKED_PATH [style=dotted, label="after combat (from block)"];
   }
 

@@ -1,37 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  drilldownForEntryState,
   listPhaseEntryStates,
   listTurnPhases,
   loadGameLoop,
   type GameLoop,
+  type GameLoopComplexity,
+  type GameLoopDrilldownId,
   type GameLoopState,
 } from '../lib/gameLoop'
+import GameLoopDrilldown from './GameLoopDrilldown'
+import RuleDetailList from './RuleDetailList'
 
 function phaseName(label: string): string {
   return label.replace(/^\d+\)\s*/, '')
-}
-
-function DetailList({ detail }: { detail: string }) {
-  const lines = detail
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  if (!lines.length) return <p className="text-sm text-ink-muted">No additional steps are recorded.</p>
-
-  return (
-    <ul className="grid gap-2 text-sm leading-relaxed text-ink-muted sm:text-base">
-      {lines.map((line, index) => {
-        const isBullet = line.startsWith('•')
-        return (
-          <li key={`${line}-${index}`} className={isBullet ? 'flex gap-3' : 'pl-7 text-ink-dim'}>
-            {isBullet && <span className="mt-2 size-1.5 shrink-0 rounded-full bg-blood-hi" aria-hidden="true" />}
-            <span>{isBullet ? line.slice(1).trim() : line}</span>
-          </li>
-        )
-      })}
-    </ul>
-  )
 }
 
 function EntryPreview({ state, onClose }: { state: GameLoopState; onClose: () => void }) {
@@ -50,10 +32,8 @@ function EntryPreview({ state, onClose }: { state: GameLoopState; onClose: () =>
           Close
         </button>
       </div>
-      <DetailList detail={state.detail} />
-      <p className="mt-4 text-xs text-ink-dim">
-        Full action, combat, block, and referendum drill-downs arrive in the next rules milestone.
-      </p>
+      <RuleDetailList detail={state.detail} />
+      <p className="mt-4 text-xs text-ink-dim">This branch is summarized here because it sits outside the four core drill-downs.</p>
     </section>
   )
 }
@@ -63,6 +43,8 @@ export default function RulesPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [entryId, setEntryId] = useState<string | null>(null)
+  const [complexity, setComplexity] = useState<GameLoopComplexity>('basic')
+  const [drilldown, setDrilldown] = useState<GameLoopDrilldownId | null>(null)
 
   useEffect(() => {
     let active = true
@@ -83,15 +65,28 @@ export default function RulesPage() {
   const phases = useMemo(() => (gameLoop ? listTurnPhases(gameLoop) : []), [gameLoop])
   const selectedIndex = Math.max(0, phases.findIndex((phase) => phase.id === selectedId))
   const selected = phases[selectedIndex]
-  const entries = useMemo(
-    () => (gameLoop && selected ? listPhaseEntryStates(gameLoop, selected.id) : []),
-    [gameLoop, selected],
-  )
+  const entries = useMemo(() => {
+    if (!gameLoop || !selected) return []
+    return listPhaseEntryStates(gameLoop, selected.id).filter(
+      (candidate) => complexity === 'advanced' || candidate.level === 'basic',
+    )
+  }, [complexity, gameLoop, selected])
   const entry = entries.find((candidate) => candidate.id === entryId) ?? null
 
   const selectPhase = (id: string) => {
     setSelectedId(id)
     setEntryId(null)
+    setDrilldown(null)
+  }
+
+  const openEntry = (candidate: GameLoopState) => {
+    const nextDrilldown = drilldownForEntryState(candidate.id)
+    if (nextDrilldown) {
+      setDrilldown(nextDrilldown)
+      setEntryId(null)
+    } else {
+      setEntryId(candidate.id)
+    }
   }
 
   if (error) {
@@ -119,6 +114,42 @@ export default function RulesPage() {
           </p>
         </div>
       </header>
+
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-raised px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-ink">Rules complexity</p>
+          <p className="text-xs text-ink-dim">
+            {complexity === 'basic' ? 'Core flow for learning and play.' : 'Full timing detail for experienced players and judges.'}
+          </p>
+        </div>
+        <div className="flex rounded-xl border border-line bg-ground p-1" role="group" aria-label="Rules complexity">
+          {(['basic', 'advanced'] as const).map((level) => (
+            <button
+              type="button"
+              key={level}
+              aria-pressed={complexity === level}
+              onClick={() => setComplexity(level)}
+              className={
+                'rounded-lg px-3 py-1.5 text-sm transition ' +
+                (complexity === level ? 'bg-blood text-white' : 'text-ink-muted hover:text-ink')
+              }
+            >
+              {level === 'basic' ? 'Basic' : 'Advanced / Judge'}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {drilldown ? (
+        <GameLoopDrilldown
+          gameLoop={gameLoop}
+          id={drilldown}
+          complexity={complexity}
+          onBack={() => setDrilldown(null)}
+          onNavigate={setDrilldown}
+        />
+      ) : (
+        <>
 
       <section className="min-w-0 rounded-3xl border border-line bg-surface p-4 sm:p-6" aria-label="Turn phases">
         <div className="max-w-full overflow-x-auto pb-2">
@@ -185,7 +216,7 @@ export default function RulesPage() {
           </div>
         </div>
 
-        <DetailList detail={selected.detail} />
+        <RuleDetailList detail={selected.detail} />
 
         {entries.length > 0 && (
           <div className="border-t border-line-soft pt-4">
@@ -195,7 +226,7 @@ export default function RulesPage() {
                 <button
                   type="button"
                   key={candidate.id}
-                  onClick={() => setEntryId(candidate.id)}
+                  onClick={() => openEntry(candidate)}
                   className={
                     'rounded-full border px-3 py-1.5 text-sm transition ' +
                     (entryId === candidate.id
@@ -212,6 +243,8 @@ export default function RulesPage() {
 
         {entry && <EntryPreview state={entry} onClose={() => setEntryId(null)} />}
       </section>
+        </>
+      )}
 
       <p className="text-center text-xs text-ink-dim">
         Source: the canonical SchreckNet V5 game-loop statechart · available offline

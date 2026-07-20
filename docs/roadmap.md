@@ -218,18 +218,16 @@ design, decisions, and visualization options in
 [docs/gameloop-visualizer.md](gameloop-visualizer.md)._
 - ☑ M1 source/schema: dependency-free Rust distiller converts the canonical DOT
   into a typed, committed `frontend/public/gameloop.json` (18 regions, 136 states,
-  196 transitions, 17 hooks, three structured impulse orders). Golden tests lock
+  195 transitions, 17 hooks, three structured impulse orders). Golden tests lock
   the five turn phases, seven combat steps, impulse orderings, representative
   transitions, and exact DOT→JSON structural equality
 - ☑ M2 readable turn-stepper at `#/rules`: five source-derived phase controls,
   authored phase detail, immediate sub-loop entry previews, responsive horizontal
   navigation, and explicit PWA precaching of the statechart JSON
-- ☐ Interactive, decomposed game-loop explainer (drill-down statechart, not one flat
-  FSM): turn stepper → action / combat / block / referendum sub-views; Basic vs
-  Advanced/Judge complexity toggle. Sourced from the existing full-game-loop DOT FSM,
-  distilled to a build-time JSON (single source of truth, not two hand-maintained
-  representations). Zero-dep MVP path (inline SVG + CSS/JS); richer libs (React Flow /
-  XState) each need an ADR first
+- ☑ M3 interactive drill-downs: breadcrumb-linked action, block, combat, and
+  referendum flow views plus a source-driven Basic vs Advanced/Judge switch; Basic
+  combat compresses to round → strike → damage → press → repeat while Advanced
+  exposes the full seven-step timing and exception graph
 - ☐ Impulse / priority interactive widget — the highest-teaching-value piece: a 5-seat
   table with predator/prey, animating the context-specific pass orders (combat /
   directed-at-one / directed-at-set / undirected)

@@ -13,7 +13,9 @@ cargo run -p schrecknet-data -- gameloop \
 
 The distiller intentionally supports only the DOT subset used by this artifact:
 clusters, node/graph attributes, quoted multiline labels, ordinary nodes, and chained
-directed edges. This keeps the build dependency-free. Unsupported syntax fails loudly;
+directed edges. Nodes may set `level=basic` or `level=advanced`; without that attribute,
+complexity is inferred from the region and first label line for compatibility with the
+original graph. This keeps the build dependency-free. Unsupported syntax fails loudly;
 undefined transition endpoints and incomplete hooks are rejected.
 
 ## Version 1

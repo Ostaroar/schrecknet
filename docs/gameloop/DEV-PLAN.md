@@ -113,7 +113,7 @@ statechart rather than duplicated in React. Phase selection reveals the authored
 and immediate sub-loop entry states; the static JSON is explicitly precached by the PWA
 service worker. Readability and offline behavior were verified in the built app.
 
-### M3 — Drill-down sub-views + Basic/Advanced toggle
+### M3 — Drill-down sub-views + Basic/Advanced toggle  ☑ complete
 - Action-resolution **decision tree** (declare → announce → block eligibility →
   blocked/success → bleed | hunt | referendum | combat).
 - **Combat** as its own round loop: simplified (round → strike → damage → press → repeat)
@@ -122,6 +122,14 @@ service worker. Readability and offline behavior were verified in the built app.
 - Block-resolution detail (stealth vs intercept + the end-early / no-combat / torpor
   exceptions) and the referendum sub-view. Breadcrumb navigation between levels.
 - **DoD:** each sub-view live-verified for readability; toggle hides/show `advanced` nodes.
+
+Implemented as source-driven flow cards with breadcrumb navigation for action, block,
+combat, and referendum resolution. Basic combat compresses advanced-only DOT nodes into
+the canonical round → strike → damage → press → repeat path; Advanced/Judge reveals all
+28 combat nodes, including the complete seven-step timing and additional-strike loops.
+The DOT distiller now accepts explicit `level=basic|advanced` node metadata so complexity
+remains authored in the canonical graph rather than hardcoded in React. Live checks cover
+all four views, the complexity switch, mobile containment, and offline reload.
 
 ### M4 — Impulse / priority interactive widget (highest teaching value)
 - A 5-seat table with predator/prey marked; pick a context (combat / directed-at-one /

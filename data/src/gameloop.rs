@@ -590,7 +590,10 @@ impl ParsedDot {
                     .as_deref()
                     .and_then(|parent| region_levels.get(parent).copied())
                     .unwrap_or(Level::Basic);
-                Ok((draft.id.as_str(), state_level(label, parent_level)))
+                Ok((
+                    draft.id.as_str(),
+                    state_level(label, parent_level, &draft.attributes)?,
+                ))
             })
             .collect::<Result<BTreeMap<_, _>, DistillError>>()?;
 
@@ -775,15 +778,29 @@ fn region_level(label: &str) -> Level {
     }
 }
 
-fn state_level(label: &str, parent_level: Level) -> Level {
+fn state_level(
+    label: &str,
+    parent_level: Level,
+    attributes: &BTreeMap<String, String>,
+) -> Result<Level, DistillError> {
+    if let Some(level) = attributes.get("level") {
+        return match level.as_str() {
+            "basic" => Ok(Level::Basic),
+            "advanced" => Ok(Level::Advanced),
+            other => Err(DistillError(format!(
+                "state level must be basic or advanced, got {other}"
+            ))),
+        };
+    }
+
     let first_line = label.lines().next().unwrap_or_default().to_uppercase();
     if parent_level == Level::Advanced
         || first_line.contains("(ADV)")
         || first_line.starts_with("ADV:")
     {
-        Level::Advanced
+        Ok(Level::Advanced)
     } else {
-        Level::Basic
+        Ok(Level::Basic)
     }
 }
 
@@ -843,6 +860,25 @@ mod tests {
         assert_eq!(model.transitions.len(), 2);
         assert_eq!(model.transitions[0].kind, TransitionKind::Conditional);
         assert_eq!(model.transitions[0].guard.as_deref(), Some("if ready"));
+    }
+
+    #[test]
+    fn explicit_state_level_overrides_label_inference() {
+        let dot = r#"
+            digraph Example {
+              graph [label="Example (5 players)"];
+              subgraph cluster_COMBAT {
+                label="Combat";
+                SIMPLE [label="Simple"];
+                DETAIL [level=advanced, label="Detailed timing"];
+                SIMPLE -> DETAIL;
+              }
+            }
+        "#;
+        let model = distill(dot, "example.dot").unwrap();
+        assert_eq!(model.states[0].level, Level::Basic);
+        assert_eq!(model.states[1].level, Level::Advanced);
+        assert_eq!(model.transitions[0].level, Level::Advanced);
     }
 
     #[test]
@@ -922,10 +958,26 @@ mod tests {
         assert!(model.transitions.iter().any(|transition| {
             transition.from == "COMBAT_S7_END_ROUND" && transition.to == "COMBAT_CONTINUE_Q"
         }));
+        assert!(!model.transitions.iter().any(|transition| {
+            transition.from == "BLOCK_COMPARE"
+                && transition.to == "BLOCK_FAIL"
+                && transition.label.is_none()
+        }));
+        assert!(model
+            .states
+            .iter()
+            .any(|state| { state.id == "ACTION_BLOCKED" && state.kind == StateKind::Decision }));
         assert!(model
             .states
             .iter()
             .any(|state| { state.id == "CONTEST_CHECK" && state.level == Level::Advanced }));
+        assert!(model.states.iter().any(|state| {
+            state.id == "COMBAT_S1_BEFORE_RANGE" && state.level == Level::Advanced
+        }));
+        assert!(model
+            .states
+            .iter()
+            .any(|state| { state.id == "COMBAT_S4_STRIKE" && state.level == Level::Basic }));
         assert!(model
             .regions
             .iter()

@@ -406,7 +406,7 @@
       "id": "ACTION_BLOCKED",
       "label": "Action blocked?",
       "detail": "YES -> blocked path\nNO  -> successful path",
-      "kind": "state",
+      "kind": "decision",
       "level": "basic",
       "parent": "MINION",
       "hooks": []
@@ -536,7 +536,7 @@
       "id": "BLOCK_COMPARE",
       "label": "Compare:",
       "detail": "if Intercept ≥ Stealth => block succeeds\nelse => block fails",
-      "kind": "state",
+      "kind": "decision",
       "level": "basic",
       "parent": "BLOCK",
       "hooks": []
@@ -636,7 +636,7 @@
       "label": "Combat card limit:",
       "detail": "• The only minion cards that can be played during combat are combat cards.\nADV: Some combat cards are played by minions \"not involved in the current combat\"; minions controlled by ANY Methuselah can play those cards.\n(Non-combatants can play ONLY if the combat card text explicitly allows it.)",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -663,7 +663,7 @@
       "label": "1) Before Range",
       "detail": "Play cards/effects usable before range is chosen.\nNOTE: 'before range is determined' effects must be played\nbefore the acting minion decides whether to play a maneuver.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -672,7 +672,7 @@
       "label": "2) Determine Range",
       "detail": "Default = close.\nUse maneuvers to change/offset to close or long.\nNo minion may play two maneuvers in a row.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": [
         "HK_CMB_RANGE"
@@ -683,7 +683,7 @@
       "label": "Maneuver cycle:",
       "detail": "Any combatant play a maneuver (alternate)?",
       "kind": "decision",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -692,7 +692,7 @@
       "label": "Range is set for this round",
       "detail": "(close or long)\n(If maneuver came from strike card/weapon:\nthat also sets the initial strike choice constraint.)",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -701,7 +701,7 @@
       "label": "3) Before Strikes",
       "detail": "Play cards/effects usable after range is set\nbut before strikes are chosen.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -721,7 +721,7 @@
       "label": "Strike targeting note:",
       "detail": "At long range, a ranged strike may target an opposing retainer\n(instead of the opposing minion) if announced when strike is announced.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -730,7 +730,7 @@
       "label": "Strike Pair: Choose & Resolve",
       "detail": "",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -739,7 +739,7 @@
       "label": "Choose Strike (acting)",
       "detail": "From: hand strike / weapon / combat card / other strike source.\nIf maneuver was used from a strike card/weapon this round:\nno other strike for the initial strike.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -748,7 +748,7 @@
       "label": "Choose Strike (opposing)",
       "detail": "",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -757,7 +757,7 @@
       "label": "Resolve Strike Pair",
       "detail": "Apply strike effects.\nThen proceed to damage resolution.\nIf a combatant becomes not ready at any point:\nround & combat end immediately.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -766,7 +766,7 @@
       "label": "Additional strikes this round?",
       "detail": "",
       "kind": "decision",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -784,7 +784,7 @@
       "label": "More additional strikes to resolve?",
       "detail": "",
       "kind": "decision",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -802,7 +802,7 @@
       "label": "Any combatant not ready?",
       "detail": "",
       "kind": "decision",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -811,7 +811,7 @@
       "label": "Combat ends immediately",
       "detail": "(if a combatant is no longer ready)\nReturn to action flow after resolving required steps.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -831,7 +831,7 @@
       "label": "Press cycle:",
       "detail": "Uncancelled press to continue exists?",
       "kind": "decision",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -840,7 +840,7 @@
       "label": "7) End of Round",
       "detail": "Play end-of-round cards/effects\n(after the press step).\nNote: This step also occurs even if combat ends prematurely.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -849,7 +849,7 @@
       "label": "7) End of Round (premature)",
       "detail": "Play end-of-round cards/effects\n(after the press step).\nNote: Occurs even if combat ends prematurely.",
       "kind": "state",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -878,7 +878,7 @@
       "label": "Priority within combat steps:",
       "detail": "At every combat stage, the acting minion gets first opportunity\nbefore the opposing minion.\nOperationally this is handled by impulse:\n• Acting Methuselah keeps impulse until they pass.\n• Then the defending Methuselah gets impulse.\n• Then the remaining Methuselahs get impulse clockwise (5-player).\nOther Methuselahs can only act if a card/effect explicitly allows it\n(e.g., combat cards playable by minions not involved in the current combat).",
       "kind": "note",
-      "level": "basic",
+      "level": "advanced",
       "parent": "COMBAT",
       "hooks": []
     },
@@ -1800,14 +1800,6 @@
     },
     {
       "from": "BLOCK_COMPARE",
-      "to": "BLOCK_FAIL",
-      "label": null,
-      "guard": null,
-      "kind": "flow",
-      "level": "basic"
-    },
-    {
-      "from": "BLOCK_COMPARE",
       "to": "BLOCK_SUCCESS",
       "label": "YES",
       "guard": null,
@@ -1940,7 +1932,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_CARD_LIMIT",
@@ -1948,7 +1940,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_ROUND_BEGIN",
@@ -1956,7 +1948,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_CARD_LIMIT",
@@ -1972,7 +1964,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S2_DETERMINE_RANGE",
@@ -1980,7 +1972,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_RANGE_LOOP",
@@ -1988,7 +1980,7 @@
       "label": "maneuver played (alternate)",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_RANGE_LOOP",
@@ -1996,7 +1988,7 @@
       "label": "both decline / stop",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_RANGE_SET",
@@ -2004,7 +1996,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S3_BEFORE_STRIKES",
@@ -2012,7 +2004,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S4_STRIKE",
@@ -2020,7 +2012,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_TARGET_NOTE",
@@ -2028,7 +2020,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_PAIR_BEGIN",
@@ -2036,7 +2028,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_CHOOSE_ACTING",
@@ -2044,7 +2036,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_CHOOSE_OPP",
@@ -2052,7 +2044,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_RESOLVE",
@@ -2060,7 +2052,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S4_STRIKE",
@@ -2068,7 +2060,7 @@
       "label": "after first pair",
       "guard": "after first pair",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_ADDITIONAL_Q",
@@ -2076,7 +2068,7 @@
       "label": "NO",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_ADDITIONAL_Q",
@@ -2100,7 +2092,7 @@
       "label": "only for additional strikes",
       "guard": "only for additional strikes",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_ADDITIONAL_LOOP",
@@ -2108,7 +2100,7 @@
       "label": "YES (another pair)",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "STRIKE_ADDITIONAL_LOOP",
@@ -2116,7 +2108,7 @@
       "label": "NO (done)",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S5_DAMAGE_RES",
@@ -2124,7 +2116,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_EARLY_END_Q",
@@ -2132,7 +2124,7 @@
       "label": "YES",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_END_IMMEDIATE",
@@ -2140,7 +2132,7 @@
       "label": "end-of-round step still occurs",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_EARLY_END_Q",
@@ -2148,7 +2140,7 @@
       "label": "NO",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S6_PRESS",
@@ -2156,7 +2148,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_PRESS_LOOP",
@@ -2164,7 +2156,7 @@
       "label": "press played (alternate)",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_PRESS_LOOP",
@@ -2172,7 +2164,7 @@
       "label": "pressing complete",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S7_END_ROUND",
@@ -2180,7 +2172,7 @@
       "label": null,
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S7_END_ROUND_PREMATURE",
@@ -2188,7 +2180,7 @@
       "label": "combat already ended",
       "guard": null,
       "kind": "flow",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_CONTINUE_Q",
@@ -2212,7 +2204,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S2_DETERMINE_RANGE",
@@ -2220,7 +2212,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S3_BEFORE_STRIKES",
@@ -2228,7 +2220,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S4_STRIKE",
@@ -2236,7 +2228,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S5_DAMAGE_RES",
@@ -2244,7 +2236,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S6_PRESS",
@@ -2252,7 +2244,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S7_END_ROUND",
@@ -2260,7 +2252,7 @@
       "label": "if combatant not ready",
       "guard": "if combatant not ready",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S1_BEFORE_RANGE",
@@ -2268,7 +2260,7 @@
       "label": "open window (combat step 1)",
       "guard": "open window (combat step 1)",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S2_DETERMINE_RANGE",
@@ -2276,7 +2268,7 @@
       "label": "open window (combat step 2)",
       "guard": "open window (combat step 2)",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S3_BEFORE_STRIKES",
@@ -2284,7 +2276,7 @@
       "label": "open window (combat step 3)",
       "guard": "open window (combat step 3)",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_S4_STRIKE",
@@ -2316,7 +2308,7 @@
       "label": "open window (combat step 7)",
       "guard": "open window (combat step 7)",
       "kind": "conditional",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_ROUND_BEGIN",
@@ -2324,7 +2316,7 @@
       "label": null,
       "guard": null,
       "kind": "annotation",
-      "level": "basic"
+      "level": "advanced"
     },
     {
       "from": "COMBAT_END_NODE",
