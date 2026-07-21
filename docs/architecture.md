@@ -72,7 +72,7 @@ migration status:
 | Opening-hand sizes, seeded shuffle, quantity expansion | Live in native + WASM; MCP + REST mirror |
 | Exact-search result sorting | Live in native + WASM through `core/src/search_sort.rs` |
 | Exact-search filter normalization and query planning | Live in native + WASM through `core/src/search_plan.rs`; platform adapters only execute plans and map rows |
-| Card-text token parsing and structured symbol metadata | Migration pending |
+| Card-text token parsing and structured symbol metadata | Live in native + WASM through `core/src/card_text.rs`; React only renders returned segments |
 
 Moving code merely to reduce the TypeScript line count is not a goal. Moving a
 rule or deterministic transformation that could drift between browser and server

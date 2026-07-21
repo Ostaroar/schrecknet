@@ -2,14 +2,35 @@
 
 use wasm_bindgen::prelude::{wasm_bindgen, JsError};
 
+fn json<T: serde::Serialize>(value: &T) -> Result<String, JsError> {
+    serde_json::to_string(value).map_err(|error| JsError::new(&error.to_string()))
+}
+
+/// Parses VTES bracket-token card text into canonical symbol segments.
+#[wasm_bindgen]
+pub fn parse_card_text(input: &str) -> Result<String, JsError> {
+    json(&crate::card_text::parse(input))
+}
+
+/// Returns canonical discipline-symbol metadata, or JSON `null` if unknown.
+#[wasm_bindgen]
+pub fn discipline_symbol(code: &str, superior: bool) -> Result<String, JsError> {
+    json(&crate::card_text::discipline_symbol(code, superior))
+}
+
+/// Returns canonical card-type-symbol metadata, or JSON `null` if unknown.
+#[wasm_bindgen]
+pub fn card_type_symbol(card_type: &str) -> Result<String, JsError> {
+    json(&crate::card_text::card_type_symbol(card_type))
+}
+
 /// Builds the shared bound-parameter crypt query plan from a JSON filter
 /// object and returns `{ sql, params }` as JSON for the browser SQLite adapter.
 #[wasm_bindgen]
 pub fn plan_crypt_search(input_json: &str) -> Result<String, JsError> {
     let input =
         serde_json::from_str(input_json).map_err(|error| JsError::new(&error.to_string()))?;
-    serde_json::to_string(&crate::search_plan::crypt_plan(&input))
-        .map_err(|error| JsError::new(&error.to_string()))
+    json(&crate::search_plan::crypt_plan(&input))
 }
 
 /// Builds the shared bound-parameter library query plan for the browser.
@@ -17,8 +38,7 @@ pub fn plan_crypt_search(input_json: &str) -> Result<String, JsError> {
 pub fn plan_library_search(input_json: &str) -> Result<String, JsError> {
     let input =
         serde_json::from_str(input_json).map_err(|error| JsError::new(&error.to_string()))?;
-    serde_json::to_string(&crate::search_plan::library_plan(&input))
-        .map_err(|error| JsError::new(&error.to_string()))
+    json(&crate::search_plan::library_plan(&input))
 }
 
 #[wasm_bindgen]

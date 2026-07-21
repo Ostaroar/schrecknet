@@ -1,5 +1,18 @@
 import assert from 'node:assert/strict'
-import { cardTypeSymbol, disciplineSymbol, parseCardText } from '../src/lib/cardText.ts'
+import { readFile } from 'node:fs/promises'
+import init, {
+  card_type_symbol,
+  discipline_symbol,
+  parse_card_text,
+} from '../src/wasm/schrecknet_core.js'
+
+const wasm = await readFile(new URL('../src/wasm/schrecknet_core_bg.wasm', import.meta.url))
+await init({ module_or_path: wasm })
+
+const parseCardText = (text) => JSON.parse(parse_card_text(text))
+const disciplineSymbol = (code, superior = false) =>
+  JSON.parse(discipline_symbol(code, superior))
+const cardTypeSymbol = (type) => JSON.parse(card_type_symbol(type))
 
 const disciplines = [
   ['ani', 'Animalism', 'animalism'],

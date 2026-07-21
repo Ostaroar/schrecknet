@@ -6,6 +6,9 @@
 
 import init, {
   validate_deck as validateDeckWasm,
+  parse_card_text as parseCardTextWasm,
+  discipline_symbol as disciplineSymbolWasm,
+  card_type_symbol as cardTypeSymbolWasm,
   encode_deck_share as encodeDeckShareWasm,
   decode_deck_share as decodeDeckShareWasm,
   parse_deck_text as parseDeckTextWasm,
@@ -22,10 +25,42 @@ import init, {
 } from '../wasm/schrecknet_core.js'
 
 let ready: Promise<void> | null = null
+let initialized = false
 
 function ensureReady(): Promise<void> {
-  if (!ready) ready = init().then(() => undefined)
+  if (!ready) {
+    ready = init().then(() => {
+      initialized = true
+    })
+  }
   return ready
+}
+
+/** Loads the mandatory shared Rust core before React renders. */
+export function initializeCore(): Promise<void> {
+  return ensureReady()
+}
+
+function requireInitialized(): void {
+  if (!initialized) throw new Error('schrecknet-core was used before initialization')
+}
+
+/** Synchronous post-initialization bridge used by card-text rendering. */
+export function parseCardTextSegments(input: string): unknown {
+  requireInitialized()
+  return JSON.parse(parseCardTextWasm(input))
+}
+
+/** Synchronous post-initialization bridge for discipline-symbol metadata. */
+export function getDisciplineSymbol(code: string, superior: boolean): unknown {
+  requireInitialized()
+  return JSON.parse(disciplineSymbolWasm(code, superior))
+}
+
+/** Synchronous post-initialization bridge for card-type-symbol metadata. */
+export function getCardTypeSymbol(cardType: string): unknown {
+  requireInitialized()
+  return JSON.parse(cardTypeSymbolWasm(cardType))
 }
 
 export type SqlParameter = string | number | null
