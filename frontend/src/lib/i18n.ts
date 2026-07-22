@@ -168,6 +168,38 @@ export interface UiStrings {
     titledAny: string
     nonTitled: string
   }
+  inventory: {
+    title: string
+    counts: (crypt: number, library: number) => string
+    loading: string
+    loadError: string
+    importExportTitle: string
+    exportTxt: string
+    loadTxt: string
+    importText: string
+    hideImport: string
+    importPlaceholder: string
+    addToInventory: string
+    importing: string
+    addedCards: (count: number) => string
+    couldNotMatch: (names: string) => string
+    addRemovePreconTitle: string
+    preconNote: string
+    choosePrecon: string
+    adding: string
+    removeFromInventory: string
+    removing: string
+    addedCopies: (count: number) => string
+    removedCopies: (count: number) => string
+    missingCardsTitle: (total: number, count: number) => string
+    exportWantList: string
+    missingNote: string
+    crypt: string
+    library: string
+    noCryptOwned: string
+    noLibraryOwned: string
+    removeAria: (name: string) => string
+  }
 }
 
 const en: UiStrings = {
@@ -247,6 +279,9 @@ const en: UiStrings = {
   },
   librarySearch: {
     anyType: 'Any type', anyClanRequirement: 'Any clan requirement', requiresCapacity: 'requires cap', blood: 'blood', pool: 'pool', disciplineLogic: 'Discipline logic', noRequirement: 'No requirement', sect: 'Sect', title: 'Title', results: (count, semantic) => `${count}${semantic ? ' semantic' : ''} library cards`, semanticEmpty: 'Describe a concept to search the V5 library.', sortRequirement: 'Clan / discipline', sortCostDesc: 'Cost high–low', sortCostAsc: 'Cost low–high', sortName: 'Name', sortType: 'Type', similarity: 'similarity', requirement: 'requirement', notRequired: 'Not required', titledSpecific: 'Titled (specific)', titledAny: 'Titled (any)', nonTitled: 'Non-titled',
+  },
+  inventory: {
+    title: 'Inventory', counts: (crypt, library) => `${crypt} crypt · ${library} library`, loading: 'Loading inventory…', loadError: "Couldn't load inventory", importExportTitle: 'Text import / export', exportTxt: 'Export .txt', loadTxt: 'Load .txt', importText: 'Import text…', hideImport: 'Hide import', importPlaceholder: 'Paste a card list, e.g.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', addToInventory: 'Add to inventory', importing: 'Importing…', addedCards: (count) => `Added ${count} card${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `Couldn't match: ${names}.`, addRemovePreconTitle: 'Add / remove a precon', preconNote: "Card quantities per precon aren't tracked by the data source, so this adds or removes one copy of each distinct card in the deck's known pool, not a full ready-to-play count.", choosePrecon: 'Choose a precon…', adding: 'Adding…', removeFromInventory: 'Remove from inventory', removing: 'Removing…', addedCopies: (count) => `Added 1 copy each of ${count} cards.`, removedCopies: (count) => `Removed 1 copy each of ${count} cards.`, missingCardsTitle: (total, count) => `Missing cards — ${total} copies across ${count} card${count === 1 ? '' : 's'}`, exportWantList: 'Export want-list .txt', missingNote: 'What every inventory-tracked deck still needs, combined — decks marked "Not in inventory" aren\'t counted.', crypt: 'Crypt', library: 'Library', noCryptOwned: 'No crypt cards owned yet.', noLibraryOwned: 'No library cards owned yet.', removeAria: (name) => `Remove ${name} from inventory`,
   },
 }
 
@@ -332,6 +367,9 @@ const es: UiStrings = {
   librarySearch: {
     anyType: 'Cualquier tipo', anyClanRequirement: 'Cualquier requisito de clan', requiresCapacity: 'requiere cap', blood: 'sangre', pool: 'pool', disciplineLogic: 'Lógica de disciplinas', noRequirement: 'Sin requisito', sect: 'Secta', title: 'Título', results: (count, semantic) => `${count} cartas de biblioteca${semantic ? ' semánticas' : ''}`, semanticEmpty: 'Describe un concepto para buscar en la biblioteca V5.', sortRequirement: 'Clan / disciplina', sortCostDesc: 'Coste mayor–menor', sortCostAsc: 'Coste menor–mayor', sortName: 'Nombre', sortType: 'Tipo', similarity: 'similitud', requirement: 'requisito', notRequired: 'No requerido', titledSpecific: 'Con título (específico)', titledAny: 'Con título (cualquiera)', nonTitled: 'Sin título',
   },
+  inventory: {
+    title: 'Inventario', counts: (crypt, library) => `${crypt} cripta · ${library} biblioteca`, loading: 'Cargando inventario…', loadError: 'No se pudo cargar el inventario', importExportTitle: 'Importar / exportar texto', exportTxt: 'Exportar .txt', loadTxt: 'Cargar .txt', importText: 'Importar texto…', hideImport: 'Ocultar importación', importPlaceholder: 'Pega una lista de cartas, p. ej.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', addToInventory: 'Añadir al inventario', importing: 'Importando…', addedCards: (count) => `${count} carta${count === 1 ? '' : 's'} añadida${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `No se pudo encontrar: ${names}.`, addRemovePreconTitle: 'Añadir / quitar un premontado', preconNote: 'Las cantidades por premontado no están registradas en la fuente de datos, así que esto añade o quita una copia de cada carta distinta del mazo conocido, no un recuento listo para jugar.', choosePrecon: 'Elegir un premontado…', adding: 'Añadiendo…', removeFromInventory: 'Quitar del inventario', removing: 'Quitando…', addedCopies: (count) => `Añadida 1 copia de cada una de ${count} cartas.`, removedCopies: (count) => `Quitada 1 copia de cada una de ${count} cartas.`, missingCardsTitle: (total, count) => `Cartas que faltan — ${total} copias en ${count} carta${count === 1 ? '' : 's'}`, exportWantList: 'Exportar lista de deseos .txt', missingNote: 'Lo que necesita en total cada mazo con seguimiento de inventario — los mazos marcados "No en inventario" no cuentan.', crypt: 'Cripta', library: 'Biblioteca', noCryptOwned: 'Aún no posees cartas de cripta.', noLibraryOwned: 'Aún no posees cartas de biblioteca.', removeAria: (name) => `Quitar ${name} del inventario`,
+  },
 }
 
 const fr: UiStrings = {
@@ -415,6 +453,9 @@ const fr: UiStrings = {
   },
   librarySearch: {
     anyType: 'Tout type', anyClanRequirement: 'Toute exigence de clan', requiresCapacity: 'requiert cap', blood: 'sang', pool: 'pool', disciplineLogic: 'Logique des disciplines', noRequirement: 'Sans exigence', sect: 'Secte', title: 'Titre', results: (count, semantic) => `${count} cartes de bibliothèque${semantic ? ' sémantiques' : ''}`, semanticEmpty: 'Décrivez un concept pour chercher dans la bibliothèque V5.', sortRequirement: 'Clan / discipline', sortCostDesc: 'Coût décroissant', sortCostAsc: 'Coût croissant', sortName: 'Nom', sortType: 'Type', similarity: 'similarité', requirement: 'exigence', notRequired: 'Non requis', titledSpecific: 'Titré (spécifique)', titledAny: 'Titré (tout)', nonTitled: 'Sans titre',
+  },
+  inventory: {
+    title: 'Inventaire', counts: (crypt, library) => `${crypt} crypte · ${library} bibliothèque`, loading: "Chargement de l'inventaire…", loadError: "Impossible de charger l'inventaire", importExportTitle: 'Import / export texte', exportTxt: 'Exporter .txt', loadTxt: 'Charger .txt', importText: 'Importer texte…', hideImport: "Masquer l'import", importPlaceholder: 'Collez une liste de cartes, p. ex.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', addToInventory: "Ajouter à l'inventaire", importing: 'Importation…', addedCards: (count) => `${count} carte${count === 1 ? '' : 's'} ajoutée${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `Introuvable : ${names}.`, addRemovePreconTitle: 'Ajouter / retirer un préconstruit', preconNote: "Les quantités par préconstruit ne sont pas suivies par la source de données ; ceci ajoute ou retire une copie de chaque carte distincte du pool connu du deck, pas un décompte prêt à jouer.", choosePrecon: 'Choisir un préconstruit…', adding: 'Ajout…', removeFromInventory: "Retirer de l'inventaire", removing: 'Retrait…', addedCopies: (count) => `1 copie de chacune de ${count} cartes ajoutée.`, removedCopies: (count) => `1 copie de chacune de ${count} cartes retirée.`, missingCardsTitle: (total, count) => `Cartes manquantes — ${total} copies sur ${count} carte${count === 1 ? '' : 's'}`, exportWantList: 'Exporter la liste de souhaits .txt', missingNote: 'Ce dont chaque deck suivi par l\'inventaire a encore besoin, combiné — les decks marqués « Pas dans l\'inventaire » ne comptent pas.', crypt: 'Crypte', library: 'Bibliothèque', noCryptOwned: 'Aucune carte de crypte possédée pour le moment.', noLibraryOwned: 'Aucune carte de bibliothèque possédée pour le moment.', removeAria: (name) => `Retirer ${name} de l'inventaire`,
   },
 }
 

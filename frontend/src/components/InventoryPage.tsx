@@ -15,6 +15,7 @@ import { listPrecons, type PreconSummary } from '../lib/precons'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
+import { useUiStrings, type UiStrings } from '../lib/i18n'
 import AddCardBox from './AddCardBox'
 
 function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
@@ -39,7 +40,15 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
   )
 }
 
-function CardRow({ card, onQty }: { card: InventoryCardDetail; onQty: (qty: number) => void }) {
+function CardRow({
+  card,
+  onQty,
+  ui,
+}: {
+  card: InventoryCardDetail
+  onQty: (qty: number) => void
+  ui: UiStrings['inventory']
+}) {
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 text-sm">
       <button
@@ -54,7 +63,7 @@ function CardRow({ card, onQty }: { card: InventoryCardDetail; onQty: (qty: numb
       <QtyStepper qty={card.qty} onChange={onQty} />
       <button
         onClick={() => onQty(0)}
-        aria-label={`Remove ${card.name} from inventory`}
+        aria-label={ui.removeAria(card.name)}
         className="text-ink-dim hover:text-blood-hi"
       >
         ×
@@ -63,7 +72,7 @@ function CardRow({ card, onQty }: { card: InventoryCardDetail; onQty: (qty: numb
   )
 }
 
-function ImportExportPanel({ onImported }: { onImported: () => void }) {
+function ImportExportPanel({ onImported, ui }: { onImported: () => void; ui: UiStrings['inventory'] }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [result, setResult] = useState<InventoryImportResult | null>(null)
@@ -98,12 +107,12 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
   return (
     <div className="grid min-w-0 gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xs uppercase tracking-wide text-ink-dim">Text import / export</h2>
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.importExportTitle}</h2>
         <button onClick={doExport} className="min-h-10 rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink sm:min-h-0">
-          Export .txt
+          {ui.exportTxt}
         </button>
         <label className="flex min-h-10 cursor-pointer items-center rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink sm:min-h-0">
-          Load .txt
+          {ui.loadTxt}
           <input
             type="file"
             accept=".txt,text/plain"
@@ -116,14 +125,14 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
           />
         </label>
         <button onClick={() => setOpen((o) => !o)} className="min-h-10 rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink sm:min-h-0">
-          {open ? 'Hide import' : 'Import text…'}
+          {open ? ui.hideImport : ui.importText}
         </button>
       </div>
       {open && (
         <div className="grid gap-2">
           <textarea
             className="h-32 w-full rounded-lg border border-line bg-ground p-2 font-mono text-xs text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-            placeholder={'Paste a card list, e.g.\n4x Deflection\n1x Aaradhya, The Callous Tyrant'}
+            placeholder={ui.importPlaceholder}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -132,12 +141,12 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
             disabled={!text.trim() || importing}
             className="justify-self-start rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50"
           >
-            {importing ? 'Importing…' : 'Add to inventory'}
+            {importing ? ui.importing : ui.addToInventory}
           </button>
           {result && (
             <p className="text-xs text-ink-dim">
-              Added {result.added} card{result.added === 1 ? '' : 's'}.
-              {result.unresolved.length > 0 && <> Couldn't match: {result.unresolved.join(', ')}.</>}
+              {ui.addedCards(result.added)}
+              {result.unresolved.length > 0 && <> {ui.couldNotMatch(result.unresolved.join(', '))}</>}
             </p>
           )}
         </div>
@@ -146,7 +155,7 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
   )
 }
 
-function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
+function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiStrings['inventory'] }) {
   const [precons, setPrecons] = useState<PreconSummary[]>([])
   const [selected, setSelected] = useState('')
   const [busy, setBusy] = useState<'add' | 'remove' | null>(null)
@@ -173,29 +182,22 @@ function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
     setBusy(mode)
     const cardIds = await preconCardIds()
     await adjustInventoryQtyForCards(cardIds, mode === 'add' ? 1 : -1)
-    setStatus(
-      mode === 'add'
-        ? `Added 1 copy each of ${cardIds.length} cards.`
-        : `Removed 1 copy each of ${cardIds.length} cards.`,
-    )
+    setStatus(mode === 'add' ? ui.addedCopies(cardIds.length) : ui.removedCopies(cardIds.length))
     setBusy(null)
     onChanged()
   }
 
   return (
     <div className="grid min-w-0 gap-3 rounded-lg border border-line bg-surface p-4">
-      <h2 className="text-xs uppercase tracking-wide text-ink-dim">Add / remove a precon</h2>
-      <p className="text-xs text-ink-dim">
-        Card quantities per precon aren't tracked by the data source, so this adds or removes one
-        copy of each distinct card in the deck's known pool, not a full ready-to-play count.
-      </p>
+      <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.addRemovePreconTitle}</h2>
+      <p className="text-xs text-ink-dim">{ui.preconNote}</p>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <select
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
           className="min-h-10 w-full min-w-0 max-w-full rounded-lg border border-line bg-ground px-3 py-1.5 text-sm text-ink outline-none focus:border-blood-hi sm:min-h-0 sm:flex-1"
         >
-          <option value="">Choose a precon…</option>
+          <option value="">{ui.choosePrecon}</option>
           {precons.map((p) => (
             <option key={`${p.set}:${p.precon}`} value={`${p.set}:${p.precon}`}>
               {p.set} — {p.precon} ({p.card_count} cards)
@@ -207,14 +209,14 @@ function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
           disabled={!selectedPrecon || busy !== null}
           className="min-h-10 rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50 sm:min-h-0"
         >
-          {busy === 'add' ? 'Adding…' : 'Add to inventory'}
+          {busy === 'add' ? ui.adding : ui.addToInventory}
         </button>
         <button
           onClick={() => apply('remove')}
           disabled={!selectedPrecon || busy !== null}
           className="min-h-10 rounded-lg border border-line px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:opacity-50 sm:min-h-0"
         >
-          {busy === 'remove' ? 'Removing…' : 'Remove from inventory'}
+          {busy === 'remove' ? ui.removing : ui.removeFromInventory}
         </button>
       </div>
       {status && <p className="text-xs text-ink-dim">{status}</p>}
@@ -222,7 +224,7 @@ function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
   )
 }
 
-function MissingCardsPanel({ refreshKey }: { refreshKey: number }) {
+function MissingCardsPanel({ refreshKey, ui }: { refreshKey: number; ui: UiStrings['inventory'] }) {
   const [cards, setCards] = useState<MissingCard[] | null>(null)
 
   useEffect(() => {
@@ -248,20 +250,15 @@ function MissingCardsPanel({ refreshKey }: { refreshKey: number }) {
   return (
     <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xs uppercase tracking-wide text-ink-dim">
-          Missing cards — {total} copies across {cards.length} card{cards.length === 1 ? '' : 's'}
-        </h2>
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.missingCardsTitle(total, cards.length)}</h2>
         <button
           onClick={doExport}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
         >
-          Export want-list .txt
+          {ui.exportWantList}
         </button>
       </div>
-      <p className="text-xs text-ink-dim">
-        What every inventory-tracked deck still needs, combined — decks marked "Not in inventory" aren't
-        counted.
-      </p>
+      <p className="text-xs text-ink-dim">{ui.missingNote}</p>
       <ul className="grid gap-1 divide-y divide-line-soft rounded-lg border border-line bg-ground text-sm">
         {cards.map((c) => (
           <li key={c.id} className="flex items-center gap-3 px-3 py-1.5">
@@ -280,6 +277,7 @@ function MissingCardsPanel({ refreshKey }: { refreshKey: number }) {
 }
 
 export default function InventoryPage() {
+  const ui = useUiStrings().inventory
   const [cards, setCards] = useState<InventoryCardDetail[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -311,8 +309,8 @@ export default function InventoryPage() {
     refresh()
   }
 
-  if (status === 'loading') return <p className="text-sm text-ink-dim">Loading inventory…</p>
-  if (status === 'error') return <p className="text-sm text-blood-hi">Couldn't load inventory: {error}</p>
+  if (status === 'loading') return <p className="text-sm text-ink-dim">{ui.loading}</p>
+  if (status === 'error') return <p className="text-sm text-blood-hi">{ui.loadError}: {error}</p>
 
   const cryptCards = cards.filter((c) => c.kind === 'crypt')
   const libraryCards = cards.filter((c) => c.kind === 'library')
@@ -322,35 +320,33 @@ export default function InventoryPage() {
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl text-ink">Inventory</h1>
-        <span className="text-xs text-ink-dim">
-          {cryptCount} crypt · {libraryCount} library
-        </span>
+        <h1 className="font-display text-2xl text-ink">{ui.title}</h1>
+        <span className="text-xs text-ink-dim">{ui.counts(cryptCount, libraryCount)}</span>
       </div>
 
-      <ImportExportPanel onImported={refresh} />
-      <AddPreconPanel onChanged={refresh} />
-      <MissingCardsPanel refreshKey={refreshKey} />
+      <ImportExportPanel onImported={refresh} ui={ui} />
+      <AddPreconPanel onChanged={refresh} ui={ui} />
+      <MissingCardsPanel refreshKey={refreshKey} ui={ui} />
 
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="grid gap-2">
-          <h2 className="text-xs uppercase tracking-wide text-ink-dim">Crypt</h2>
+          <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.crypt}</h2>
           <AddCardBox kind="crypt" onAdd={addCard} />
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
-            {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">No crypt cards owned yet.</p>}
+            {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">{ui.noCryptOwned}</p>}
             {cryptCards.map((c) => (
-              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} />
+              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} ui={ui} />
             ))}
           </div>
         </section>
 
         <section className="grid gap-2">
-          <h2 className="text-xs uppercase tracking-wide text-ink-dim">Library</h2>
+          <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.library}</h2>
           <AddCardBox kind="library" onAdd={addCard} />
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
-            {libraryCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">No library cards owned yet.</p>}
+            {libraryCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">{ui.noLibraryOwned}</p>}
             {libraryCards.map((c) => (
-              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} />
+              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} ui={ui} />
             ))}
           </div>
         </section>
