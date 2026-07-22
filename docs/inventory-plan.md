@@ -204,6 +204,16 @@ count stays in sync with the inventory page for the same card id. Deferred (not
 in this slice, no vdb parity gap yet since vdb itself doesn't expose it as a
 distinct UI surface either): "only owned" filtering lives with I5, not here.
 
+**Follow-up (2026-07-22): add/remove precon parity**, matching vdb's
+`InventoryAddPreconModal.jsx` — `AddPreconPanel` in `InventoryPage.tsx` plus
+`inventoryStore.adjustInventoryQtyForCards(cardIds, delta)`, reusing
+`lib/precons.ts` and the same `searchCrypt`/`searchLibrary` precon filter
+`PreconBrowser.tsx` already uses (no new query path). Explicitly adds/removes
+one copy of each distinct card, since precon quantities aren't tracked by the
+data pipeline — the UI states this rather than implying a ready-to-play count.
+Live-verified: adding Fifth Edition — Malkavian (30 cards) took the inventory
+from empty to 9 crypt/21 library at qty 1 each; Remove reversed it exactly.
+
 ### I3 — Deck ↔ inventory cross-referencing
 - Deck editor: `inventory_mode` selector (excluded/flexible/fixed — label them
   human-readably, e.g. "not in inventory / shares copies / owns copies" ✎ vdb's
