@@ -10,6 +10,7 @@ import {
   type GameLoopState,
 } from '../lib/gameLoop'
 import GameLoopDrilldown from './GameLoopDrilldown'
+import ImpulseOrderWidget from './ImpulseOrderWidget'
 import RuleDetailList from './RuleDetailList'
 
 function phaseName(label: string): string {
@@ -45,6 +46,7 @@ export default function RulesPage() {
   const [entryId, setEntryId] = useState<string | null>(null)
   const [complexity, setComplexity] = useState<GameLoopComplexity>('basic')
   const [drilldown, setDrilldown] = useState<GameLoopDrilldownId | null>(null)
+  const [showImpulse, setShowImpulse] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -77,6 +79,7 @@ export default function RulesPage() {
     setSelectedId(id)
     setEntryId(null)
     setDrilldown(null)
+    setShowImpulse(false)
   }
 
   const openEntry = (candidate: GameLoopState) => {
@@ -122,25 +125,39 @@ export default function RulesPage() {
             {complexity === 'basic' ? 'Core flow for learning and play.' : 'Full timing detail for experienced players and judges.'}
           </p>
         </div>
-        <div className="flex rounded-xl border border-line bg-ground p-1" role="group" aria-label="Rules complexity">
-          {(['basic', 'advanced'] as const).map((level) => (
-            <button
-              type="button"
-              key={level}
-              aria-pressed={complexity === level}
-              onClick={() => setComplexity(level)}
-              className={
-                'rounded-lg px-3 py-1.5 text-sm transition ' +
-                (complexity === level ? 'bg-blood text-white' : 'text-ink-muted hover:text-ink')
-              }
-            >
-              {level === 'basic' ? 'Basic' : 'Advanced / Judge'}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex rounded-xl border border-line bg-ground p-1" role="group" aria-label="Rules complexity">
+            {(['basic', 'advanced'] as const).map((level) => (
+              <button
+                type="button"
+                key={level}
+                aria-pressed={complexity === level}
+                onClick={() => setComplexity(level)}
+                className={
+                  'rounded-lg px-3 py-1.5 text-sm transition ' +
+                  (complexity === level ? 'bg-blood text-white' : 'text-ink-muted hover:text-ink')
+                }
+              >
+                {level === 'basic' ? 'Basic' : 'Advanced / Judge'}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDrilldown(null)
+              setShowImpulse(true)
+            }}
+            className="rounded-lg border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm text-gold hover:border-gold"
+          >
+            Impulse &amp; priority order →
+          </button>
         </div>
       </section>
 
-      {drilldown ? (
+      {showImpulse ? (
+        <ImpulseOrderWidget gameLoop={gameLoop} onBack={() => setShowImpulse(false)} />
+      ) : drilldown ? (
         <GameLoopDrilldown
           gameLoop={gameLoop}
           id={drilldown}

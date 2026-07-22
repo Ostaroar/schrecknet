@@ -296,6 +296,71 @@ export function listVisibleTransitions(
   )
 }
 
+export type ImpulseContext = 'combat' | 'directed_single' | 'directed_set' | 'undirected'
+
+export const IMPULSE_CONTEXTS: { id: ImpulseContext; label: string }[] = [
+  { id: 'combat', label: 'Combat' },
+  { id: 'directed_single', label: 'Directed at one Methuselah' },
+  { id: 'directed_set', label: 'Directed at a set' },
+  { id: 'undirected', label: 'Undirected' },
+]
+
+export interface ImpulseSeat {
+  seat: number
+  role: 'acting' | 'defender' | 'targeted_clockwise' | 'clockwise_others' | 'prey' | 'predator'
+}
+
+const IMPULSE_SEAT_COUNT = 5
+const IMPULSE_DEFENDER_SEAT = 3
+const IMPULSE_SET_TARGET_SEATS = [2, 4]
+const IMPULSE_PREY_SEAT = 1
+const IMPULSE_PREDATOR_SEAT = 4
+
+function clockwiseAfter(startSeat: number, exclude: Set<number>): number[] {
+  const seq: number[] = []
+  for (let offset = 1; offset <= IMPULSE_SEAT_COUNT; offset++) {
+    const seat = (startSeat + offset) % IMPULSE_SEAT_COUNT
+    if (seat === startSeat) break
+    if (!exclude.has(seat)) seq.push(seat)
+  }
+  return seq
+}
+
+export function getImpulseOrder(gameLoop: GameLoop, context: ImpulseContext): GameLoopImpulseOrder | undefined {
+  return gameLoop.impulseOrders.find((order) => order.contexts.includes(context))
+}
+
+export function computeImpulseSeatOrder(order: GameLoopImpulseOrder): ImpulseSeat[] {
+  const seq: ImpulseSeat[] = [{ seat: 0, role: 'acting' }]
+  const exclude = new Set([0])
+
+  for (const token of order.afterActing) {
+    if (token === 'clockwise_others') {
+      const last = seq[seq.length - 1].seat
+      for (const seat of clockwiseAfter(last, exclude)) {
+        seq.push({ seat, role: 'clockwise_others' })
+        exclude.add(seat)
+      }
+    } else if (token === 'defender') {
+      seq.push({ seat: IMPULSE_DEFENDER_SEAT, role: 'defender' })
+      exclude.add(IMPULSE_DEFENDER_SEAT)
+    } else if (token === 'targeted_clockwise') {
+      for (const seat of IMPULSE_SET_TARGET_SEATS) {
+        seq.push({ seat, role: 'targeted_clockwise' })
+        exclude.add(seat)
+      }
+    } else if (token === 'prey') {
+      seq.push({ seat: IMPULSE_PREY_SEAT, role: 'prey' })
+      exclude.add(IMPULSE_PREY_SEAT)
+    } else if (token === 'predator') {
+      seq.push({ seat: IMPULSE_PREDATOR_SEAT, role: 'predator' })
+      exclude.add(IMPULSE_PREDATOR_SEAT)
+    }
+  }
+
+  return seq
+}
+
 export function listDrilldownBranches(gameLoop: GameLoop, id: GameLoopDrilldownId): GameLoopBranch[] {
   const definition = getDrilldownDefinition(id)
   const sourceIds = new Set(
