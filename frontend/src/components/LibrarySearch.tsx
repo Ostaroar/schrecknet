@@ -43,18 +43,19 @@ import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 import { CardTypeSummary, DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
+import { useUiStrings } from '../lib/i18n'
 
 type DisciplineMode = 'off' | 'selected'
 
-function requirementLabel(value: string): string {
-  if (value === 'titled_specific') return 'Titled (specific)'
-  if (value === 'titled') return 'Titled (any)'
-  if (value === 'non-titled') return 'Non-titled'
+function requirementLabel(value: string, ui: ReturnType<typeof useUiStrings>['librarySearch']): string {
+  if (value === 'titled_specific') return ui.titledSpecific
+  if (value === 'titled') return ui.titledAny
+  if (value === 'non-titled') return ui.nonTitled
   return value.replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 interface RequirementControlsProps {
-  label: 'Sect' | 'Title'
+  label: string
   options: string[]
   selected: Record<string, boolean>
   logic: RequirementLogic
@@ -76,13 +77,14 @@ function RequirementControls({
   onNoRequirementChange,
   onClear,
 }: RequirementControlsProps) {
+  const ui = useUiStrings()
   const hasSelected = Object.values(selected).some(Boolean)
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
-      <span className="text-ink-dim">{label} requirement</span>
+      <span className="text-ink-dim">{label} {ui.librarySearch.requirement}</span>
       {options.map((value) => {
         const active = selected[value] ?? false
-        const optionLabel = requirementLabel(value)
+        const optionLabel = requirementLabel(value, ui.librarySearch)
         return (
           <button
             key={value}
@@ -113,15 +115,15 @@ function RequirementControls({
               : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
           }
         >
-          Not required
+          {ui.librarySearch.notRequired}
         </button>
       )}
       <div className="flex overflow-hidden rounded-lg border border-line">
         {(
           [
-            ['all', 'All'],
-            ['any', 'Any'],
-            ['none', 'Not'],
+            ['all', ui.search.all],
+            ['any', ui.search.any],
+            ['none', ui.search.not],
           ] as [RequirementLogic, string][]
         ).map(([value, logicLabel]) => (
           <button
@@ -147,7 +149,7 @@ function RequirementControls({
           onClick={onClear}
           className="text-ink-dim underline hover:text-ink-muted"
         >
-          clear
+          {ui.search.clear}
         </button>
       )}
     </div>
@@ -165,6 +167,7 @@ function CostPill({ blood, pool }: { blood: string | null; pool: string | null }
 }
 
 export default function LibrarySearch() {
+  const ui = useUiStrings()
   const [text, setText] = useState('')
   const [textMode, setTextMode] = useState<TextMode>('any')
   const [textRegex, setTextRegex] = useState(false)
@@ -393,7 +396,7 @@ export default function LibrarySearch() {
   if (status === 'error') {
     return (
       <div className="rounded-lg border border-line bg-surface p-4 text-sm text-blood-hi">
-        Couldn't load the card database: {error}
+        {ui.search.loadError}: {error}
       </div>
     )
   }
@@ -404,7 +407,7 @@ export default function LibrarySearch() {
       <div className="flex flex-wrap gap-3">
         <input
           className="min-w-48 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder={semanticMode ? 'Describe a card concept (English)' : 'Name / text'}
+          placeholder={semanticMode ? ui.search.semanticPrompt : ui.search.nameText}
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={status === 'loading'}
@@ -412,9 +415,9 @@ export default function LibrarySearch() {
         <div className="flex overflow-hidden rounded-lg border border-line">
           {(
             [
-              ['any', 'All'],
-              ['name', 'Name'],
-              ['text', 'Text'],
+              ['any', ui.search.all],
+              ['name', ui.search.name],
+              ['text', ui.search.text],
             ] as [TextMode, string][]
           ).map(([mode, label]) => (
             <button
@@ -451,7 +454,7 @@ export default function LibrarySearch() {
             (onlyOwned ? 'border-gold bg-gold/10 text-gold' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
           }
         >
-          Only owned
+          {ui.search.onlyOwned}
         </button>
         <SemanticModeControl
           enabled={semanticMode}
@@ -477,7 +480,7 @@ export default function LibrarySearch() {
           onChange={(e) => setCardType(e.target.value || null)}
           disabled={status === 'loading'}
         >
-          <option value="">Any type</option>
+          <option value="">{ui.librarySearch.anyType}</option>
           {types.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -490,7 +493,7 @@ export default function LibrarySearch() {
           onChange={(e) => setClan(e.target.value || null)}
           disabled={status === 'loading'}
         >
-          <option value="">Any clan requirement</option>
+          <option value="">{ui.librarySearch.anyClanRequirement}</option>
           {clans.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -498,7 +501,7 @@ export default function LibrarySearch() {
           ))}
         </select>
         <div className="flex items-center gap-1 text-sm text-ink-dim">
-          <span>requires cap</span>
+          <span>{ui.librarySearch.requiresCapacity}</span>
           <select
             aria-label="Capacity requirement comparison"
             value={capacityRequirementMode}
@@ -523,7 +526,7 @@ export default function LibrarySearch() {
           />
         </div>
         <div className="flex items-center gap-1 text-sm text-ink-dim">
-          <span>blood</span>
+          <span>{ui.librarySearch.blood}</span>
           <select
             aria-label="Blood cost comparison"
             value={bloodCostMode}
@@ -543,7 +546,7 @@ export default function LibrarySearch() {
             value={bloodCost ?? ''}
             onChange={(e) => setBloodCost(e.target.value ? Number(e.target.value) : null)}
           />
-          <span>pool</span>
+          <span>{ui.librarySearch.pool}</span>
           <select
             aria-label="Pool cost comparison"
             value={poolCostMode}
@@ -584,7 +587,7 @@ export default function LibrarySearch() {
         />
         <input
           className="min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder="Artist"
+          placeholder={ui.search.artist}
           value={artist ?? ''}
           onChange={(e) => setArtist(e.target.value || null)}
           disabled={status === 'loading'}
@@ -617,20 +620,20 @@ export default function LibrarySearch() {
             onClick={() => setDiscModes({})}
             className="ml-1 text-xs text-ink-dim underline hover:text-ink-muted"
           >
-            clear
+            {ui.search.clear}
           </button>
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-ink-dim">Discipline logic</span>
+        <span className="text-ink-dim">{ui.librarySearch.disciplineLogic}</span>
         <div className="flex overflow-hidden rounded-lg border border-line">
           {(
             [
-              ['all', 'All'],
-              ['any', 'Any'],
-              ['none', 'Not'],
-              ['only', 'Only'],
+              ['all', ui.search.all],
+              ['any', ui.search.any],
+              ['none', ui.search.not],
+              ['only', ui.search.only],
             ] as [LibraryDisciplineLogic, string][]
           ).map(([logic, label]) => (
             <button
@@ -660,12 +663,12 @@ export default function LibrarySearch() {
               : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
           }
         >
-          No requirement
+          {ui.librarySearch.noRequirement}
         </button>
       </div>
 
       <RequirementControls
-        label="Sect"
+        label={ui.librarySearch.sect}
         options={allSectRequirements}
         selected={sectRequirements}
         logic={sectRequirementLogic}
@@ -682,7 +685,7 @@ export default function LibrarySearch() {
       />
 
       <RequirementControls
-        label="Title"
+        label={ui.librarySearch.title}
         options={allTitleRequirements}
         selected={titleRequirements}
         logic={titleRequirementLogic}
@@ -700,27 +703,27 @@ export default function LibrarySearch() {
       />
 
       {status === 'loading' ? (
-        <p className="text-sm text-ink-dim">Loading card database…</p>
+        <p className="text-sm text-ink-dim">{ui.search.loading}</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
-              {searchError || `${displayResults.length}${semanticMode ? ' semantic' : ''} library cards`}
+              {searchError || ui.librarySearch.results(displayResults.length, semanticMode)}
             </p>
             <label className="flex items-center gap-2 text-xs text-ink-dim">
-              Sort
+              {ui.search.sort}
               <select
                 aria-label="Sort library results"
                 value={sort}
                 onChange={(event) => setSort(event.target.value as LibrarySort | 'relevance')}
                 className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink"
               >
-                {semanticMode && <option value="relevance">Relevance</option>}
-                <option value="requirement">Clan / discipline</option>
-                <option value="cost_desc">Cost high–low</option>
-                <option value="cost_asc">Cost low–high</option>
-                <option value="name">Name</option>
-                <option value="type">Type</option>
+                {semanticMode && <option value="relevance">{ui.search.relevance}</option>}
+                <option value="requirement">{ui.librarySearch.sortRequirement}</option>
+                <option value="cost_desc">{ui.librarySearch.sortCostDesc}</option>
+                <option value="cost_asc">{ui.librarySearch.sortCostAsc}</option>
+                <option value="name">{ui.librarySearch.sortName}</option>
+                <option value="type">{ui.librarySearch.sortType}</option>
               </select>
             </label>
           </div>
@@ -740,7 +743,7 @@ export default function LibrarySearch() {
                       {c.name}
                       {semanticMode && 'semanticScore' in c && (
                         <span className="ml-2 font-mono text-[10px] text-gold">
-                          similarity {c.semanticScore.toFixed(3)}
+                          {ui.librarySearch.similarity} {c.semanticScore.toFixed(3)}
                         </span>
                       )}
                       <span className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
@@ -770,8 +773,8 @@ export default function LibrarySearch() {
             {displayResults.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-ink-dim">
                 {semanticMode && !text.trim()
-                  ? 'Describe a concept to search the V5 library.'
-                  : 'No cards match those filters.'}
+                  ? ui.librarySearch.semanticEmpty
+                  : ui.search.noMatches}
               </p>
             )}
           </div>

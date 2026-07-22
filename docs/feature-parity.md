@@ -32,6 +32,11 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       full card pages and inline details with per-card English fallback; options
       are derived from the V5 data at build time (currently EN/ES/FR, with
       PT-BR appearing automatically when the source provides it) ✎
+- 🌓 Interface localization — navigation, shell, Help/About, and primary Crypt/
+      Library search controls and result status are translated in EN/ES/FR via
+      one typed catalog; browser smoke coverage switches languages on both
+      search routes. Decks, inventory, precons, rules, and secondary tooltips/
+      accessibility labels remain English-only follow-up work.
 - ☑ Responsive mobile layout — measured at 320px and 360px across Crypt,
       Library, Decks (including a populated editor), Inventory, Precons,
       Rules, Help, About, and Card Detail; CI rejects viewport overflow and

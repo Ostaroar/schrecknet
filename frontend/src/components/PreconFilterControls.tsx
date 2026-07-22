@@ -3,6 +3,7 @@ import {
   defaultSetPrint,
   type SetPrintMode,
 } from '../lib/setFilter'
+import { useUiStrings } from '../lib/i18n'
 
 interface PreconFilterControlsProps {
   options: PreconOption[]
@@ -32,6 +33,7 @@ export default function PreconFilterControls({
   onValueChange,
   onPrintingChange,
 }: PreconFilterControlsProps) {
+  const ui = useUiStrings().search
   const selected = new Set(value.map(selectionKey))
   const sets = [...new Set(options.map((option) => option.set))]
 
@@ -48,16 +50,17 @@ export default function PreconFilterControls({
   }
 
   return (
-    <fieldset className="grid min-w-0 gap-1.5" aria-label="Precon filters">
+    <fieldset className="grid min-w-0 gap-1.5" aria-label={ui.preconFilters}>
       <div className="flex min-w-0 flex-wrap gap-1">
         <select
-          aria-label="Add precon"
+          data-filter="precon-add"
+          aria-label={ui.addPrecon}
           value=""
           onChange={(event) => add(event.target.value)}
           disabled={disabled}
           className="min-w-48 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
         >
-          <option value="">Any precon / add another…</option>
+          <option value="">{ui.anyPrecon}</option>
           {sets.map((set) => (
             <optgroup key={set} label={set}>
               {options
@@ -72,28 +75,29 @@ export default function PreconFilterControls({
         </select>
         {value.length > 0 && (
           <select
-            aria-label="Precon printing relation"
+            data-filter="precon-printing"
+            aria-label={ui.printing}
             title={PRINT_TITLES[printing]}
             value={printing}
             onChange={(event) => onPrintingChange(event.target.value as SetPrintMode)}
             className="rounded-lg border border-line bg-surface px-2 py-2 text-xs text-ink"
           >
-            <option value="any">Any printing</option>
-            <option value="only">Only in</option>
-            <option value="first">First print</option>
-            <option value="reprint">Reprint</option>
+            <option value="any">{ui.anyPrinting}</option>
+            <option value="only">{ui.onlyIn}</option>
+            <option value="first">{ui.firstPrint}</option>
+            <option value="reprint">{ui.reprint}</option>
           </select>
         )}
       </div>
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1" aria-label="Selected precons">
+        <div className="flex flex-wrap gap-1" aria-label={ui.selectedPrecons}>
           {value.map((selection) => (
             <button
               key={selectionKey(selection)}
               type="button"
               onClick={() => remove(selection)}
-              aria-label={`Remove ${selection.precon} from ${selection.set}`}
-              title={`Remove ${selection.precon} from ${selection.set}`}
+              aria-label={ui.removePrecon(selection.precon, selection.set)}
+              title={ui.removePrecon(selection.precon, selection.set)}
               className="rounded-full border border-line bg-raised px-2.5 py-1 text-[10px] text-ink-muted hover:border-blood hover:text-ink"
             >
               {selection.precon} · {selection.set} ×

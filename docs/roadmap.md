@@ -107,10 +107,12 @@ docs/feature-parity.md's scope note).
 - ☑ Responsive/touch layout: no horizontal page overflow across ten primary
   routes at 320px/360px, including a populated deck editor; coarse-pointer
   controls and icon buttons have CI-enforced 40px targets
-- 🌓 UI localization: nav, header, footer, and Help/About pages are localized in
-  en/es/fr via `frontend/src/lib/i18n.ts`, reusing the existing card-text language
-  selector (no new UI control). Search filters, deck builder, and other
-  components still render English-only strings — follow-up, not blocking.
+- 🌓 UI localization: nav, header, footer, Help/About, and the primary Crypt +
+  Library search controls/results are localized in en/es/fr through the typed
+  `frontend/src/lib/i18n.ts` contract, reusing the existing card-text language
+  selector (no new UI control). A browser smoke contract exercises both search
+  surfaces in Spanish and French. Deck builder, inventory, precons, rules, and
+  secondary accessibility/tool-tip text remain follow-up work.
   Card-text translation selection is complete separately using the pipeline's
   `translations` table
 - ☑ MCP `search_crypt` + `search_library` tools live (rmcp, Streamable HTTP at

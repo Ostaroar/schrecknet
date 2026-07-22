@@ -1,3 +1,5 @@
+import { useCardLanguage } from './cardLanguage'
+
 export type UiLanguage = 'en' | 'es' | 'fr'
 
 export const UI_LANGUAGES: UiLanguage[] = ['en', 'es', 'fr']
@@ -61,6 +63,102 @@ export interface UiStrings {
     creditsCardData: string
     creditsRights: string
   }
+  search: {
+    nameText: string
+    semanticPrompt: string
+    all: string
+    any: string
+    not: string
+    only: string
+    name: string
+    text: string
+    artist: string
+    clear: string
+    loading: string
+    loadError: string
+    noMatches: string
+    sort: string
+    relevance: string
+    onlyOwned: string
+    traits: string
+    allTraitsRequired: string
+    set: string
+    anySet: string
+    setAge: string
+    inSet: string
+    orNewer: string
+    orOlder: string
+    notNewer: string
+    notOlder: string
+    printing: string
+    anyPrinting: string
+    onlyIn: string
+    firstPrint: string
+    reprint: string
+    preconFilters: string
+    addPrecon: string
+    anyPrecon: string
+    selectedPrecons: string
+    removePrecon: (precon: string, set: string) => string
+    semantic: string
+    semanticTitle: string
+    semanticIdle: string
+    semanticLoading: string
+    semanticDownloading: string
+    semanticReady: string
+    semanticUnavailable: (error: string) => string
+    retry: string
+    removeModel: string
+  }
+  cryptSearch: {
+    anyClan: string
+    anyTitle: string
+    nonTitled: string
+    votes: string
+    anyVotes: string
+    noVotes: string
+    votesAtLeast: (count: number) => string
+    group: string
+    capacity: string
+    minimum: string
+    maximum: string
+    sect: string
+    orDiscipline: string
+    choose: string
+    results: (count: number, semantic: boolean) => string
+    semanticEmpty: string
+    sortCapacityDesc: string
+    sortCapacityAsc: string
+    sortClan: string
+    sortGroup: string
+    sortName: string
+    sortSect: string
+    similarity: string
+  }
+  librarySearch: {
+    anyType: string
+    anyClanRequirement: string
+    requiresCapacity: string
+    blood: string
+    pool: string
+    disciplineLogic: string
+    noRequirement: string
+    sect: string
+    title: string
+    results: (count: number, semantic: boolean) => string
+    semanticEmpty: string
+    sortRequirement: string
+    sortCostDesc: string
+    sortCostAsc: string
+    sortName: string
+    sortType: string
+    similarity: string
+    requirement: string
+    notRequired: string
+    titledSpecific: string
+    titledAny: string
+    nonTitled: string
+  }
 }
 
 const en: UiStrings = {
@@ -118,6 +216,15 @@ const en: UiStrings = {
     creditsCardData: '. The source code is available under the MIT license.',
     creditsRights:
       'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com. SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive; it is not official World of Darkness material.',
+  },
+  search: {
+    nameText: 'Name / text', semanticPrompt: 'Describe a card concept (English)', all: 'All', any: 'Any', not: 'Not', only: 'Only', name: 'Name', text: 'Text', artist: 'Artist', clear: 'clear', loading: 'Loading card database…', loadError: "Couldn't load the card database", noMatches: 'No cards match those filters.', sort: 'Sort', relevance: 'Relevance', onlyOwned: 'Only owned', traits: 'Traits', allTraitsRequired: 'all selected traits required', set: 'Set', anySet: 'Any set', setAge: 'Set age relation', inSet: 'In set', orNewer: 'Or newer', orOlder: 'Or older', notNewer: 'Not newer', notOlder: 'Not older', printing: 'Printing relation', anyPrinting: 'Any printing', onlyIn: 'Only in', firstPrint: 'First print', reprint: 'Reprint', preconFilters: 'Precon filters', addPrecon: 'Add precon', anyPrecon: 'Any precon / add another…', selectedPrecons: 'Selected precons', removePrecon: (precon, set) => `Remove ${precon} from ${set}`, semantic: 'Semantic', semanticTitle: 'Find cards by English concept using the local offline model', semanticIdle: 'Describe an English card concept. First use downloads about 46 MB (model + runtime); queries stay on this device.', semanticLoading: 'Preparing the local semantic model…', semanticDownloading: 'Downloading local model', semanticReady: 'Local semantic model ready. Results are cosine-ranked; the score is similarity, not a probability.', semanticUnavailable: (error) => `Semantic model unavailable: ${error}`, retry: 'Retry', removeModel: 'Remove local model',
+  },
+  cryptSearch: {
+    anyClan: 'Any clan', anyTitle: 'Any title', nonTitled: 'Non-titled', votes: 'Votes', anyVotes: 'Any votes', noVotes: 'No votes', votesAtLeast: (count) => `${count}+ votes`, group: 'Group', capacity: 'cap', minimum: 'min', maximum: 'max', sect: 'Sect', orDiscipline: '+ OR discipline', choose: 'Choose…', results: (count, semantic) => `${count}${semantic ? ' semantic' : ''} crypt cards`, semanticEmpty: 'Describe a concept to search the V5 crypt.', sortCapacityDesc: 'Capacity high–low', sortCapacityAsc: 'Capacity low–high', sortClan: 'Clan', sortGroup: 'Group', sortName: 'Name', sortSect: 'Sect', similarity: 'similarity',
+  },
+  librarySearch: {
+    anyType: 'Any type', anyClanRequirement: 'Any clan requirement', requiresCapacity: 'requires cap', blood: 'blood', pool: 'pool', disciplineLogic: 'Discipline logic', noRequirement: 'No requirement', sect: 'Sect', title: 'Title', results: (count, semantic) => `${count}${semantic ? ' semantic' : ''} library cards`, semanticEmpty: 'Describe a concept to search the V5 library.', sortRequirement: 'Clan / discipline', sortCostDesc: 'Cost high–low', sortCostAsc: 'Cost low–high', sortName: 'Name', sortType: 'Type', similarity: 'similarity', requirement: 'requirement', notRequired: 'Not required', titledSpecific: 'Titled (specific)', titledAny: 'Titled (any)', nonTitled: 'Non-titled',
   },
 }
 
@@ -181,6 +288,15 @@ const es: UiStrings = {
     creditsRights:
       'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com. SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive; no es material oficial de World of Darkness.',
   },
+  search: {
+    nameText: 'Nombre / texto', semanticPrompt: 'Describe un concepto de carta (en inglés)', all: 'Todos', any: 'Cualquiera', not: 'No', only: 'Solo', name: 'Nombre', text: 'Texto', artist: 'Artista', clear: 'limpiar', loading: 'Cargando la base de cartas…', loadError: 'No se pudo cargar la base de cartas', noMatches: 'Ninguna carta coincide con esos filtros.', sort: 'Ordenar', relevance: 'Relevancia', onlyOwned: 'Solo propias', traits: 'Rasgos', allTraitsRequired: 'se requieren todos los rasgos seleccionados', set: 'Edición', anySet: 'Cualquier edición', setAge: 'Relación de edición', inSet: 'En la edición', orNewer: 'O más nueva', orOlder: 'O más antigua', notNewer: 'No más nueva', notOlder: 'No más antigua', printing: 'Relación de impresión', anyPrinting: 'Cualquier impresión', onlyIn: 'Solo en', firstPrint: 'Primera impresión', reprint: 'Reimpresión', preconFilters: 'Filtros de premontados', addPrecon: 'Añadir premontado', anyPrecon: 'Cualquier premontado / añadir otro…', selectedPrecons: 'Premontados seleccionados', removePrecon: (precon, set) => `Quitar ${precon} de ${set}`, semantic: 'Semántica', semanticTitle: 'Busca cartas por concepto en inglés con el modelo local sin conexión', semanticIdle: 'Describe un concepto de carta en inglés. El primer uso descarga unos 46 MB; las consultas permanecen en este dispositivo.', semanticLoading: 'Preparando el modelo semántico local…', semanticDownloading: 'Descargando el modelo local', semanticReady: 'Modelo semántico local listo. Los resultados se ordenan por similitud coseno; la puntuación no es una probabilidad.', semanticUnavailable: (error) => `Modelo semántico no disponible: ${error}`, retry: 'Reintentar', removeModel: 'Eliminar modelo local',
+  },
+  cryptSearch: {
+    anyClan: 'Cualquier clan', anyTitle: 'Cualquier título', nonTitled: 'Sin título', votes: 'Votos', anyVotes: 'Cualquier voto', noVotes: 'Sin votos', votesAtLeast: (count) => `${count}+ votos`, group: 'Grupo', capacity: 'cap', minimum: 'mín', maximum: 'máx', sect: 'Secta', orDiscipline: '+ disciplina O', choose: 'Elegir…', results: (count, semantic) => `${count} cartas de cripta${semantic ? ' semánticas' : ''}`, semanticEmpty: 'Describe un concepto para buscar en la cripta V5.', sortCapacityDesc: 'Capacidad mayor–menor', sortCapacityAsc: 'Capacidad menor–mayor', sortClan: 'Clan', sortGroup: 'Grupo', sortName: 'Nombre', sortSect: 'Secta', similarity: 'similitud',
+  },
+  librarySearch: {
+    anyType: 'Cualquier tipo', anyClanRequirement: 'Cualquier requisito de clan', requiresCapacity: 'requiere cap', blood: 'sangre', pool: 'pool', disciplineLogic: 'Lógica de disciplinas', noRequirement: 'Sin requisito', sect: 'Secta', title: 'Título', results: (count, semantic) => `${count} cartas de biblioteca${semantic ? ' semánticas' : ''}`, semanticEmpty: 'Describe un concepto para buscar en la biblioteca V5.', sortRequirement: 'Clan / disciplina', sortCostDesc: 'Coste mayor–menor', sortCostAsc: 'Coste menor–mayor', sortName: 'Nombre', sortType: 'Tipo', similarity: 'similitud', requirement: 'requisito', notRequired: 'No requerido', titledSpecific: 'Con título (específico)', titledAny: 'Con título (cualquiera)', nonTitled: 'Sin título',
+  },
 }
 
 const fr: UiStrings = {
@@ -243,10 +359,23 @@ const fr: UiStrings = {
     creditsRights:
       "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission. Tous droits réservés. Pour plus d'informations, visitez worldofdarkness.com. SchreckNet est un contenu de fans non officiel, non approuvé par et sans affiliation avec Paradox Interactive ; ce n'est pas du matériel officiel World of Darkness.",
   },
+  search: {
+    nameText: 'Nom / texte', semanticPrompt: 'Décrivez un concept de carte (en anglais)', all: 'Tous', any: 'Au moins un', not: 'Exclure', only: 'Seulement', name: 'Nom', text: 'Texte', artist: 'Artiste', clear: 'effacer', loading: 'Chargement de la base de cartes…', loadError: 'Impossible de charger la base de cartes', noMatches: 'Aucune carte ne correspond à ces filtres.', sort: 'Trier', relevance: 'Pertinence', onlyOwned: 'Possédées seulement', traits: 'Traits', allTraitsRequired: 'tous les traits sélectionnés sont requis', set: 'Extension', anySet: 'Toute extension', setAge: "Relation d'extension", inSet: "Dans l'extension", orNewer: 'Ou plus récente', orOlder: 'Ou plus ancienne', notNewer: 'Pas plus récente', notOlder: 'Pas plus ancienne', printing: "Relation d'impression", anyPrinting: 'Toute impression', onlyIn: 'Seulement dans', firstPrint: 'Première impression', reprint: 'Réimpression', preconFilters: 'Filtres de préconstruits', addPrecon: 'Ajouter un préconstruit', anyPrecon: 'Tout préconstruit / en ajouter un…', selectedPrecons: 'Préconstruits sélectionnés', removePrecon: (precon, set) => `Retirer ${precon} de ${set}`, semantic: 'Sémantique', semanticTitle: 'Trouvez des cartes par concept anglais avec le modèle local hors ligne', semanticIdle: 'Décrivez un concept de carte en anglais. La première utilisation télécharge environ 46 Mo ; les requêtes restent sur cet appareil.', semanticLoading: 'Préparation du modèle sémantique local…', semanticDownloading: 'Téléchargement du modèle local', semanticReady: "Le modèle sémantique local est prêt. Les résultats sont classés par similarité cosinus ; le score n'est pas une probabilité.", semanticUnavailable: (error) => `Modèle sémantique indisponible : ${error}`, retry: 'Réessayer', removeModel: 'Supprimer le modèle local',
+  },
+  cryptSearch: {
+    anyClan: 'Tout clan', anyTitle: 'Tout titre', nonTitled: 'Sans titre', votes: 'Voix', anyVotes: 'Toutes voix', noVotes: 'Aucune voix', votesAtLeast: (count) => `${count}+ voix`, group: 'Groupe', capacity: 'cap', minimum: 'min', maximum: 'max', sect: 'Secte', orDiscipline: '+ discipline OU', choose: 'Choisir…', results: (count, semantic) => `${count} cartes de crypte${semantic ? ' sémantiques' : ''}`, semanticEmpty: 'Décrivez un concept pour chercher dans la crypte V5.', sortCapacityDesc: 'Capacité décroissante', sortCapacityAsc: 'Capacité croissante', sortClan: 'Clan', sortGroup: 'Groupe', sortName: 'Nom', sortSect: 'Secte', similarity: 'similarité',
+  },
+  librarySearch: {
+    anyType: 'Tout type', anyClanRequirement: 'Toute exigence de clan', requiresCapacity: 'requiert cap', blood: 'sang', pool: 'pool', disciplineLogic: 'Logique des disciplines', noRequirement: 'Sans exigence', sect: 'Secte', title: 'Titre', results: (count, semantic) => `${count} cartes de bibliothèque${semantic ? ' sémantiques' : ''}`, semanticEmpty: 'Décrivez un concept pour chercher dans la bibliothèque V5.', sortRequirement: 'Clan / discipline', sortCostDesc: 'Coût décroissant', sortCostAsc: 'Coût croissant', sortName: 'Nom', sortType: 'Type', similarity: 'similarité', requirement: 'exigence', notRequired: 'Non requis', titledSpecific: 'Titré (spécifique)', titledAny: 'Titré (tout)', nonTitled: 'Sans titre',
+  },
 }
 
 const STRINGS: Record<UiLanguage, UiStrings> = { en, es, fr }
 
 export function getUiStrings(language: string): UiStrings {
   return STRINGS[resolveUiLanguage(language)]
+}
+
+export function useUiStrings(): UiStrings {
+  return getUiStrings(useCardLanguage().language)
 }

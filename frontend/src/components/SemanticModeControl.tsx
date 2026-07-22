@@ -1,4 +1,5 @@
 import type { SemanticProgress } from '../lib/semanticSearch'
+import { useUiStrings } from '../lib/i18n'
 
 interface Props {
   enabled: boolean
@@ -19,11 +20,12 @@ export default function SemanticModeControl({
   onRetry,
   onRemove,
 }: Props) {
+  const ui = useUiStrings().search
   return (
     <>
       <button
         onClick={onToggle}
-        title="Find cards by English concept using the local offline model"
+        title={ui.semanticTitle}
         aria-pressed={enabled}
         className={
           'rounded-lg border px-2.5 py-2 text-xs font-medium ' +
@@ -32,7 +34,7 @@ export default function SemanticModeControl({
             : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
         }
       >
-        ◇ Semantic
+        ◇ {ui.semantic}
       </button>
 
       {enabled && (
@@ -40,11 +42,11 @@ export default function SemanticModeControl({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p>
               {progress.phase === 'idle' &&
-                'Describe an English card concept. First use downloads about 46 MB (model + runtime); queries stay on this device.'}
-              {progress.phase === 'loading' && 'Preparing the local semantic model…'}
+                ui.semanticIdle}
+              {progress.phase === 'loading' && ui.semanticLoading}
               {progress.phase === 'downloading' && (
                 <>
-                  Downloading local model
+                  {ui.semanticDownloading}
                   {typeof progress.percent === 'number' ? ` · ${Math.round(progress.percent)}%` : ''}
                   {typeof progress.loaded === 'number' && typeof progress.total === 'number'
                     ? ` · ${megabytes(progress.loaded)} / ${megabytes(progress.total)}`
@@ -52,18 +54,18 @@ export default function SemanticModeControl({
                 </>
               )}
               {progress.phase === 'ready' &&
-                'Local semantic model ready. Results are cosine-ranked; the score is similarity, not a probability.'}
-              {progress.phase === 'error' && `Semantic model unavailable: ${progress.error ?? 'unknown error'}`}
+                ui.semanticReady}
+              {progress.phase === 'error' && ui.semanticUnavailable(progress.error ?? 'unknown error')}
             </p>
             <span className="flex gap-3">
               {progress.phase === 'error' && (
                 <button onClick={onRetry} className="text-blood-hi underline hover:text-ink">
-                  Retry
+                  {ui.retry}
                 </button>
               )}
               {progress.phase === 'ready' && (
                 <button onClick={onRemove} className="text-ink-dim underline hover:text-ink">
-                  Remove local model
+                  {ui.removeModel}
                 </button>
               )}
             </span>

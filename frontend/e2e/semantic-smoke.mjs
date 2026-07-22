@@ -164,11 +164,9 @@ try {
 
   async function selectPreconFixture(preconFixture) {
     for (const selection of preconFixture.selections) {
-      await page.getByLabel('Add precon', { exact: true }).selectOption(selection.value)
+      await page.locator('[data-filter="precon-add"]').selectOption(selection.value)
     }
-    await page
-      .getByLabel('Precon printing relation', { exact: true })
-      .selectOption(preconFixture.printing)
+    await page.locator('[data-filter="precon-printing"]').selectOption(preconFixture.printing)
   }
 
   // Golden exact-search parity for the VDB composition grammar. This checks
@@ -459,11 +457,12 @@ try {
 
   await page.goto(`${baseUrl}/#/library`, { waitUntil: 'domcontentloaded' })
   await page.getByLabel('Card text language', { exact: true }).selectOption('es')
-  await page.getByPlaceholder('Name / text').fill('Conditioning')
+  await page.getByPlaceholder('Nombre / texto').fill('Conditioning')
   await waitForExactIds([100401])
   await page.locator('main button[data-card-id="100401"]').click()
   await page.locator('[data-card-text-symbol="dom"]').waitFor()
   await page.getByText('Card text: Español', { exact: true }).waitFor()
+  await page.getByLabel('Card text language', { exact: true }).selectOption('en')
 
   // The semantic golden queries intentionally start with no structured
   // filters. Reload to discard the exact-search component state above while

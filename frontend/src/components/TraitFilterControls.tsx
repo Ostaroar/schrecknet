@@ -1,4 +1,5 @@
 import { traitLabel } from '../lib/cardTraits'
+import { useUiStrings } from '../lib/i18n'
 
 interface TraitFilterControlsProps {
   options: string[]
@@ -11,10 +12,11 @@ export default function TraitFilterControls({
   selected,
   onToggle,
 }: TraitFilterControlsProps) {
+  const ui = useUiStrings().search
   if (options.length === 0) return null
   return (
-    <div className="flex flex-wrap items-center gap-1.5" aria-label="Card traits">
-      <span className="mr-1 text-xs text-ink-dim">Traits</span>
+    <div className="flex flex-wrap items-center gap-1.5" aria-label={ui.traits}>
+      <span className="mr-1 text-xs text-ink-dim">{ui.traits}</span>
       {options.map((trait) => {
         const active = selected.includes(trait)
         return (
@@ -36,7 +38,7 @@ export default function TraitFilterControls({
         )
       })}
       {selected.length > 0 && (
-        <span className="ml-1 text-[11px] text-ink-dim">all selected traits required</span>
+        <span className="ml-1 text-[11px] text-ink-dim">{ui.allTraitsRequired}</span>
       )}
     </div>
   )

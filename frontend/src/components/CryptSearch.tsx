@@ -41,12 +41,14 @@ import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 import { DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
+import { useUiStrings } from '../lib/i18n'
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
 type OrDisciplineGroup = Array<DisciplineRequirement | null>
 
 export default function CryptSearch() {
+  const ui = useUiStrings()
   const [text, setText] = useState('')
   const [textMode, setTextMode] = useState<TextMode>('any')
   const [textRegex, setTextRegex] = useState(false)
@@ -301,7 +303,7 @@ export default function CryptSearch() {
   if (status === 'error') {
     return (
       <div className="rounded-lg border border-line bg-surface p-4 text-sm text-blood-hi">
-        Couldn't load the card database: {error}
+        {ui.search.loadError}: {error}
       </div>
     )
   }
@@ -312,7 +314,7 @@ export default function CryptSearch() {
       <div className="flex flex-wrap gap-3">
         <input
           className="min-w-48 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder={semanticMode ? 'Describe a card concept (English)' : 'Name / text'}
+          placeholder={semanticMode ? ui.search.semanticPrompt : ui.search.nameText}
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={status === 'loading'}
@@ -320,9 +322,9 @@ export default function CryptSearch() {
         <div className="flex overflow-hidden rounded-lg border border-line">
           {(
             [
-              ['any', 'All'],
-              ['name', 'Name'],
-              ['text', 'Text'],
+              ['any', ui.search.all],
+              ['name', ui.search.name],
+              ['text', ui.search.text],
             ] as [TextMode, string][]
           ).map(([mode, label]) => (
             <button
@@ -361,7 +363,7 @@ export default function CryptSearch() {
             (onlyOwned ? 'border-gold bg-gold/10 text-gold' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
           }
         >
-          Only owned
+          {ui.search.onlyOwned}
         </button>
         <SemanticModeControl
           enabled={semanticMode}
@@ -387,7 +389,7 @@ export default function CryptSearch() {
           onChange={(e) => setClan(e.target.value || null)}
           disabled={status === 'loading'}
         >
-          <option value="">Any clan</option>
+          <option value="">{ui.cryptSearch.anyClan}</option>
           {clans.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -400,8 +402,8 @@ export default function CryptSearch() {
           onChange={(e) => setTitle(e.target.value || null)}
           disabled={status === 'loading'}
         >
-          <option value="">Any title</option>
-          <option value="non-titled">Non-titled</option>
+          <option value="">{ui.cryptSearch.anyTitle}</option>
+          <option value="non-titled">{ui.cryptSearch.nonTitled}</option>
           {titles.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -409,24 +411,21 @@ export default function CryptSearch() {
           ))}
         </select>
         <select
-          aria-label="Votes"
+          aria-label={ui.cryptSearch.votes}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={votes ?? ''}
           onChange={(e) => setVotes(e.target.value === '' ? null : Number(e.target.value))}
           disabled={status === 'loading'}
         >
-          <option value="">Any votes</option>
-          <option value="0">No votes</option>
-          <option value="1">1+ votes</option>
-          <option value="2">2+ votes</option>
-          <option value="3">3+ votes</option>
-          <option value="4">4+ votes</option>
+          <option value="">{ui.cryptSearch.anyVotes}</option>
+          <option value="0">{ui.cryptSearch.noVotes}</option>
+          {[1, 2, 3, 4].map((count) => <option key={count} value={count}>{ui.cryptSearch.votesAtLeast(count)}</option>)}
         </select>
         <div
           className="flex items-center overflow-hidden rounded-lg border border-line bg-surface"
           aria-label="Crypt groups"
         >
-          <span className="px-2 text-xs text-ink-dim">Group</span>
+          <span className="px-2 text-xs text-ink-dim">{ui.cryptSearch.group}</span>
           {groups.map((g) => (
             <button
               key={g}
@@ -446,13 +445,13 @@ export default function CryptSearch() {
           ))}
         </div>
         <div className="flex items-center gap-1 text-sm text-ink-dim">
-          cap
+          {ui.cryptSearch.capacity}
           <input
             type="number"
             min={1}
             max={11}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            placeholder="min"
+            placeholder={ui.cryptSearch.minimum}
             value={capacityMin ?? ''}
             onChange={(e) => setCapacityMin(e.target.value ? Number(e.target.value) : null)}
           />
@@ -462,7 +461,7 @@ export default function CryptSearch() {
             min={1}
             max={11}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            placeholder="max"
+            placeholder={ui.cryptSearch.maximum}
             value={capacityMax ?? ''}
             onChange={(e) => setCapacityMax(e.target.value ? Number(e.target.value) : null)}
           />
@@ -487,7 +486,7 @@ export default function CryptSearch() {
         />
         <input
           className="min-w-40 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder="Artist"
+          placeholder={ui.search.artist}
           value={artist ?? ''}
           onChange={(e) => setArtist(e.target.value || null)}
           disabled={status === 'loading'}
@@ -501,7 +500,7 @@ export default function CryptSearch() {
       />
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-xs text-ink-dim">Sect</span>
+        <span className="mr-1 text-xs text-ink-dim">{ui.cryptSearch.sect}</span>
         {sects.map((sect) => (
           <button
             key={sect}
@@ -524,9 +523,9 @@ export default function CryptSearch() {
           <div className="ml-1 flex overflow-hidden rounded-lg border border-line">
             {(
               [
-                ['all', 'All'],
-                ['any', 'Any'],
-                ['none', 'Not'],
+                ['all', ui.search.all],
+                ['any', ui.search.any],
+                ['none', ui.search.not],
               ] as [RequirementLogic, string][]
             ).map(([logic, label]) => (
               <button
@@ -581,7 +580,7 @@ export default function CryptSearch() {
             onClick={() => setDiscModes({})}
             className="ml-1 text-xs text-ink-dim underline hover:text-ink-muted"
           >
-            clear
+            {ui.search.clear}
           </button>
         )}
         <button
@@ -589,7 +588,7 @@ export default function CryptSearch() {
           onClick={() => setOrDisciplineGroups((rows) => [...rows, [null, null]])}
           className="ml-1 rounded border border-dashed border-line px-2 py-1 text-xs text-ink-dim hover:border-blood hover:text-ink-muted"
         >
-          + OR discipline
+          {ui.cryptSearch.orDiscipline}
         </button>
       </div>
 
@@ -613,7 +612,7 @@ export default function CryptSearch() {
                     }
                     className="bg-surface px-2 py-1.5 text-xs text-ink"
                   >
-                    <option value="">Choose…</option>
+                    <option value="">{ui.cryptSearch.choose}</option>
                     {allDisciplines.map((code) => (
                       <option key={code} value={code}>
                         {code.toUpperCase()}
@@ -650,28 +649,28 @@ export default function CryptSearch() {
       )}
 
       {status === 'loading' ? (
-        <p className="text-sm text-ink-dim">Loading card database…</p>
+        <p className="text-sm text-ink-dim">{ui.search.loading}</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className={'text-xs ' + (searchError ? 'text-blood-hi' : 'text-ink-dim')}>
-              {searchError || `${displayResults.length}${semanticMode ? ' semantic' : ''} crypt cards`}
+              {searchError || ui.cryptSearch.results(displayResults.length, semanticMode)}
             </p>
             <label className="flex items-center gap-2 text-xs text-ink-dim">
-              Sort
+              {ui.search.sort}
               <select
                 aria-label="Sort crypt results"
                 value={sort}
                 onChange={(event) => setSort(event.target.value as CryptSort | 'relevance')}
                 className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink"
               >
-                {semanticMode && <option value="relevance">Relevance</option>}
-                <option value="capacity_desc">Capacity high–low</option>
-                <option value="capacity_asc">Capacity low–high</option>
-                <option value="clan">Clan</option>
-                <option value="group">Group</option>
-                <option value="name">Name</option>
-                <option value="sect">Sect</option>
+                {semanticMode && <option value="relevance">{ui.search.relevance}</option>}
+                <option value="capacity_desc">{ui.cryptSearch.sortCapacityDesc}</option>
+                <option value="capacity_asc">{ui.cryptSearch.sortCapacityAsc}</option>
+                <option value="clan">{ui.cryptSearch.sortClan}</option>
+                <option value="group">{ui.cryptSearch.sortGroup}</option>
+                <option value="name">{ui.cryptSearch.sortName}</option>
+                <option value="sect">{ui.cryptSearch.sortSect}</option>
               </select>
             </label>
           </div>
@@ -694,7 +693,7 @@ export default function CryptSearch() {
                       {c.name}
                       {semanticMode && 'semanticScore' in c && (
                         <span className="ml-2 font-mono text-[10px] text-gold">
-                          similarity {c.semanticScore.toFixed(3)}
+                          {ui.cryptSearch.similarity} {c.semanticScore.toFixed(3)}
                         </span>
                       )}
                       <span className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
@@ -722,8 +721,8 @@ export default function CryptSearch() {
             {displayResults.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-ink-dim">
                 {semanticMode && !text.trim()
-                  ? 'Describe a concept to search the V5 crypt.'
-                  : 'No cards match those filters.'}
+                  ? ui.cryptSearch.semanticEmpty
+                  : ui.search.noMatches}
               </p>
             )}
           </div>

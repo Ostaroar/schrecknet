@@ -4,6 +4,7 @@ import {
   type SetAgeMode,
   type SetPrintMode,
 } from '../lib/setFilter'
+import { useUiStrings } from '../lib/i18n'
 
 interface SetFilterControlsProps {
   value: string | null
@@ -41,6 +42,7 @@ export default function SetFilterControls({
   onAgeChange,
   onPrintingChange,
 }: SetFilterControlsProps) {
+  const ui = useUiStrings().search
   const changeSet = (next: string) => {
     onValueChange(next || null)
     if (!next) {
@@ -52,13 +54,13 @@ export default function SetFilterControls({
   return (
     <div className="flex flex-wrap gap-1">
       <select
-        aria-label="Set"
+        aria-label={ui.set}
         className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
         value={value ?? ''}
         onChange={(event) => changeSet(event.target.value)}
         disabled={disabled}
       >
-        <option value="">Any set</option>
+        <option value="">{ui.anySet}</option>
         {sets.map((set) => (
           <option key={set} value={set}>
             {set}
@@ -68,29 +70,29 @@ export default function SetFilterControls({
       {value && (
         <>
           <select
-            aria-label="Set age relation"
+            aria-label={ui.setAge}
             title={AGE_TITLES[age]}
             className="rounded-lg border border-line bg-surface px-2 py-2 text-xs text-ink"
             value={age}
             onChange={(event) => onAgeChange(event.target.value as SetAgeMode)}
           >
-            <option value="exact">In set</option>
-            <option value="or_newer">Or newer</option>
-            <option value="or_older">Or older</option>
-            <option value="not_newer">Not newer</option>
-            <option value="not_older">Not older</option>
+            <option value="exact">{ui.inSet}</option>
+            <option value="or_newer">{ui.orNewer}</option>
+            <option value="or_older">{ui.orOlder}</option>
+            <option value="not_newer">{ui.notNewer}</option>
+            <option value="not_older">{ui.notOlder}</option>
           </select>
           <select
-            aria-label="Set printing relation"
+            aria-label={ui.printing}
             title={PRINT_TITLES[printing]}
             className="rounded-lg border border-line bg-surface px-2 py-2 text-xs text-ink"
             value={printing}
             onChange={(event) => onPrintingChange(event.target.value as SetPrintMode)}
           >
-            <option value="any">Any printing</option>
-            <option value="only">Only in</option>
-            <option value="first">First print</option>
-            <option value="reprint">Reprint</option>
+            <option value="any">{ui.anyPrinting}</option>
+            <option value="only">{ui.onlyIn}</option>
+            <option value="first">{ui.firstPrint}</option>
+            <option value="reprint">{ui.reprint}</option>
           </select>
         </>
       )}

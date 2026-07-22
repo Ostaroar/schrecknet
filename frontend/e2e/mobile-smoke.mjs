@@ -131,6 +131,30 @@ try {
 
   for (const route of routes) await checkRoute(route)
 
+  // The card-text selector also controls the UI locale. Exercise both search
+  // surfaces in every shipped UI language so typed translations cannot drift
+  // into dead, unrendered entries.
+  await page.goto(`${baseUrl}/#/crypt`, { waitUntil: 'domcontentloaded' })
+  const language = page.getByLabel('Card text language')
+  await language.selectOption('es')
+  await page.getByPlaceholder('Nombre / texto').waitFor()
+  await page.getByRole('option', { name: 'Cualquier clan', exact: true }).waitFor({ state: 'attached' })
+  await page.getByText('Rasgos', { exact: true }).waitFor()
+  await page.locator('button[data-route="library"]').click()
+  await page.getByPlaceholder('Nombre / texto').waitFor()
+  await page.getByRole('option', { name: 'Cualquier tipo', exact: true }).waitFor({ state: 'attached' })
+  await page.getByText('Lógica de disciplinas', { exact: true }).waitFor()
+
+  await language.selectOption('fr')
+  await page.getByPlaceholder('Nom / texte').waitFor()
+  await page.getByRole('option', { name: 'Tout type', exact: true }).waitFor({ state: 'attached' })
+  await page.getByText('Logique des disciplines', { exact: true }).waitFor()
+  await page.locator('button[data-route="crypt"]').click()
+  await page.getByPlaceholder('Nom / texte').waitFor()
+  await page.getByRole('option', { name: 'Tout clan', exact: true }).waitFor({ state: 'attached' })
+  await page.getByText('Traits', { exact: true }).waitFor()
+  await language.selectOption('en')
+
   await page.goto(`${baseUrl}/#/decks`, { waitUntil: 'domcontentloaded' })
   await page.getByPlaceholder('New deck name').fill('Mobile smoke')
   await page.getByRole('button', { name: 'Create deck', exact: true }).click()
