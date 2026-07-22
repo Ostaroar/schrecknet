@@ -179,9 +179,17 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
 - ☑ Deck stats: crypt/library count, V5 legality, weighted crypt capacity
       min/average/max, library type distribution, discipline distribution,
       and blood/pool cost curves — all aggregation runs in the Rust WASM core
-- ☐ Format legality checks: custom limited formats within the V5 pool ✎
-      (limited format editor: allowed sets/cards); 2-Players variant within V5 ✎
-      (keep only if the V5 pool supports it) — V5 base-format legality is live
+- 🌓 Format legality checks: custom limited formats within the V5 pool ✎ —
+      ☑ limited format editor (`#/limited`): allowed sets + per-card allow/ban
+      overrides, ported from vdb's `LimitedStore.js` (banned wins over allowed,
+      allowed wins over set membership — verified by reading the source
+      directly), local-only (`localStorage`, single active format, matching
+      vdb's one-format-at-a-time model), JSON import/export, and a deck-editor
+      legality line alongside V5 legality. ☐ still open: surfacing the format
+      as a search filter (crypt/library "in format" badge, mirroring the
+      inventory "owned" badge pattern) — the editor and deck legality check
+      work without it. ☐ 2-Players variant within V5 ✎ (keep only if the V5
+      pool supports it) — separate, unstarted. V5 base-format legality is live.
 - ☑ Deck tags: user (free-text) tags — live (frontend/src/lib/deckStore.ts,
       frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
       archetype tags still not done ✎
