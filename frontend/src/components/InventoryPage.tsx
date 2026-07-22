@@ -5,8 +5,11 @@ import {
   adjustInventoryQtyForCards,
   exportInventoryText,
   importInventoryText,
+  computeGlobalMissing,
+  exportGlobalMissingText,
   type InventoryCardDetail,
   type InventoryImportResult,
+  type MissingCard,
 } from '../lib/inventoryStore'
 import { listPrecons, type PreconSummary } from '../lib/precons'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
@@ -219,15 +222,74 @@ function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
   )
 }
 
+function MissingCardsPanel({ refreshKey }: { refreshKey: number }) {
+  const [cards, setCards] = useState<MissingCard[] | null>(null)
+
+  useEffect(() => {
+    computeGlobalMissing().then(setCards)
+  }, [refreshKey])
+
+  const doExport = async () => {
+    const content = await exportGlobalMissingText()
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'want-list.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (cards === null) return null
+  if (cards.length === 0) return null
+
+  const total = cards.reduce((sum, c) => sum + c.missing, 0)
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">
+          Missing cards — {total} copies across {cards.length} card{cards.length === 1 ? '' : 's'}
+        </h2>
+        <button
+          onClick={doExport}
+          className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
+        >
+          Export want-list .txt
+        </button>
+      </div>
+      <p className="text-xs text-ink-dim">
+        What every inventory-tracked deck still needs, combined — decks marked "Not in inventory" aren't
+        counted.
+      </p>
+      <ul className="grid gap-1 divide-y divide-line-soft rounded-lg border border-line bg-ground text-sm">
+        {cards.map((c) => (
+          <li key={c.id} className="flex items-center gap-3 px-3 py-1.5">
+            <button
+              onClick={() => navigate({ page: 'card', id: c.id })}
+              className="flex-1 truncate text-left hover:text-blood-hi"
+            >
+              {c.name}
+            </button>
+            <span className="font-mono text-xs font-semibold text-blood-hi">{c.missing}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default function InventoryPage() {
   const [cards, setCards] = useState<InventoryCardDetail[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const refresh = async () => {
     try {
       setCards(await getInventoryCardDetails())
       setStatus('ready')
+      setRefreshKey((k) => k + 1)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setStatus('error')
@@ -268,6 +330,7 @@ export default function InventoryPage() {
 
       <ImportExportPanel onImported={refresh} />
       <AddPreconPanel onChanged={refresh} />
+      <MissingCardsPanel refreshKey={refreshKey} />
 
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="grid gap-2">

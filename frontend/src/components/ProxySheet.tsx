@@ -5,12 +5,14 @@ import { navigate } from '../lib/route'
 export default function ProxySheet({ deckId }: { deckId: number }) {
   const [cards, setCards] = useState<ProxyCard[] | null>(null)
   const [error, setError] = useState('')
+  const [onlyMissing, setOnlyMissing] = useState(false)
 
   useEffect(() => {
-    getProxyCards(deckId)
+    setCards(null)
+    getProxyCards(deckId, onlyMissing)
       .then(setCards)
       .catch((e: Error) => setError(e.message))
-  }, [deckId])
+  }, [deckId, onlyMissing])
 
   if (error) return <p className="text-sm text-blood-hi">Couldn't load deck: {error}</p>
   if (!cards) return <p className="text-sm text-ink-dim">Loading…</p>
@@ -29,6 +31,10 @@ export default function ProxySheet({ deckId }: { deckId: number }) {
         >
           Print / Save as PDF
         </button>
+        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+          <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
+          Only missing copies
+        </label>
         <span className="text-xs text-ink-dim">
           {copies.length} card{copies.length === 1 ? '' : 's'} at 2.5"×3.5" (standard card size) — 9 per
           US Letter page. For personal proxy use only.

@@ -209,6 +209,54 @@ export async function computeDeckMissing(cardIds: number[]): Promise<Map<number,
   return result
 }
 
+/** Distinct card ids referenced by any deck that participates in inventory tracking. */
+async function listInventoryParticipatingCardIds(): Promise<number[]> {
+  const rows = await userQuery<{ card_id: number }>(
+    `SELECT DISTINCT dc.card_id FROM deck_cards dc
+     JOIN decks d ON d.id = dc.deck_id
+     WHERE d.inventory_mode != 'excluded'`,
+  )
+  return rows.map((r) => r.card_id)
+}
+
+export interface MissingCard {
+  id: number
+  kind: 'crypt' | 'library'
+  name: string
+  missing: number
+}
+
+/**
+ * The collection-wide want-list: every card any inventory-participating deck
+ * still needs, using the raw (unclamped) pooled missing count — unlike a
+ * single deck's own report, this isn't capped to any one deck's quantity,
+ * since it answers "what do I need to buy in total", not "what does this
+ * deck need". See docs/inventory-plan.md § 1a/I4.
+ */
+export async function computeGlobalMissing(): Promise<MissingCard[]> {
+  const cardIds = await listInventoryParticipatingCardIds()
+  if (cardIds.length === 0) return []
+  const missingByCard = await computeDeckMissing(cardIds)
+  const missingIds = cardIds.filter((id) => (missingByCard.get(id) ?? 0) > 0)
+  if (missingIds.length === 0) return []
+  const placeholders = missingIds.map((_, i) => `?${i + 1}`).join(',')
+  const cards = await cardsQuery<{ id: number; kind: string; name: string }>(
+    `SELECT id, kind, name FROM cards WHERE id IN (${placeholders})`,
+    missingIds,
+  )
+  return cards
+    .map((c) => ({ id: c.id, kind: c.kind as 'crypt' | 'library', name: c.name, missing: missingByCard.get(c.id) ?? 0 }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Formats the global want-list as a plain-text (Lackey/JOL-style) card list. */
+export async function exportGlobalMissingText(): Promise<string> {
+  const cards = await computeGlobalMissing()
+  const crypt = cards.filter((c) => c.kind === 'crypt').map((c) => ({ name: c.name, qty: c.missing }))
+  const library = cards.filter((c) => c.kind === 'library').map((c) => ({ name: c.name, qty: c.missing }))
+  return formatDeckText(crypt, library)
+}
+
 /** Formats the inventory as a plain-text (Lackey/JOL-style) card list for export. */
 export async function exportInventoryText(): Promise<string> {
   const cards = await getInventoryCardDetails()

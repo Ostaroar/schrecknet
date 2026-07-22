@@ -518,6 +518,7 @@ export default function DeckEditor({ id }: { id: number }) {
   const [cryptSort, setCryptSort] = useState<CryptSort>('capacity')
   const [overrides, setOverrides] = useState<Map<number, 'fixed' | 'flexible'>>(new Map())
   const [missingByCard, setMissingByCard] = useState<Map<number, number>>(new Map())
+  const [missingExpanded, setMissingExpanded] = useState(false)
 
   const refresh = async () => {
     try {
@@ -594,6 +595,14 @@ export default function DeckEditor({ id }: { id: number }) {
   // (docs/inventory-plan.md § 1a).
   const deckMissingTotal = useMemo(
     () => cards.reduce((sum, card) => sum + Math.min(missingByCard.get(card.id) ?? 0, card.qty), 0),
+    [cards, missingByCard],
+  )
+  const missingCardsList = useMemo(
+    () =>
+      cards
+        .map((card) => ({ card, missing: Math.min(missingByCard.get(card.id) ?? 0, card.qty) }))
+        .filter((entry) => entry.missing > 0)
+        .sort((a, b) => a.card.name.localeCompare(b.card.name)),
     [cards, missingByCard],
   )
 
@@ -711,16 +720,34 @@ export default function DeckEditor({ id }: { id: number }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <InventoryModeSelector mode={deck.inventory_mode} onChange={changeInventoryMode} />
-        {deck.inventory_mode !== 'excluded' && (
-          <span className="text-xs text-ink-dim">
-            {deckMissingTotal > 0 ? (
-              <span className="text-blood-hi">{deckMissingTotal} copies missing</span>
-            ) : (
-              'All copies covered by inventory'
-            )}
-          </span>
+      <div className="grid gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <InventoryModeSelector mode={deck.inventory_mode} onChange={changeInventoryMode} />
+          {deck.inventory_mode !== 'excluded' && (
+            <span className="text-xs text-ink-dim">
+              {deckMissingTotal > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setMissingExpanded((v) => !v)}
+                  className="text-blood-hi underline decoration-blood/40 underline-offset-2"
+                >
+                  {deckMissingTotal} copies missing {missingExpanded ? '▴' : '▾'}
+                </button>
+              ) : (
+                'All copies covered by inventory'
+              )}
+            </span>
+          )}
+        </div>
+        {missingExpanded && missingCardsList.length > 0 && (
+          <ul className="grid gap-1 divide-y divide-line-soft rounded-lg border border-line bg-surface text-sm">
+            {missingCardsList.map(({ card, missing }) => (
+              <li key={card.id} className="flex items-center gap-3 px-3 py-1.5">
+                <span className="flex-1 truncate">{card.name}</span>
+                <span className="font-mono text-xs font-semibold text-blood-hi">{missing}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
