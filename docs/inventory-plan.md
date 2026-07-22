@@ -178,7 +178,7 @@ builds. Live-verified in the browser: `computeMissingQty([2,2],[3,4],3) === 5`
 through the OPFS worker with no existing-data-loss on migration. § 1a's vdb
 verification is folded into the schema (per-card overrides) and the core doc comment.
 
-### I2 — Inventory page (`#/inventory`)
+### I2 — Inventory page (`#/inventory`)  ☑ complete
 - Route + nav tab (+ i18n strings). Table of owned cards: name (localized), type/clan
   chips (reuse `VtesSymbol`), qty stepper, remove; add-by-name using the existing
   inline-search pattern from the deck editor; total counts (crypt/library).
@@ -187,6 +187,22 @@ verification is folded into the schema (per-card overrides) and the core doc com
 - Card page: "You own N" + stepper.
 - **DoD:** add/edit/remove/import/export verified live in the browser; reload
   persistence confirmed; works offline.
+
+Shipped: `#/inventory` route (`route.ts`, `App.tsx` nav tab, `i18n.ts` nav string in
+en/es/fr — plain-text card names/labels on the page itself stay English-only for now,
+matching the honest partial-localization scope noted elsewhere in the roadmap),
+`InventoryPage.tsx` (add-by-name, qty stepper, remove, crypt/library totals),
+`inventoryStore.getInventoryCardDetails/exportInventoryText/importInventoryText`
+(mirrors `deckStore`'s equivalent functions and the shared dtext format —
+unresolved names are reported, not dropped), `AddCardBox.tsx` (extracted from
+`DeckEditor.tsx`, now shared by both pages), and `InventoryOwnedControl.tsx`
+("You own N" + stepper on `CardPage.tsx`, both crypt and library cards).
+Live-verified: add/adjust/remove via the inventory page (header counts update
+reactively), mixed valid/invalid text import (resolved card added at the right
+qty, unresolved name surfaced), export text round-trips, and a card page's owned
+count stays in sync with the inventory page for the same card id. Deferred (not
+in this slice, no vdb parity gap yet since vdb itself doesn't expose it as a
+distinct UI surface either): "only owned" filtering lives with I5, not here.
 
 ### I3 — Deck ↔ inventory cross-referencing
 - Deck editor: `inventory_mode` selector (excluded/flexible/fixed — label them
