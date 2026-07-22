@@ -13,6 +13,7 @@ import CommandPalette from './components/CommandPalette'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
+import { getUiStrings } from './lib/i18n'
 import { useHashRoute, navigate } from './lib/route'
 
 const TABS = ['crypt', 'library', 'decks', 'precons', 'rules', 'help', 'about'] as const
@@ -22,6 +23,7 @@ export default function App() {
   const route = useHashRoute()
   const { language, setLanguage } = useCardLanguage()
   const availableLanguages = meta?.languages?.length ? meta.languages : ['en']
+  const ui = getUiStrings(language)
 
   useEffect(() => {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
@@ -55,7 +57,7 @@ export default function App() {
         <div className="ml-auto flex items-center gap-2">
           {availableLanguages.length > 1 && (
             <label className="flex items-center gap-1.5 text-xs text-ink-dim">
-              <span className="hidden sm:inline">Card text</span>
+              <span className="hidden sm:inline">{ui.header.cardTextLabel}</span>
               <select
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
@@ -71,7 +73,7 @@ export default function App() {
             </label>
           )}
           <span className="hidden rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted sm:inline">
-          {meta ? `${meta.crypt} crypt · ${meta.library} library` : 'V5 only'}
+          {meta ? ui.header.cardCounts(meta.crypt, meta.library) : ui.header.v5Only}
           </span>
         </div>
       </header>
@@ -91,7 +93,19 @@ export default function App() {
                 (route.page === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
               }
             >
-              {t === 'crypt' || t === 'library' ? `${t} search` : t}
+              {t === 'crypt'
+                ? ui.nav.cryptSearch
+                : t === 'library'
+                  ? ui.nav.librarySearch
+                  : t === 'decks'
+                    ? ui.nav.decks
+                    : t === 'precons'
+                      ? ui.nav.precons
+                      : t === 'rules'
+                        ? ui.nav.rules
+                        : t === 'help'
+                          ? ui.nav.help
+                          : ui.nav.about}
             </button>
           ))}
         </nav>
@@ -113,9 +127,9 @@ export default function App() {
         ) : route.page === 'rules' ? (
           <RulesPage />
         ) : route.page === 'help' ? (
-          <HelpPage />
+          <HelpPage ui={ui.help} />
         ) : route.page === 'about' ? (
-          <AboutPage />
+          <AboutPage ui={ui.about} />
         ) : route.page === 'decks' ? (
           <DeckList />
         ) : route.page === 'library' ? (
@@ -128,13 +142,10 @@ export default function App() {
       <CommandPalette />
 
       <footer className="grid gap-2 py-6 text-center text-xs text-ink-dim">
-        <span>
-          Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with
-          permission under the Dark Pack agreement. All rights reserved.
-        </span>
+        <span>{ui.footer.copyright}</span>
         <span className="flex justify-center gap-3">
-          <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">Help</button>
-          <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">About</button>
+          <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">{ui.footer.help}</button>
+          <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">{ui.footer.about}</button>
         </span>
       </footer>
     </div>

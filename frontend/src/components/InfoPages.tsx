@@ -1,3 +1,5 @@
+import type { UiStrings } from '../lib/i18n'
+
 function InfoSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="grid gap-2 rounded-xl border border-line bg-surface p-5">
@@ -9,82 +11,72 @@ function InfoSection({ title, children }: { title: string; children: React.React
 
 const linkClass = 'text-blood-hi underline decoration-blood/40 underline-offset-2 hover:text-ink'
 
-export function AboutPage() {
+export function AboutPage({ ui }: { ui: UiStrings['about'] }) {
   return (
     <div className="grid gap-5">
       <div className="grid gap-2">
-        <span className="text-xs uppercase tracking-[0.2em] text-blood-hi">About SchreckNet</span>
-        <h1 className="font-display text-3xl text-ink">The V5 card library and deck workbench.</h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-ink-muted">
-          SchreckNet is a ground-up, offline-first rebuild of VDB focused exclusively on VTES Fifth Edition card
-          research and deck building. Tournament archives, community rankings, and playtest-program features are
-          intentionally outside its scope.
-        </p>
+        <span className="text-xs uppercase tracking-[0.2em] text-blood-hi">{ui.eyebrow}</span>
+        <h1 className="font-display text-3xl text-ink">{ui.title}</h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-ink-muted">{ui.lead}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <InfoSection title="Built to travel">
-          <p>Card search and local decks keep working after the app and V5 database have been cached.</p>
-          <p>Your anonymous decks live in a separate writable SQLite database in this browser.</p>
+        <InfoSection title={ui.travelTitle}>
+          <p>{ui.travel1}</p>
+          <p>{ui.travel2}</p>
         </InfoSection>
-        <InfoSection title="One rules engine">
-          <p>Rust domain logic runs natively on the server and as WebAssembly in the browser.</p>
-          <p>SQLite is the storage layer on both sides; MCP and REST share the same card services.</p>
+        <InfoSection title={ui.engineTitle}>
+          <p>{ui.engine1}</p>
+          <p>{ui.engine2}</p>
         </InfoSection>
       </div>
 
-      <InfoSection title="Credits">
+      <InfoSection title={ui.creditsTitle}>
         <p>
-          SchreckNet builds on{' '}
+          {ui.creditsBuildsOn}{' '}
           <a className={linkClass} href="https://github.com/smeea/vdb" target="_blank" rel="noreferrer">
             VDB
           </a>{' '}
-          and card data and rulings from{' '}
+          {ui.creditsAnd}{' '}
           <a className={linkClass} href="https://krcg.org" target="_blank" rel="noreferrer">
             KRCG
           </a>
-          . The source code is available under the MIT license.
+          {ui.creditsCardData}
         </p>
-        <p>
-          Portions of the materials are the copyrights and trademarks of Paradox Interactive AB and are used with
-          permission under the Dark Pack agreement. All rights reserved.
-        </p>
+        <p>{ui.creditsRights}</p>
       </InfoSection>
     </div>
   )
 }
 
-export function HelpPage() {
+export function HelpPage({ ui }: { ui: UiStrings['help'] }) {
   return (
     <div className="grid gap-5">
       <div className="grid gap-2">
-        <span className="text-xs uppercase tracking-[0.2em] text-blood-hi">Help</span>
-        <h1 className="font-display text-3xl text-ink">Search fast. Build locally. Keep control.</h1>
+        <span className="text-xs uppercase tracking-[0.2em] text-blood-hi">{ui.eyebrow}</span>
+        <h1 className="font-display text-3xl text-ink">{ui.title}</h1>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <InfoSection title="Find cards">
-          <p>Use Crypt or Library search for detailed V5-only filters. Select a result to open its full card page.</p>
+        <InfoSection title={ui.findCardsTitle}>
+          <p>{ui.findCards1}</p>
           <p>
-            Press <kbd className="rounded border border-line px-1.5 py-0.5 font-mono text-xs text-ink">⌘K</kbd> on
-            macOS or <kbd className="rounded border border-line px-1.5 py-0.5 font-mono text-xs text-ink">Ctrl+K</kbd>{' '}
-            elsewhere to search every card by name.
+            <kbd className="rounded border border-line px-1.5 py-0.5 font-mono text-xs text-ink">⌘K</kbd> /{' '}
+            <kbd className="rounded border border-line px-1.5 py-0.5 font-mono text-xs text-ink">Ctrl+K</kbd> —{' '}
+            {ui.findCards2}
           </p>
         </InfoSection>
-        <InfoSection title="Build decks">
-          <p>Create a local deck, add cards by name, and adjust quantities with the compact steppers.</p>
-          <p>Import or export text lists, share a deck URL, draw test hands, compare decks, and review V5 legality.</p>
+        <InfoSection title={ui.buildDecksTitle}>
+          <p>{ui.buildDecks1}</p>
+          <p>{ui.buildDecks2}</p>
         </InfoSection>
-        <InfoSection title="Offline data">
-          <p>The first visit downloads the V5 card database. Later searches and deck edits use browser-local SQLite.</p>
-          <p>Clearing this site's browser storage also removes anonymous local decks, so export important lists.</p>
+        <InfoSection title={ui.offlineTitle}>
+          <p>{ui.offline1}</p>
+          <p>{ui.offline2}</p>
         </InfoSection>
-        <InfoSection title="Machine API">
-          <p>
-            MCP Streamable HTTP is served at <code className="font-mono text-ink">/mcp</code>; local clients can use{' '}
-            <code className="font-mono text-ink">schrecknet-server --mcp-stdio</code>.
-          </p>
-          <p>Mirrored card REST endpoints live under <code className="font-mono text-ink">/api/v1</code>.</p>
+        <InfoSection title={ui.apiTitle}>
+          <p>{ui.api1}</p>
+          <p>{ui.api2}</p>
         </InfoSection>
       </div>
     </div>
