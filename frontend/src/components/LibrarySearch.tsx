@@ -40,9 +40,11 @@ import type { RequirementLogic } from '../lib/requirementFilter'
 import { orderLibraryCards } from '../lib/core'
 import { useSearchDeck } from '../lib/useSearchDeck'
 import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
+import { useLimitedFormat, isFormatActive, isCardLegalInFormat, getCardSetsMap } from '../lib/limitedFormat'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 import { CardTypeSummary, DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
+import OutOfFormatBadge from './OutOfFormatBadge'
 import { useUiStrings } from '../lib/i18n'
 
 type DisciplineMode = 'off' | 'selected'
@@ -214,8 +216,12 @@ export default function LibrarySearch() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [sort, setSort] = useState<LibrarySort | 'relevance'>('name')
   const [onlyOwned, setOnlyOwned] = useState(false)
+  const [onlyInFormat, setOnlyInFormat] = useState(false)
+  const [cardSets, setCardSets] = useState<Map<number, string[]>>(new Map())
   const deck = useSearchDeck()
   const owned = useInventoryOwnedMap()
+  const [limitedFormat] = useLimitedFormat()
+  const limitedFormatActive = isFormatActive(limitedFormat)
 
   useEffect(() => {
     Promise.all([
@@ -312,7 +318,16 @@ export default function LibrarySearch() {
     sort,
   ])
 
-  const displayResults = onlyOwned ? results.filter((c) => (owned.get(c.id) ?? 0) > 0) : results
+  const ownedFilteredResults = onlyOwned ? results.filter((c) => (owned.get(c.id) ?? 0) > 0) : results
+  const displayResults =
+    onlyInFormat && limitedFormatActive
+      ? ownedFilteredResults.filter((c) => isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat))
+      : ownedFilteredResults
+
+  useEffect(() => {
+    if (!limitedFormatActive) return
+    getCardSetsMap(results.map((c) => c.id)).then(setCardSets)
+  }, [results, limitedFormatActive])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {
@@ -456,6 +471,19 @@ export default function LibrarySearch() {
         >
           {ui.search.onlyOwned}
         </button>
+        {limitedFormatActive && (
+          <button
+            onClick={() => setOnlyInFormat((v) => !v)}
+            aria-pressed={onlyInFormat}
+            title="Show only cards legal in the active limited format"
+            className={
+              'rounded-lg border px-2.5 py-2 text-xs ' +
+              (onlyInFormat ? 'border-gold bg-gold/10 text-gold' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+            }
+          >
+            {ui.search.onlyInFormat}
+          </button>
+        )}
         <SemanticModeControl
           enabled={semanticMode}
           progress={semanticProgress}
@@ -750,6 +778,9 @@ export default function LibrarySearch() {
                         <CardTypeSummary types={c.types} />
                         {c.clan ? ` · ${c.clan}` : ''}
                         <OwnedBadge qty={owned.get(c.id) ?? 0} />
+                        {limitedFormatActive && (
+                          <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat)} />
+                        )}
                       </span>
                     </span>
                     <span className="hidden items-center gap-1 sm:flex">
@@ -758,6 +789,9 @@ export default function LibrarySearch() {
                       ))}
                       <CostPill blood={c.blood_cost} pool={c.pool_cost} />
                       <OwnedBadge qty={owned.get(c.id) ?? 0} />
+                      {limitedFormatActive && (
+                        <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat)} />
+                      )}
                     </span>
                     <span className="hidden items-center justify-end gap-1 text-right text-xs uppercase tracking-wide text-ink-muted lg:flex">
                       <CardTypeSummary types={c.types} />
