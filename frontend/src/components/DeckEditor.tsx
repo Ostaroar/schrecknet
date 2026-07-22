@@ -32,6 +32,7 @@ import { CardTypeSymbol, DisciplineSymbol } from './VtesSymbol'
 import AddCardBox from './AddCardBox'
 import { organizeDeckCards, type DeckCryptSort } from '../lib/core'
 import { useLimitedFormat, isFormatActive, isCardLegalInFormat, getCardSetsMap } from '../lib/limitedFormat'
+import { detectArchetypes, type ArchetypeMatch } from '../lib/archetypeTags'
 
 function StatsDistribution({
   label,
@@ -322,7 +323,68 @@ function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetai
   )
 }
 
-function TagChips({ deckId }: { deckId: number }) {
+function ArchetypeScanPanel({
+  deckId,
+  cards,
+  stats,
+  existingTags,
+  onTagged,
+}: {
+  deckId: number
+  cards: DeckCardDetail[]
+  stats: DeckStats
+  existingTags: string[]
+  onTagged: () => void
+}) {
+  const [matches, setMatches] = useState<ArchetypeMatch[]>([])
+
+  useEffect(() => {
+    let active = true
+    detectArchetypes(cards, stats).then((result) => {
+      if (active) setMatches(result)
+    })
+    return () => {
+      active = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, stats])
+
+  if (matches.length === 0) return null
+
+  return (
+    <div className="grid gap-2 rounded-lg border border-line bg-surface p-4">
+      <h2 className="text-xs uppercase tracking-wide text-ink-dim">Archetype scan</h2>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {matches.map((match) => {
+          const alreadyTagged = existingTags.some((t) => t.toLowerCase() === match.label.toLowerCase())
+          return (
+            <div
+              key={match.id}
+              className="flex items-start justify-between gap-2 rounded-lg border border-line-soft bg-raised px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="font-display text-sm text-gold">{match.label}</p>
+                <p className="text-xs text-ink-dim">{match.blurb}</p>
+              </div>
+              <button
+                onClick={async () => {
+                  await addTag(deckId, match.label)
+                  onTagged()
+                }}
+                disabled={alreadyTagged}
+                className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[10px] text-ink-dim hover:border-gold/50 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {alreadyTagged ? 'Tagged' : '+ tag'}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function TagChips({ deckId, refreshSignal }: { deckId: number; refreshSignal?: number }) {
   const [tags, setTags] = useState<string[]>([])
   const [draft, setDraft] = useState('')
 
@@ -331,7 +393,7 @@ function TagChips({ deckId }: { deckId: number }) {
   useEffect(() => {
     refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckId])
+  }, [deckId, refreshSignal])
 
   const submit = async () => {
     if (!draft.trim()) return
@@ -473,6 +535,7 @@ export default function DeckEditor({ id }: { id: number }) {
   const [overrides, setOverrides] = useState<Map<number, 'fixed' | 'flexible'>>(new Map())
   const [missingByCard, setMissingByCard] = useState<Map<number, number>>(new Map())
   const [missingExpanded, setMissingExpanded] = useState(false)
+  const [tagsRefreshKey, setTagsRefreshKey] = useState(0)
   const [cardSets, setCardSets] = useState<Map<number, string[]>>(new Map())
   const [limitedFormat] = useLimitedFormat()
 
@@ -660,7 +723,20 @@ export default function DeckEditor({ id }: { id: number }) {
         />
       </div>
 
-      <TagChips deckId={id} />
+      <TagChips deckId={id} refreshSignal={tagsRefreshKey} />
+
+      {stats && (
+        <ArchetypeScanPanel
+          deckId={id}
+          cards={cards}
+          stats={stats}
+          existingTags={deck.tags}
+          onTagged={() => {
+            setTagsRefreshKey((k) => k + 1)
+            refresh()
+          }}
+        />
+      )}
 
       {stats && (
         <div className="grid gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-xs">
