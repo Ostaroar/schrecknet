@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { listDecks, createDeck, deleteDeck, cloneDeck, type DeckSummary } from '../lib/deckStore'
+import { listDecks, getDeckCardDetails, createDeck, deleteDeck, cloneDeck, type DeckSummary } from '../lib/deckStore'
+import { computeDeckMissing } from '../lib/inventoryStore'
 import { navigate } from '../lib/route'
+
+const INVENTORY_MODE_LABEL = { excluded: null, fixed: 'Owns copies', flexible: 'Shares copies' } as const
 
 export default function DeckList() {
   const [decks, setDecks] = useState<DeckSummary[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   const [newName, setNewName] = useState('')
+  const [missingByDeck, setMissingByDeck] = useState<Map<number, number>>(new Map())
 
   const refresh = () => {
     listDecks()
@@ -21,6 +25,26 @@ export default function DeckList() {
   }
 
   useEffect(refresh, [])
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      const map = new Map<number, number>()
+      for (const deck of decks) {
+        if (deck.inventory_mode === 'excluded') continue
+        const cards = await getDeckCardDetails(deck.id)
+        const missing = await computeDeckMissing(cards.map((c) => c.id))
+        map.set(
+          deck.id,
+          cards.reduce((sum, c) => sum + Math.min(missing.get(c.id) ?? 0, c.qty), 0),
+        )
+      }
+      if (active) setMissingByDeck(map)
+    })()
+    return () => {
+      active = false
+    }
+  }, [decks])
 
   const create = async () => {
     const name = newName.trim() || 'Untitled deck'
@@ -94,6 +118,16 @@ export default function DeckList() {
                   </span>
                 )}
               </button>
+              {INVENTORY_MODE_LABEL[d.inventory_mode] && (
+                <span className="shrink-0 rounded-full border border-line bg-raised px-1.5 py-0.5 text-[10px] text-ink-dim">
+                  {INVENTORY_MODE_LABEL[d.inventory_mode]}
+                </span>
+              )}
+              {(missingByDeck.get(d.id) ?? 0) > 0 && (
+                <span className="shrink-0 rounded-full bg-blood/20 px-1.5 py-0.5 text-[10px] font-semibold text-blood-hi">
+                  {missingByDeck.get(d.id)} missing
+                </span>
+              )}
               <span className="text-xs text-ink-dim">
                 {new Date(d.updated_at).toLocaleDateString()}
               </span>

@@ -18,6 +18,7 @@ import {
   type DistributionEntry,
 } from './core'
 import { routeTo } from './route'
+import type { InventoryMode } from './inventoryStore'
 
 export interface DeckSummary {
   id: number
@@ -26,10 +27,11 @@ export interface DeckSummary {
   description: string | null
   created_at: string
   updated_at: string
+  inventory_mode: InventoryMode
   tags: string[]
 }
 
-const SUMMARY_COLUMNS = 'id, name, author, description, created_at, updated_at'
+const SUMMARY_COLUMNS = 'id, name, author, description, created_at, updated_at, inventory_mode'
 
 export async function listDecks(): Promise<DeckSummary[]> {
   const decks = await userQuery<Omit<DeckSummary, 'tags'>>(

@@ -6,7 +6,7 @@
 
 import { query as cardsQuery } from './db'
 import { query as userQuery, run as userRun } from './userDb'
-import { parseDeckText, formatDeckText } from './core'
+import { parseDeckText, formatDeckText, computeMissingQty } from './core'
 
 export interface InventoryEntry {
   cardId: number
@@ -63,6 +63,19 @@ export async function getInventoryCardDetails(): Promise<InventoryCardDetail[]> 
 export async function getInventoryQty(cardId: number): Promise<number> {
   const rows = await userQuery<{ qty: number }>('SELECT qty FROM inventory WHERE card_id = ?1', [cardId])
   return rows[0]?.qty ?? 0
+}
+
+/** Batch lookup of owned quantities, defaulting missing ids to 0. */
+export async function getInventoryQtyMap(cardIds: number[]): Promise<Map<number, number>> {
+  if (cardIds.length === 0) return new Map()
+  const placeholders = cardIds.map((_, i) => `?${i + 1}`).join(',')
+  const rows = await userQuery<{ card_id: number; qty: number }>(
+    `SELECT card_id, qty FROM inventory WHERE card_id IN (${placeholders})`,
+    cardIds,
+  )
+  const map = new Map(cardIds.map((id) => [id, 0]))
+  for (const row of rows) map.set(row.card_id, row.qty)
+  return map
 }
 
 /** Sets a card's owned quantity; a qty of 0 or less removes the row entirely. */
@@ -136,6 +149,64 @@ export async function setDeckCardOverride(
       'ON CONFLICT(deck_id, card_id) DO UPDATE SET mode = ?3',
     [deckId, cardId, mode],
   )
+}
+
+interface CardClaim {
+  qty: number
+  mode: 'fixed' | 'flexible'
+}
+
+/**
+ * Every non-excluded deck's claim on the given cards, across the whole
+ * collection (not just one deck) — a card's missing count depends on every
+ * deck that uses it, not only the one currently open. Per-card override
+ * (`deck_card_inventory_overrides`) wins over the deck's own default mode.
+ */
+async function getClaimsForCards(cardIds: number[]): Promise<Map<number, CardClaim[]>> {
+  const map = new Map<number, CardClaim[]>()
+  if (cardIds.length === 0) return map
+  const placeholders = cardIds.map((_, i) => `?${i + 1}`).join(',')
+  const rows = await userQuery<{ card_id: number; qty: number; effective_mode: 'fixed' | 'flexible' }>(
+    `SELECT dc.card_id, dc.qty, COALESCE(o.mode, d.inventory_mode) AS effective_mode
+     FROM deck_cards dc
+     JOIN decks d ON d.id = dc.deck_id
+     LEFT JOIN deck_card_inventory_overrides o ON o.deck_id = dc.deck_id AND o.card_id = dc.card_id
+     WHERE dc.card_id IN (${placeholders}) AND d.inventory_mode != 'excluded'`,
+    cardIds,
+  )
+  for (const row of rows) {
+    const claims = map.get(row.card_id) ?? []
+    claims.push({ qty: row.qty, mode: row.effective_mode })
+    map.set(row.card_id, claims)
+  }
+  return map
+}
+
+export interface CardMissing {
+  cardId: number
+  missing: number
+}
+
+/**
+ * Missing-copy count for every card in one deck, using the shared Rust
+ * usage math (core/src/inventory.rs) over claims from ALL non-excluded
+ * decks — not just this one — since fixed/flexible claims are pooled
+ * collection-wide. Matches vdb's own algorithm (docs/inventory-plan.md § 1a).
+ */
+export async function computeDeckMissing(cardIds: number[]): Promise<Map<number, number>> {
+  const [claimsByCard, ownedByCard] = await Promise.all([
+    getClaimsForCards(cardIds),
+    getInventoryQtyMap(cardIds),
+  ])
+  const result = new Map<number, number>()
+  for (const cardId of cardIds) {
+    const claims = claimsByCard.get(cardId) ?? []
+    const fixedQtys = claims.filter((c) => c.mode === 'fixed').map((c) => c.qty)
+    const flexibleQtys = claims.filter((c) => c.mode === 'flexible').map((c) => c.qty)
+    const owned = ownedByCard.get(cardId) ?? 0
+    result.set(cardId, await computeMissingQty(fixedQtys, flexibleQtys, owned))
+  }
+  return result
 }
 
 /** Formats the inventory as a plain-text (Lackey/JOL-style) card list for export. */

@@ -19,6 +19,13 @@ import {
   type DeckStats,
   type ImportResult,
 } from '../lib/deckStore'
+import {
+  setDeckInventoryMode,
+  listDeckCardOverrides,
+  setDeckCardOverride,
+  computeDeckMissing,
+  type InventoryMode,
+} from '../lib/inventoryStore'
 import { drawHand } from '../lib/drawHand'
 import { navigate } from '../lib/route'
 import { CardTypeSymbol, DisciplineSymbol } from './VtesSymbol'
@@ -65,6 +72,80 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         +
+      </button>
+    </span>
+  )
+}
+
+const INVENTORY_MODE_OPTIONS: { value: InventoryMode; label: string; hint: string }[] = [
+  { value: 'excluded', label: 'Not in inventory', hint: "This deck's cards don't affect missing-copy counts." },
+  {
+    value: 'flexible',
+    label: 'Shares copies',
+    hint: 'Claims copies from a shared pool — other flexible decks can use the same copies.',
+  },
+  { value: 'fixed', label: 'Owns copies', hint: 'Claims copies exclusively — no other deck can count on them.' },
+]
+
+function InventoryModeSelector({ mode, onChange }: { mode: InventoryMode; onChange: (mode: InventoryMode) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs">
+      <span className="text-ink-dim">Inventory</span>
+      <div className="flex rounded-lg border border-line bg-ground p-0.5" role="group" aria-label="Inventory mode">
+        {INVENTORY_MODE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            title={option.hint}
+            aria-pressed={mode === option.value}
+            onClick={() => onChange(option.value)}
+            className={
+              'rounded-md px-2 py-1 transition ' +
+              (mode === option.value ? 'bg-blood text-white' : 'text-ink-muted hover:text-ink')
+            }
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function InventoryBadge({
+  deckMode,
+  override,
+  missing,
+  onToggleOverride,
+}: {
+  deckMode: InventoryMode
+  override: 'fixed' | 'flexible' | undefined
+  missing: number
+  onToggleOverride: () => void
+}) {
+  if (deckMode === 'excluded') return null
+  const effective = override ?? deckMode
+  return (
+    <span className="flex items-center gap-1.5">
+      {missing > 0 && (
+        <span className="rounded-full bg-blood/20 px-1.5 py-0.5 text-[10px] font-semibold text-blood-hi">
+          {missing} missing
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onToggleOverride}
+        title={
+          effective === 'fixed'
+            ? 'Fixed here — claims these copies exclusively. Click to share instead.'
+            : 'Flexible here — shares copies with other decks. Click to claim exclusively.'
+        }
+        className={
+          'rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-wide ' +
+          (override ? 'border-gold/50 bg-gold/10 text-gold' : 'border-line-soft text-ink-dim hover:text-ink-muted')
+        }
+      >
+        {effective === 'fixed' ? 'Fixed' : 'Flexible'}
       </button>
     </span>
   )
@@ -293,7 +374,21 @@ function TagChips({ deckId }: { deckId: number }) {
   )
 }
 
-function CardRow({ card, onQty }: { card: DeckCardDetail; onQty: (qty: number) => void }) {
+function CardRow({
+  card,
+  onQty,
+  deckMode,
+  override,
+  missing,
+  onToggleOverride,
+}: {
+  card: DeckCardDetail
+  onQty: (qty: number) => void
+  deckMode: InventoryMode
+  override: 'fixed' | 'flexible' | undefined
+  missing: number
+  onToggleOverride: () => void
+}) {
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 text-sm">
       <button
@@ -305,6 +400,7 @@ function CardRow({ card, onQty }: { card: DeckCardDetail; onQty: (qty: number) =
       <span className="text-xs text-ink-dim">
         {card.kind === 'crypt' ? `${card.clan} · cap ${card.capacity}` : ''}
       </span>
+      <InventoryBadge deckMode={deckMode} override={override} missing={missing} onToggleOverride={onToggleOverride} />
       <QtyStepper qty={card.qty} onChange={onQty} />
     </div>
   )
@@ -344,7 +440,21 @@ function compareCryptCards(a: DeckCardDetail, b: DeckCardDetail, sort: CryptSort
   }
 }
 
-function LibraryCardGroups({ cards, onQty }: { cards: DeckCardDetail[]; onQty: (cardId: number, qty: number) => void }) {
+function LibraryCardGroups({
+  cards,
+  onQty,
+  deckMode,
+  overrides,
+  missingByCard,
+  onToggleOverride,
+}: {
+  cards: DeckCardDetail[]
+  onQty: (cardId: number, qty: number) => void
+  deckMode: InventoryMode
+  overrides: Map<number, 'fixed' | 'flexible'>
+  missingByCard: Map<number, number>
+  onToggleOverride: (cardId: number) => void
+}) {
   const groups = useMemo(() => {
     const grouped = new Map<string, DeckCardDetail[]>()
     for (const card of cards) {
@@ -378,7 +488,15 @@ function LibraryCardGroups({ cards, onQty }: { cards: DeckCardDetail[]; onQty: (
           </div>
           <div className="divide-y divide-line-soft">
             {typeCards.map((card) => (
-              <CardRow key={card.id} card={card} onQty={(qty) => onQty(card.id, qty)} />
+              <CardRow
+                key={card.id}
+                card={card}
+                onQty={(qty) => onQty(card.id, qty)}
+                deckMode={deckMode}
+                override={overrides.get(card.id)}
+                missing={missingByCard.get(card.id) ?? 0}
+                onToggleOverride={() => onToggleOverride(card.id)}
+              />
             ))}
           </div>
         </div>
@@ -398,6 +516,8 @@ export default function DeckEditor({ id }: { id: number }) {
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const [cryptSort, setCryptSort] = useState<CryptSort>('capacity')
+  const [overrides, setOverrides] = useState<Map<number, 'fixed' | 'flexible'>>(new Map())
+  const [missingByCard, setMissingByCard] = useState<Map<number, number>>(new Map())
 
   const refresh = async () => {
     try {
@@ -412,6 +532,8 @@ export default function DeckEditor({ id }: { id: number }) {
       setDescriptionDraft(d.description ?? '')
       setCards(c)
       setStats(await computeDeckStats(c))
+      setOverrides(await listDeckCardOverrides(id))
+      setMissingByCard(d.inventory_mode === 'excluded' ? new Map() : await computeDeckMissing(c.map((card) => card.id)))
       setStatus('ready')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -435,6 +557,19 @@ export default function DeckEditor({ id }: { id: number }) {
     refresh()
   }
 
+  const changeInventoryMode = async (mode: InventoryMode) => {
+    await setDeckInventoryMode(id, mode)
+    refresh()
+  }
+
+  const toggleCardOverride = async (cardId: number) => {
+    if (!deck) return
+    const current = overrides.get(cardId)
+    const opposite = deck.inventory_mode === 'fixed' ? 'flexible' : 'fixed'
+    await setDeckCardOverride(id, cardId, current ? null : opposite)
+    refresh()
+  }
+
   const saveMetadata = async () => {
     await updateDeckMetadata(id, authorDraft, descriptionDraft)
     setDeck((current) =>
@@ -453,6 +588,13 @@ export default function DeckEditor({ id }: { id: number }) {
   const sortedCryptCards = useMemo(
     () => [...cryptCards].sort((a, b) => compareCryptCards(a, b, cryptSort)),
     [cryptCards, cryptSort],
+  )
+  // vdb clamps a deck's own missing total to what it itself needs per card,
+  // so other decks' claims never inflate what THIS deck reports as missing
+  // (docs/inventory-plan.md § 1a).
+  const deckMissingTotal = useMemo(
+    () => cards.reduce((sum, card) => sum + Math.min(missingByCard.get(card.id) ?? 0, card.qty), 0),
+    [cards, missingByCard],
   )
 
   if (status === 'loading') return <p className="text-sm text-ink-dim">Loading deck…</p>
@@ -569,6 +711,19 @@ export default function DeckEditor({ id }: { id: number }) {
         </div>
       )}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <InventoryModeSelector mode={deck.inventory_mode} onChange={changeInventoryMode} />
+        {deck.inventory_mode !== 'excluded' && (
+          <span className="text-xs text-ink-dim">
+            {deckMissingTotal > 0 ? (
+              <span className="text-blood-hi">{deckMissingTotal} copies missing</span>
+            ) : (
+              'All copies covered by inventory'
+            )}
+          </span>
+        )}
+      </div>
+
       <TestHandPanel cryptCards={cryptCards} libraryCards={libraryCards} />
       <ImportExportPanel deckId={id} onImported={refresh} />
 
@@ -595,7 +750,15 @@ export default function DeckEditor({ id }: { id: number }) {
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">No crypt cards yet.</p>}
             {sortedCryptCards.map((c) => (
-              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} />
+              <CardRow
+                key={c.id}
+                card={c}
+                onQty={(qty) => changeQty(c.id, qty)}
+                deckMode={deck.inventory_mode}
+                override={overrides.get(c.id)}
+                missing={missingByCard.get(c.id) ?? 0}
+                onToggleOverride={() => toggleCardOverride(c.id)}
+              />
             ))}
           </div>
         </section>
@@ -608,7 +771,14 @@ export default function DeckEditor({ id }: { id: number }) {
               No library cards yet.
             </p>
           ) : (
-            <LibraryCardGroups cards={libraryCards} onQty={changeQty} />
+            <LibraryCardGroups
+              cards={libraryCards}
+              onQty={changeQty}
+              deckMode={deck.inventory_mode}
+              overrides={overrides}
+              missingByCard={missingByCard}
+              onToggleOverride={toggleCardOverride}
+            />
           )}
         </section>
       </div>
