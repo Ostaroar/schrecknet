@@ -104,8 +104,12 @@ docs/feature-parity.md's scope note).
   reloaded — the app shell (HTML/JS/CSS/wasm) rendered fully offline. Icon is
   a self-contained inline placeholder SVG (`frontend/public/icon.svg`), not a
   real brand asset.
-- ☐ UI localization (navigation, labels, help text); card-text translation
-  selection is complete separately using the pipeline's `translations` table
+- 🌓 UI localization: nav, header, footer, and Help/About pages are localized in
+  en/es/fr via `frontend/src/lib/i18n.ts`, reusing the existing card-text language
+  selector (no new UI control). Search filters, deck builder, and other
+  components still render English-only strings — follow-up, not blocking.
+  Card-text translation selection is complete separately using the pipeline's
+  `translations` table
 - ☑ MCP `search_crypt` + `search_library` tools live (rmcp, Streamable HTTP at
   `/mcp`), verified with a real client handshake (initialize → tools/list →
   tools/call) returning correct V5 data; `/api/v1/crypt/search` and
