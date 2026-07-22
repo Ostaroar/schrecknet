@@ -264,12 +264,25 @@ missing" in both the deck editor's disclosure and the inventory page's
 want-list (exported as "2x Deflection"), and the proxy toggle went from
 printing 3 copies to exactly 2 — the literal 3-owned-1 DoD example.
 
-### I5 — Search integration
+### I5 — Search integration  ☑ complete
 - "Owned" badge in crypt/library result rows; "only owned" toggle. Implementation:
   fetch inventory card-id set from the user-db worker, filter/badge in the component —
   no server search param, no cross-worker SQL.
 - **DoD:** toggle composes correctly with existing filters (including regex and
   semantic modes); badge counts match the inventory page; live-verified.
+
+Shipped: `lib/useInventoryOwnedMap.ts` (loads the owned-quantity map once from
+the user-db worker), `components/OwnedBadge.tsx` (shared "Owned N" pill), and
+an "Only owned" toggle in both `CryptSearch.tsx`/`LibrarySearch.tsx` that
+post-filters `displayResults` — composes with every existing filter for free
+since it never touches the shared search plan/params. Live-verified: a
+regex search (`^(Deflection|Cats)`) returned 2 matches, then 1 after enabling
+"Only owned" (the owned card only); badge counts matched the inventory page
+in both crypt and library search.
+
+**This completes all five local-first inventory milestones (I1–I5).** Only
+I6 (Phase 3 server sync — `get_inventory`/`update_inventory` MCP+REST once
+accounts land) remains, explicitly deferred per § 1's phasing decision.
 
 ### I6 — (Phase 3, not now) server sync
 - When accounts land: inventory rides the deck-sync mechanism; `get_inventory` /

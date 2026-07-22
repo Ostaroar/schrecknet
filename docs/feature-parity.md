@@ -210,12 +210,22 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 
 ## Inventory (`/inventory`)
 _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-first
-(no account needed), synced later in Phase 3._
-- ☐ Add crypt/library cards with quantities
-- ☐ Import/export inventory (text/file) ✎
-- ☐ Usage view: how many copies used across decks, missing counts
-- ☐ Filters mirroring card search
-- ☐ Deck ↔ inventory cross-highlighting ✎
+(no account needed), synced later in Phase 3. All five planned local milestones
+(I1–I5) are complete._
+- ☑ Add crypt/library cards with quantities — `#/inventory`, add-by-name, qty
+      steppers, remove, precon bulk add/remove (one copy per distinct card,
+      since precon quantities aren't tracked by the data source)
+- ☑ Import/export inventory (text/file) ✎ — Lackey/JOL-style `<qty>x <name>`,
+      unresolved names reported rather than dropped, matches deck import/export
+- ☑ Usage view: how many copies used across decks, missing counts — deck
+      editor shows per-card Fixed/Flexible badges + an expandable missing-cards
+      list; inventory page shows the collection-wide want-list (exportable)
+- ☑ Filters mirroring card search — "Owned" badge + "only owned" toggle in
+      crypt/library search, composes with every existing filter (regex,
+      semantic, etc.)
+- ☑ Deck ↔ inventory cross-highlighting ✎ — per-deck inventory mode
+      (excluded/fixed/flexible) + per-card override, verified against vdb's
+      own hard/soft claiming algorithm (see inventory-plan.md § 1a)
 
 ## Accounts (`/account`)
 - ☐ Register: username, password, optional email (for password reset only)
