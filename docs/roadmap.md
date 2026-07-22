@@ -235,9 +235,9 @@ design, decisions, and visualization options in
   referendum flow views plus a source-driven Basic vs Advanced/Judge switch; Basic
   combat compresses to round → strike → damage → press → repeat while Advanced
   exposes the full seven-step timing and exception graph
-- ☐ Impulse / priority interactive widget — the highest-teaching-value piece: a 5-seat
-  table with predator/prey, animating the context-specific pass orders (combat /
-  directed-at-one / directed-at-set / undirected)
+- ☑ Impulse / priority interactive widget: a 5-seat table with predator/prey, stepping
+  and animating the context-specific pass orders (combat / directed-at-one /
+  directed-at-set / undirected), sourced from `gameloop.json`'s `impulseOrders`
 - ☐ Card-DB integration (the differentiator): map FSM timing windows → card types, then
   deck-aware "when can I play this?" — a rules trainer no other VTES tool has
 - ☐ (Optional, own ADR) executable statechart (e.g. XState) as one source of truth for

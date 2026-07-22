@@ -131,12 +131,19 @@ The DOT distiller now accepts explicit `level=basic|advanced` node metadata so c
 remains authored in the canonical graph rather than hardcoded in React. Live checks cover
 all four views, the complexity switch, mobile containment, and offline reload.
 
-### M4 — Impulse / priority interactive widget (highest teaching value)
+### M4 — Impulse / priority interactive widget  ☑ complete
 - A 5-seat table with predator/prey marked; pick a context (combat / directed-at-one /
   directed-at-set / undirected) and animate the pass order around the table, snapping
   impulse back to the acting Methuselah on any play. Source the orderings from the M1
   JSON, not re-encoded by hand.
 - **DoD:** all three context orderings match the DOT/rules; live-verified.
+
+Shipped as `ImpulseOrderWidget.tsx` behind an "Impulse & priority order" entry point on
+`#/rules`. `computeImpulseSeatOrder` in `lib/gameLoop.ts` walks each `impulseOrders` entry's
+`afterActing` tokens generically (`defender`, `targeted_clockwise`, `prey`, `predator`,
+`clockwise_others`); only the demo seat assignment for illustrative "who is targeted" is
+fixed, the pass-order logic itself comes straight from the JSON. Step/Previous/Next and an
+auto-play toggle; live-verified for combat and directed-at-a-set contexts.
 
 ### M5 — Card-DB integration (the differentiator)
 - Map hooks → card types (from `gameloop.json.hooks`), then answer **"when can I play
