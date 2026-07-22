@@ -8,6 +8,7 @@
 pub mod capacity;
 pub mod card_text;
 pub mod crypt_metadata;
+pub mod deck_organization;
 pub mod diff;
 pub mod draw;
 pub mod dtext;

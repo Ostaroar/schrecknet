@@ -73,6 +73,7 @@ migration status:
 | Exact-search result sorting | Live in native + WASM through `core/src/search_sort.rs` |
 | Exact-search filter normalization and query planning | Live in native + WASM through `core/src/search_plan.rs`; platform adapters only execute plans and map rows |
 | Card-text token parsing and structured symbol metadata | Live in native + WASM through `core/src/card_text.rs`; React only renders returned segments |
+| Deck-editor crypt ordering and canonical library grouping | Live in native + WASM through `core/src/deck_organization.rs`; React maps returned ids to rows |
 
 Moving code merely to reduce the TypeScript line count is not a goal. Moving a
 rule or deterministic transformation that could drift between browser and server
@@ -140,9 +141,8 @@ The server is only needed for accounts, cross-device sync, and the machine APIs.
 
 ## Key flows
 
-- **Card search**: filter UI state → platform SQL adapter → local SQLite → results.
-  Browser/server filter planning is the largest remaining Rust-core migration;
-  until it is centralized, golden composition tests guard the two implementations.
+- **Card search**: filter UI state → shared Rust query plan → platform SQLite
+  adapter → results. Browser and server execute the same bound-parameter plan.
 - **Semantic card search**: structured filters select candidates → the
   local platform adapter embeds the query with the pinned ONNX model → shared
   native/WASM Rust ranks normalized vectors loaded from `cards.sqlite`. Browser and

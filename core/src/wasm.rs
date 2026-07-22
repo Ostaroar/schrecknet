@@ -24,6 +24,22 @@ pub fn card_type_symbol(card_type: &str) -> Result<String, JsError> {
     json(&crate::card_text::card_type_symbol(card_type))
 }
 
+/// Returns canonical crypt ordering and library groups for a deck editor.
+#[wasm_bindgen]
+pub fn organize_deck(input_json: &str, crypt_sort: &str) -> Result<String, JsError> {
+    let cards =
+        serde_json::from_str(input_json).map_err(|error| JsError::new(&error.to_string()))?;
+    let crypt_sort = match crypt_sort {
+        "capacity" => crate::deck_organization::CryptSort::Capacity,
+        "clan" => crate::deck_organization::CryptSort::Clan,
+        "group" => crate::deck_organization::CryptSort::Group,
+        "name" => crate::deck_organization::CryptSort::Name,
+        "quantity" => crate::deck_organization::CryptSort::Quantity,
+        _ => return Err(JsError::new("unknown deck crypt sort mode")),
+    };
+    json(&crate::deck_organization::organize(&cards, crypt_sort))
+}
+
 /// Builds the shared bound-parameter crypt query plan from a JSON filter
 /// object and returns `{ sql, params }` as JSON for the browser SQLite adapter.
 #[wasm_bindgen]

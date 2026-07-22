@@ -9,6 +9,7 @@ import init, {
   parse_card_text as parseCardTextWasm,
   discipline_symbol as disciplineSymbolWasm,
   card_type_symbol as cardTypeSymbolWasm,
+  organize_deck as organizeDeckWasm,
   encode_deck_share as encodeDeckShareWasm,
   decode_deck_share as decodeDeckShareWasm,
   parse_deck_text as parseDeckTextWasm,
@@ -62,6 +63,51 @@ export function getDisciplineSymbol(code: string, superior: boolean): unknown {
 export function getCardTypeSymbol(cardType: string): unknown {
   requireInitialized()
   return JSON.parse(cardTypeSymbolWasm(cardType))
+}
+
+export type DeckCryptSort = 'capacity' | 'clan' | 'group' | 'name' | 'quantity'
+
+interface DeckOrganizationCard {
+  id: number
+  qty: number
+  name: string
+  clan: string | null
+  capacity: number | null
+  group: number | null
+  types: string[]
+}
+
+export interface DeckLibraryGroup<T> {
+  cardType: string
+  cards: T[]
+  quantity: number
+}
+
+/** Synchronous after startup: canonical deck-editor ordering from shared Rust. */
+export function organizeDeckCards<T extends DeckOrganizationCard>(
+  crypt: T[],
+  library: T[],
+  cryptSort: DeckCryptSort,
+): { crypt: T[]; libraryGroups: DeckLibraryGroup<T>[] } {
+  requireInitialized()
+  const raw = JSON.parse(organizeDeckWasm(JSON.stringify({ crypt, library }), cryptSort)) as {
+    crypt_ids: number[]
+    library_groups: { card_type: string; card_ids: number[]; quantity: number }[]
+  }
+  const byId = new Map([...crypt, ...library].map((card) => [card.id, card]))
+  const card = (id: number): T => {
+    const value = byId.get(id)
+    if (!value) throw new Error(`deck organization returned unknown card id ${id}`)
+    return value
+  }
+  return {
+    crypt: raw.crypt_ids.map(card),
+    libraryGroups: raw.library_groups.map((group) => ({
+      cardType: group.card_type,
+      cards: group.card_ids.map(card),
+      quantity: group.quantity,
+    })),
+  }
 }
 
 export type SqlParameter = string | number | null

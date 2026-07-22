@@ -153,7 +153,8 @@ docs/feature-parity.md's scope note).
 - ☑ Rich deck statistics through Rust/WASM: weighted capacity min/average/max,
   library type and discipline distributions, and blood/pool cost curves
 - ☑ VDB-style deck organization: library grouped by canonical type combination
-  and crypt sortable by capacity, clan, group, name, or quantity
+  and crypt sortable by capacity, clan, group, name, or quantity; ordering,
+  grouping, and quantity totals are shared native/WASM Rust behavior
 - ☑ Editable deck author/description metadata + clipboard text export; local
   user-data schema is now upgraded through the shared `migrations/` SQL set
 - ☑ Local `.txt` deck import (browser-only file read; nothing uploaded)

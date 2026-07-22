@@ -30,6 +30,7 @@ import { drawHand } from '../lib/drawHand'
 import { navigate } from '../lib/route'
 import { CardTypeSymbol, DisciplineSymbol } from './VtesSymbol'
 import AddCardBox from './AddCardBox'
+import { organizeDeckCards, type DeckCryptSort } from '../lib/core'
 
 function StatsDistribution({
   label,
@@ -406,88 +407,38 @@ function CardRow({
   )
 }
 
-type CryptSort = 'capacity' | 'clan' | 'group' | 'name' | 'quantity'
-
-const LIBRARY_TYPE_ORDER = [
-  'Master',
-  'Action',
-  'Action/Combat',
-  'Political Action',
-  'Ally',
-  'Equipment',
-  'Retainer',
-  'Action Modifier',
-  'Action Modifier/Combat',
-  'Action Modifier/Reaction',
-  'Reaction',
-  'Combat',
-]
-
-function compareCryptCards(a: DeckCardDetail, b: DeckCardDetail, sort: CryptSort): number {
-  const byName = () => a.name.localeCompare(b.name)
-  const byCapacity = () => (b.capacity ?? -1) - (a.capacity ?? -1)
-  switch (sort) {
-    case 'clan':
-      return (a.clan ?? '').localeCompare(b.clan ?? '') || byCapacity() || byName()
-    case 'group':
-      return (a.group ?? Number.MAX_SAFE_INTEGER) - (b.group ?? Number.MAX_SAFE_INTEGER) || byCapacity() || byName()
-    case 'name':
-      return byName()
-    case 'quantity':
-      return b.qty - a.qty || byCapacity() || byName()
-    case 'capacity':
-      return byCapacity() || byName()
-  }
-}
-
 function LibraryCardGroups({
-  cards,
+  groups,
   onQty,
   deckMode,
   overrides,
   missingByCard,
   onToggleOverride,
 }: {
-  cards: DeckCardDetail[]
+  groups: { cardType: string; cards: DeckCardDetail[]; quantity: number }[]
   onQty: (cardId: number, qty: number) => void
   deckMode: InventoryMode
   overrides: Map<number, 'fixed' | 'flexible'>
   missingByCard: Map<number, number>
   onToggleOverride: (cardId: number) => void
 }) {
-  const groups = useMemo(() => {
-    const grouped = new Map<string, DeckCardDetail[]>()
-    for (const card of cards) {
-      const type = card.types.length > 0 ? card.types.join('/') : 'Other'
-      grouped.set(type, [...(grouped.get(type) ?? []), card])
-    }
-    return [...grouped.entries()].sort(([typeA], [typeB]) => {
-      const indexA = LIBRARY_TYPE_ORDER.indexOf(typeA)
-      const indexB = LIBRARY_TYPE_ORDER.indexOf(typeB)
-      if (indexA === -1 && indexB === -1) return typeA.localeCompare(typeB)
-      if (indexA === -1) return 1
-      if (indexB === -1) return -1
-      return indexA - indexB
-    })
-  }, [cards])
-
   return (
     <div className="grid gap-2">
-      {groups.map(([type, typeCards]) => (
-        <div key={type} className="overflow-hidden rounded-lg border border-line bg-surface">
+      {groups.map((group) => (
+        <div key={group.cardType} className="overflow-hidden rounded-lg border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line-soft bg-raised px-3 py-1.5">
             <h3 className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-ink-dim">
-              {type.split('/').map((part) => (
+              {group.cardType.split('/').map((part) => (
                 <CardTypeSymbol key={part} type={part} className="size-3.5" decorative />
               ))}
-              {type}
+              {group.cardType}
             </h3>
             <span className="font-mono text-[10px] text-ink-dim">
-              {typeCards.reduce((sum, card) => sum + card.qty, 0)}
+              {group.quantity}
             </span>
           </div>
           <div className="divide-y divide-line-soft">
-            {typeCards.map((card) => (
+            {group.cards.map((card) => (
               <CardRow
                 key={card.id}
                 card={card}
@@ -515,7 +466,7 @@ export default function DeckEditor({ id }: { id: number }) {
   const [authorDraft, setAuthorDraft] = useState('')
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle')
-  const [cryptSort, setCryptSort] = useState<CryptSort>('capacity')
+  const [cryptSort, setCryptSort] = useState<DeckCryptSort>('capacity')
   const [overrides, setOverrides] = useState<Map<number, 'fixed' | 'flexible'>>(new Map())
   const [missingByCard, setMissingByCard] = useState<Map<number, number>>(new Map())
   const [missingExpanded, setMissingExpanded] = useState(false)
@@ -586,9 +537,9 @@ export default function DeckEditor({ id }: { id: number }) {
 
   const cryptCards = useMemo(() => cards.filter((c) => c.kind === 'crypt'), [cards])
   const libraryCards = useMemo(() => cards.filter((c) => c.kind === 'library'), [cards])
-  const sortedCryptCards = useMemo(
-    () => [...cryptCards].sort((a, b) => compareCryptCards(a, b, cryptSort)),
-    [cryptCards, cryptSort],
+  const organization = useMemo(
+    () => organizeDeckCards(cryptCards, libraryCards, cryptSort),
+    [cryptCards, libraryCards, cryptSort],
   )
   // vdb clamps a deck's own missing total to what it itself needs per card,
   // so other decks' claims never inflate what THIS deck reports as missing
@@ -762,7 +713,7 @@ export default function DeckEditor({ id }: { id: number }) {
               Sort
               <select
                 value={cryptSort}
-                onChange={(event) => setCryptSort(event.target.value as CryptSort)}
+                onChange={(event) => setCryptSort(event.target.value as DeckCryptSort)}
                 className="rounded border border-line bg-surface px-1.5 py-1 text-xs normal-case tracking-normal text-ink-muted"
               >
                 <option value="capacity">Capacity</option>
@@ -776,7 +727,7 @@ export default function DeckEditor({ id }: { id: number }) {
           <AddCardBox kind="crypt" onAdd={addCard} />
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">No crypt cards yet.</p>}
-            {sortedCryptCards.map((c) => (
+            {organization.crypt.map((c) => (
               <CardRow
                 key={c.id}
                 card={c}
@@ -799,7 +750,7 @@ export default function DeckEditor({ id }: { id: number }) {
             </p>
           ) : (
             <LibraryCardGroups
-              cards={libraryCards}
+              groups={organization.libraryGroups}
               onQty={changeQty}
               deckMode={deck.inventory_mode}
               overrides={overrides}
