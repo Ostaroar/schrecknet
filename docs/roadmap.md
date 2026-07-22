@@ -104,9 +104,11 @@ docs/feature-parity.md's scope note).
   reloaded — the app shell (HTML/JS/CSS/wasm) rendered fully offline. Icon is
   a self-contained inline placeholder SVG (`frontend/public/icon.svg`), not a
   real brand asset.
-- ☑ Responsive/touch layout: no horizontal page overflow across ten primary
+- ☑ Responsive/touch layout: no horizontal page overflow across eleven primary
   routes at 320px/360px, including a populated deck editor; coarse-pointer
   controls and icon buttons have CI-enforced 40px targets
+- ☑ Offline changelog route: curated product milestones at `#/changelog`,
+  localized in EN/ES/FR and covered by the responsive browser contract
 - 🌓 UI localization: nav, header, footer, Help/About, and the primary Crypt +
   Library search controls/results are localized in en/es/fr through the typed
   `frontend/src/lib/i18n.ts` contract, reusing the existing card-text language

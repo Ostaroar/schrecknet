@@ -11,13 +11,14 @@ import DeckDiff from './components/DeckDiff'
 import PreconBrowser from './components/PreconBrowser'
 import RulesPage from './components/RulesPage'
 import CommandPalette from './components/CommandPalette'
+import ChangelogPage from './components/ChangelogPage'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings } from './lib/i18n'
 import { useHashRoute, navigate } from './lib/route'
 
-const TABS = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'help', 'about'] as const
+const TABS = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'changelog', 'help', 'about'] as const
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
@@ -108,6 +109,8 @@ export default function App() {
                         ? ui.nav.precons
                         : t === 'rules'
                           ? ui.nav.rules
+                          : t === 'changelog'
+                            ? ui.nav.changelog
                           : t === 'help'
                             ? ui.nav.help
                             : ui.nav.about}
@@ -133,6 +136,8 @@ export default function App() {
           <InventoryPage />
         ) : route.page === 'rules' ? (
           <RulesPage />
+        ) : route.page === 'changelog' ? (
+          <ChangelogPage ui={ui.changelog} />
         ) : route.page === 'help' ? (
           <HelpPage ui={ui.help} />
         ) : route.page === 'about' ? (

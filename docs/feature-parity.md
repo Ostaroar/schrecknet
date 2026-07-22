@@ -39,12 +39,14 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       accessibility labels remain English-only follow-up work.
 - ☑ Responsive mobile layout — measured at 320px and 360px across Crypt,
       Library, Decks (including a populated editor), Inventory, Precons,
-      Rules, Help, About, and Card Detail; CI rejects viewport overflow and
+      Rules, Changelog, Help, About, and Card Detail; CI rejects viewport overflow and
       coarse-pointer controls below 40px
 - ☑ Installable PWA (manifest + offline app shell via hand-written service
       worker; offline card search itself is handled separately by the
       OPFS-backed dbWorker.ts)
-- ☐ Changelog page
+- ☑ Changelog page — offline `#/changelog` timeline with curated product
+      milestones, localized in EN/ES/FR and included in responsive browser
+      coverage
 - ☑ Documentation / Help page — search, decks, offline storage, and API quick start
 - ☑ About page — V5 scope, architecture summary, credits, and Dark Pack notice;
       donations/contacts intentionally omitted until the project has official ones

@@ -17,6 +17,7 @@ export interface UiStrings {
     inventory: string
     precons: string
     rules: string
+    changelog: string
     help: string
     about: string
   }
@@ -62,6 +63,12 @@ export interface UiStrings {
     creditsAnd: string
     creditsCardData: string
     creditsRights: string
+  }
+  changelog: {
+    eyebrow: string
+    title: string
+    lead: string
+    entries: Array<{ date: string; title: string; summary: string; items: string[] }>
   }
   search: {
     nameText: string
@@ -169,6 +176,7 @@ const en: UiStrings = {
     inventory: 'inventory',
     precons: 'precons',
     rules: 'rules',
+    changelog: 'changelog',
     help: 'help',
     about: 'about',
   },
@@ -217,6 +225,17 @@ const en: UiStrings = {
     creditsRights:
       'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com. SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive; it is not official World of Darkness material.',
   },
+  changelog: {
+    eyebrow: 'Changelog',
+    title: 'What changed in SchreckNet.',
+    lead: 'Product milestones for the V5 card-research and deckbuilding workbench.',
+    entries: [
+      { date: '2026-07-22', title: 'Search in your language', summary: 'Crypt and Library research controls now follow the selected English, Spanish, or French interface language.', items: ['Localized exact, regex, semantic, set, precon, trait, and sorting controls.', 'Added browser coverage for both search routes in Spanish and French.'] },
+      { date: '2026-07-22', title: 'Responsive deckbuilding', summary: 'The complete workbench now fits compact phones without hiding core actions.', items: ['Validated ten primary routes at 320 px and 360 px.', 'Improved touch targets, Inventory layout, and the populated deck editor.'] },
+      { date: '2026-07-22', title: 'Local inventory complete', summary: 'Anonymous inventory works offline alongside local decks.', items: ['Added owned-card search filters, missing-card lists, want-list export, and proxy integration.', 'Kept inventory and deck data in the browser-local user database.'] },
+      { date: '2026-07-21', title: 'Offline semantic research', summary: 'Concept search is available without sending card text or queries to a remote model.', items: ['Added a checksum-pinned local model and embedded V5 vectors.', 'Kept browser, REST, and MCP result ranking aligned through shared Rust.'] },
+    ],
+  },
   search: {
     nameText: 'Name / text', semanticPrompt: 'Describe a card concept (English)', all: 'All', any: 'Any', not: 'Not', only: 'Only', name: 'Name', text: 'Text', artist: 'Artist', clear: 'clear', loading: 'Loading card database…', loadError: "Couldn't load the card database", noMatches: 'No cards match those filters.', sort: 'Sort', relevance: 'Relevance', onlyOwned: 'Only owned', traits: 'Traits', allTraitsRequired: 'all selected traits required', set: 'Set', anySet: 'Any set', setAge: 'Set age relation', inSet: 'In set', orNewer: 'Or newer', orOlder: 'Or older', notNewer: 'Not newer', notOlder: 'Not older', printing: 'Printing relation', anyPrinting: 'Any printing', onlyIn: 'Only in', firstPrint: 'First print', reprint: 'Reprint', preconFilters: 'Precon filters', addPrecon: 'Add precon', anyPrecon: 'Any precon / add another…', selectedPrecons: 'Selected precons', removePrecon: (precon, set) => `Remove ${precon} from ${set}`, semantic: 'Semantic', semanticTitle: 'Find cards by English concept using the local offline model', semanticIdle: 'Describe an English card concept. First use downloads about 46 MB (model + runtime); queries stay on this device.', semanticLoading: 'Preparing the local semantic model…', semanticDownloading: 'Downloading local model', semanticReady: 'Local semantic model ready. Results are cosine-ranked; the score is similarity, not a probability.', semanticUnavailable: (error) => `Semantic model unavailable: ${error}`, retry: 'Retry', removeModel: 'Remove local model',
   },
@@ -236,6 +255,7 @@ const es: UiStrings = {
     inventory: 'inventario',
     precons: 'premontados',
     rules: 'reglas',
+    changelog: 'novedades',
     help: 'ayuda',
     about: 'acerca de',
   },
@@ -288,6 +308,17 @@ const es: UiStrings = {
     creditsRights:
       'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com. SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive; no es material oficial de World of Darkness.',
   },
+  changelog: {
+    eyebrow: 'Novedades',
+    title: 'Qué ha cambiado en SchreckNet.',
+    lead: 'Hitos del banco de trabajo para investigar cartas y construir mazos V5.',
+    entries: [
+      { date: '2026-07-22', title: 'Busca en tu idioma', summary: 'Los controles de Cripta y Biblioteca siguen ahora el idioma de interfaz seleccionado: inglés, español o francés.', items: ['Se han traducido los controles de búsqueda exacta, regex, semántica, edición, premontado, rasgos y ordenación.', 'La cobertura del navegador prueba ambas rutas de búsqueda en español y francés.'] },
+      { date: '2026-07-22', title: 'Construcción de mazos adaptable', summary: 'El banco de trabajo completo cabe ahora en teléfonos compactos sin ocultar las acciones principales.', items: ['Se han validado diez rutas principales a 320 px y 360 px.', 'Se han mejorado los objetivos táctiles, el inventario y el editor de mazos con cartas.'] },
+      { date: '2026-07-22', title: 'Inventario local completo', summary: 'El inventario anónimo funciona sin conexión junto a los mazos locales.', items: ['Incluye filtros de cartas propias, listas de faltantes, exportación de compras e integración con proxies.', 'El inventario y los mazos permanecen en la base local del navegador.'] },
+      { date: '2026-07-21', title: 'Investigación semántica sin conexión', summary: 'La búsqueda conceptual funciona sin enviar textos ni consultas a un modelo remoto.', items: ['Se añadió un modelo local verificado y vectores V5 integrados.', 'El navegador, REST y MCP comparten la clasificación implementada en Rust.'] },
+    ],
+  },
   search: {
     nameText: 'Nombre / texto', semanticPrompt: 'Describe un concepto de carta (en inglés)', all: 'Todos', any: 'Cualquiera', not: 'No', only: 'Solo', name: 'Nombre', text: 'Texto', artist: 'Artista', clear: 'limpiar', loading: 'Cargando la base de cartas…', loadError: 'No se pudo cargar la base de cartas', noMatches: 'Ninguna carta coincide con esos filtros.', sort: 'Ordenar', relevance: 'Relevancia', onlyOwned: 'Solo propias', traits: 'Rasgos', allTraitsRequired: 'se requieren todos los rasgos seleccionados', set: 'Edición', anySet: 'Cualquier edición', setAge: 'Relación de edición', inSet: 'En la edición', orNewer: 'O más nueva', orOlder: 'O más antigua', notNewer: 'No más nueva', notOlder: 'No más antigua', printing: 'Relación de impresión', anyPrinting: 'Cualquier impresión', onlyIn: 'Solo en', firstPrint: 'Primera impresión', reprint: 'Reimpresión', preconFilters: 'Filtros de premontados', addPrecon: 'Añadir premontado', anyPrecon: 'Cualquier premontado / añadir otro…', selectedPrecons: 'Premontados seleccionados', removePrecon: (precon, set) => `Quitar ${precon} de ${set}`, semantic: 'Semántica', semanticTitle: 'Busca cartas por concepto en inglés con el modelo local sin conexión', semanticIdle: 'Describe un concepto de carta en inglés. El primer uso descarga unos 46 MB; las consultas permanecen en este dispositivo.', semanticLoading: 'Preparando el modelo semántico local…', semanticDownloading: 'Descargando el modelo local', semanticReady: 'Modelo semántico local listo. Los resultados se ordenan por similitud coseno; la puntuación no es una probabilidad.', semanticUnavailable: (error) => `Modelo semántico no disponible: ${error}`, retry: 'Reintentar', removeModel: 'Eliminar modelo local',
   },
@@ -307,6 +338,7 @@ const fr: UiStrings = {
     inventory: 'inventaire',
     precons: 'préconstruits',
     rules: 'règles',
+    changelog: 'nouveautés',
     help: 'aide',
     about: 'à propos',
   },
@@ -358,6 +390,17 @@ const fr: UiStrings = {
     creditsCardData: '. Le code source est disponible sous licence MIT.',
     creditsRights:
       "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission. Tous droits réservés. Pour plus d'informations, visitez worldofdarkness.com. SchreckNet est un contenu de fans non officiel, non approuvé par et sans affiliation avec Paradox Interactive ; ce n'est pas du matériel officiel World of Darkness.",
+  },
+  changelog: {
+    eyebrow: 'Nouveautés',
+    title: 'Ce qui a changé dans SchreckNet.',
+    lead: "Les étapes marquantes de l'atelier de recherche de cartes et de construction de decks V5.",
+    entries: [
+      { date: '2026-07-22', title: 'Recherchez dans votre langue', summary: "Les commandes Crypte et Bibliothèque suivent maintenant la langue d'interface choisie : anglais, espagnol ou français.", items: ['Les commandes de recherche exacte, regex, sémantique, extension, préconstruit, traits et tri sont traduites.', 'La couverture navigateur vérifie les deux recherches en espagnol et en français.'] },
+      { date: '2026-07-22', title: 'Construction de decks adaptative', summary: "L'atelier complet tient maintenant sur les téléphones compacts sans masquer les actions essentielles.", items: ['Dix routes principales sont validées à 320 px et 360 px.', "Les cibles tactiles, l'inventaire et l'éditeur de deck rempli ont été améliorés."] },
+      { date: '2026-07-22', title: 'Inventaire local complet', summary: "L'inventaire anonyme fonctionne hors ligne avec les decks locaux.", items: ['Filtres de cartes possédées, listes de cartes manquantes, export des achats et intégration des proxies.', "L'inventaire et les decks restent dans la base locale du navigateur."] },
+      { date: '2026-07-21', title: 'Recherche sémantique hors ligne', summary: "La recherche par concept fonctionne sans envoyer les textes ou requêtes à un modèle distant.", items: ['Un modèle local vérifié et les vecteurs V5 sont intégrés.', 'Le navigateur, REST et MCP partagent le classement implémenté en Rust.'] },
+    ],
   },
   search: {
     nameText: 'Nom / texte', semanticPrompt: 'Décrivez un concept de carte (en anglais)', all: 'Tous', any: 'Au moins un', not: 'Exclure', only: 'Seulement', name: 'Nom', text: 'Texte', artist: 'Artiste', clear: 'effacer', loading: 'Chargement de la base de cartes…', loadError: 'Impossible de charger la base de cartes', noMatches: 'Aucune carte ne correspond à ces filtres.', sort: 'Trier', relevance: 'Pertinence', onlyOwned: 'Possédées seulement', traits: 'Traits', allTraitsRequired: 'tous les traits sélectionnés sont requis', set: 'Extension', anySet: 'Toute extension', setAge: "Relation d'extension", inSet: "Dans l'extension", orNewer: 'Ou plus récente', orOlder: 'Ou plus ancienne', notNewer: 'Pas plus récente', notOlder: 'Pas plus ancienne', printing: "Relation d'impression", anyPrinting: 'Toute impression', onlyIn: 'Seulement dans', firstPrint: 'Première impression', reprint: 'Réimpression', preconFilters: 'Filtres de préconstruits', addPrecon: 'Ajouter un préconstruit', anyPrecon: 'Tout préconstruit / en ajouter un…', selectedPrecons: 'Préconstruits sélectionnés', removePrecon: (precon, set) => `Retirer ${precon} de ${set}`, semantic: 'Sémantique', semanticTitle: 'Trouvez des cartes par concept anglais avec le modèle local hors ligne', semanticIdle: 'Décrivez un concept de carte en anglais. La première utilisation télécharge environ 46 Mo ; les requêtes restent sur cet appareil.', semanticLoading: 'Préparation du modèle sémantique local…', semanticDownloading: 'Téléchargement du modèle local', semanticReady: "Le modèle sémantique local est prêt. Les résultats sont classés par similarité cosinus ; le score n'est pas une probabilité.", semanticUnavailable: (error) => `Modèle sémantique indisponible : ${error}`, retry: 'Réessayer', removeModel: 'Supprimer le modèle local',

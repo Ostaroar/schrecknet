@@ -47,7 +47,7 @@ try {
   const page = await browser.newPage({ viewport: { width: viewportWidth, height: 800 }, isMobile: true, hasTouch: true })
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
-  const routes = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'help', 'about', 'cards/100401']
+  const routes = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'changelog', 'help', 'about', 'cards/100401']
 
   async function checkRoute(route) {
     await page.goto(`${baseUrl}/#/${route}`, { waitUntil: 'domcontentloaded' })
@@ -144,8 +144,12 @@ try {
   await page.getByPlaceholder('Nombre / texto').waitFor()
   await page.getByRole('option', { name: 'Cualquier tipo', exact: true }).waitFor({ state: 'attached' })
   await page.getByText('Lógica de disciplinas', { exact: true }).waitFor()
+  await page.locator('button[data-route="changelog"]').click()
+  await page.getByRole('heading', { name: 'Qué ha cambiado en SchreckNet.' }).waitFor()
 
   await language.selectOption('fr')
+  await page.getByRole('heading', { name: 'Ce qui a changé dans SchreckNet.' }).waitFor()
+  await page.locator('button[data-route="library"]').click()
   await page.getByPlaceholder('Nom / texte').waitFor()
   await page.getByRole('option', { name: 'Tout type', exact: true }).waitFor({ state: 'attached' })
   await page.getByText('Logique des disciplines', { exact: true }).waitFor()
