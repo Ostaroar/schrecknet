@@ -32,7 +32,10 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       full card pages and inline details with per-card English fallback; options
       are derived from the V5 data at build time (currently EN/ES/FR, with
       PT-BR appearing automatically when the source provides it) ✎
-- ☐ Responsive mobile layout
+- ☑ Responsive mobile layout — measured at 320px and 360px across Crypt,
+      Library, Decks (including a populated editor), Inventory, Precons,
+      Rules, Help, About, and Card Detail; CI rejects viewport overflow and
+      coarse-pointer controls below 40px
 - ☑ Installable PWA (manifest + offline app shell via hand-written service
       worker; offline card search itself is handled separately by the
       OPFS-backed dbWorker.ts)
@@ -255,7 +258,10 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       ✎ still missing: full canonical-text cross-check against VEKN, incremental/
       diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)
-- ☐ Keyboard-first UX on desktop, touch-first on mobile
+- 🌓 Keyboard-first UX on desktop, touch-first on mobile — command palette and
+      search keyboard flows are live; mobile layout, coarse-pointer form
+      controls, and icon-button targets are CI-verified at 320/360px. A full
+      keyboard map and WCAG audit remain Phase 4 work
 - ☑ Dark Pack legal notice on every page footer ✎ — required elements per the
       [Dark Pack Agreement](https://www.paradoxinteractive.com/games/world-of-darkness/community/dark-pack-agreement):
       logo, copyright/trademark notice, and a "not official World of Darkness

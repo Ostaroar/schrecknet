@@ -104,6 +104,9 @@ docs/feature-parity.md's scope note).
   reloaded — the app shell (HTML/JS/CSS/wasm) rendered fully offline. Icon is
   a self-contained inline placeholder SVG (`frontend/public/icon.svg`), not a
   real brand asset.
+- ☑ Responsive/touch layout: no horizontal page overflow across ten primary
+  routes at 320px/360px, including a populated deck editor; coarse-pointer
+  controls and icon buttons have CI-enforced 40px targets
 - 🌓 UI localization: nav, header, footer, and Help/About pages are localized in
   en/es/fr via `frontend/src/lib/i18n.ts`, reusing the existing card-text language
   selector (no new UI control). Search filters, deck builder, and other

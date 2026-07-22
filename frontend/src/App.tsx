@@ -92,7 +92,7 @@ export default function App() {
               data-route={t}
               onClick={() => navigate({ page: t })}
               className={
-                'shrink-0 rounded-lg px-3 py-1.5 font-display text-sm capitalize ' +
+                'min-h-10 shrink-0 rounded-lg px-3 py-1.5 font-display text-sm capitalize sm:min-h-0 ' +
                 (route.page === t ? 'bg-raised text-ink' : 'text-ink-muted hover:text-ink')
               }
             >
@@ -116,7 +116,7 @@ export default function App() {
         </nav>
       )}
 
-      <main className="flex-1 pb-10">
+      <main className="min-w-0 flex-1 pb-10">
         {route.page === 'card' ? (
           <CardPage id={route.id} />
         ) : route.page === 'deck' ? (

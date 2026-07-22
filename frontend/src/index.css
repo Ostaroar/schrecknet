@@ -22,6 +22,19 @@ body {
   color: var(--color-ink);
 }
 
+/* Preserve the compact desktop workbench while giving touch users reliable
+   targets, including icon-only quantity and image controls. */
+@media (pointer: coarse) {
+  button,
+  select,
+  input:not([type="hidden"]):not([type="file"]) {
+    min-height: 2.5rem;
+  }
+  button[aria-label] {
+    min-width: 2.5rem;
+  }
+}
+
 /* Proxy print sheets (components/ProxySheet.tsx) — physical card sizing
    (2.5in x 3.5in, standard poker card) independent of the app's dark theme.
    window.print() is the whole "PDF generation" story here: no PDF library

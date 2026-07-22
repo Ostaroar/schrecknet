@@ -7,7 +7,7 @@ export default function AddCardBox({
   onAdd,
 }: {
   kind: 'crypt' | 'library'
-  onAdd: (cardId: number) => void
+  onAdd: (cardId: number) => void | Promise<void>
 }) {
   const [text, setText] = useState('')
   const [results, setResults] = useState<{ id: number; name: string; sub: string }[]>([])
@@ -29,9 +29,9 @@ export default function AddCardBox({
   }, [text, kind])
 
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
       <input
-        className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+        className="min-w-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
         placeholder={`Add ${kind} card by name…`}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -41,8 +41,8 @@ export default function AddCardBox({
           {results.map((r) => (
             <button
               key={r.id}
-              onClick={() => {
-                onAdd(r.id)
+              onClick={async () => {
+                await onAdd(r.id)
                 setText('')
                 setResults([])
               }}

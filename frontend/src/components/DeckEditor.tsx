@@ -63,6 +63,7 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
     <span className="flex items-center gap-1.5">
       <button
         onClick={() => onChange(qty - 1)}
+        aria-label="Decrease quantity"
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         −
@@ -70,6 +71,7 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
       <span className="w-4 text-center font-mono text-xs text-ink">{qty}</span>
       <button
         onClick={() => onChange(qty + 1)}
+        aria-label="Increase quantity"
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         +
@@ -391,14 +393,14 @@ function CardRow({
   onToggleOverride: () => void
 }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 text-sm">
+    <div className="flex min-w-0 items-center gap-3 px-3 py-1.5 text-sm">
       <button
         onClick={() => navigate({ page: 'card', id: card.id })}
-        className="flex-1 truncate text-left hover:text-blood-hi"
+        className="min-w-0 flex-1 truncate text-left hover:text-blood-hi"
       >
         {card.name}
       </button>
-      <span className="text-xs text-ink-dim">
+      <span className="hidden shrink-0 text-xs text-ink-dim sm:inline">
         {card.kind === 'crypt' ? `${card.clan} · cap ${card.capacity}` : ''}
       </span>
       <InventoryBadge deckMode={deckMode} override={override} missing={missing} onToggleOverride={onToggleOverride} />
@@ -570,67 +572,69 @@ export default function DeckEditor({ id }: { id: number }) {
     )
 
   return (
-    <div className="grid gap-5">
-      <div className="flex items-center gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex">
         <button onClick={() => navigate({ page: 'decks' })} className="text-xs text-ink-dim hover:text-ink-muted">
           ← decks
         </button>
         <input
-          className="flex-1 rounded-lg border border-transparent bg-transparent px-1 font-display text-2xl text-ink hover:border-line-soft focus:border-blood focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1 font-display text-2xl text-ink hover:border-line-soft focus:border-blood focus:outline-none"
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
           onBlur={() => nameDraft.trim() && nameDraft !== deck.name && renameDeck(id, nameDraft.trim()).then(refresh)}
         />
-        <button
-          onClick={async () => {
-            try {
-              const url = await buildShareUrl(id)
-              await navigator.clipboard.writeText(url)
-              setShareStatus('copied')
-              setTimeout(() => setShareStatus('idle'), 2000)
-            } catch {
-              setShareStatus('error')
-            }
-          }}
-          className="text-xs text-ink-dim hover:text-ink-muted"
-        >
-          {shareStatus === 'copied' ? 'Link copied!' : shareStatus === 'error' ? "Couldn't copy" : 'Share'}
-        </button>
-        <button
-          onClick={async () => navigate({ page: 'deck', id: await cloneDeck(id) })}
-          className="text-xs text-ink-dim hover:text-ink-muted"
-        >
-          Clone
-        </button>
-        <button
-          onClick={() => navigate({ page: 'proxy', deckId: id })}
-          className="text-xs text-ink-dim hover:text-ink-muted"
-        >
-          Print proxies
-        </button>
-        <button
-          onClick={async () => {
-            if (confirm(`Delete "${deck.name}"? This can't be undone.`)) {
-              await deleteDeck(id)
-              navigate({ page: 'decks' })
-            }
-          }}
-          className="text-xs text-ink-dim hover:text-blood-hi"
-        >
-          Delete deck
-        </button>
+        <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:contents">
+          <button
+            onClick={async () => {
+              try {
+                const url = await buildShareUrl(id)
+                await navigator.clipboard.writeText(url)
+                setShareStatus('copied')
+                setTimeout(() => setShareStatus('idle'), 2000)
+              } catch {
+                setShareStatus('error')
+              }
+            }}
+            className="text-xs text-ink-dim hover:text-ink-muted"
+          >
+            {shareStatus === 'copied' ? 'Link copied!' : shareStatus === 'error' ? "Couldn't copy" : 'Share'}
+          </button>
+          <button
+            onClick={async () => navigate({ page: 'deck', id: await cloneDeck(id) })}
+            className="text-xs text-ink-dim hover:text-ink-muted"
+          >
+            Clone
+          </button>
+          <button
+            onClick={() => navigate({ page: 'proxy', deckId: id })}
+            className="text-xs text-ink-dim hover:text-ink-muted"
+          >
+            Print proxies
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm(`Delete "${deck.name}"? This can't be undone.`)) {
+                await deleteDeck(id)
+                navigate({ page: 'decks' })
+              }
+            }}
+            className="text-xs text-ink-dim hover:text-blood-hi"
+          >
+            Delete deck
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-[minmax(12rem,0.35fr)_1fr]">
         <input
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+          className="min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
           placeholder="Author"
           value={authorDraft}
           onChange={(event) => setAuthorDraft(event.target.value)}
           onBlur={saveMetadata}
         />
         <textarea
-          className="min-h-10 resize-y rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
+          className="min-h-10 min-w-0 resize-y rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
           placeholder="Deck description, strategy, or notes…"
           value={descriptionDraft}
           onChange={(event) => setDescriptionDraft(event.target.value)}
@@ -705,9 +709,9 @@ export default function DeckEditor({ id }: { id: number }) {
       <TestHandPanel cryptCards={cryptCards} libraryCards={libraryCards} />
       <ImportExportPanel deckId={id} onImported={refresh} />
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <section className="grid gap-2">
-          <div className="flex items-center justify-between gap-3">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
+        <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
+          <div className="flex min-w-0 items-center justify-between gap-3">
             <h2 className="text-xs uppercase tracking-wide text-ink-dim">Crypt</h2>
             <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ink-dim">
               Sort
@@ -741,7 +745,7 @@ export default function DeckEditor({ id }: { id: number }) {
           </div>
         </section>
 
-        <section className="grid gap-2">
+        <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">Library</h2>
           <AddCardBox kind="library" onAdd={addCard} />
           {libraryCards.length === 0 ? (

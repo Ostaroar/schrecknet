@@ -85,6 +85,11 @@ jobs:
       - run: npm ci --ignore-scripts
         working-directory: frontend
       - run: chmod +x target/debug/schrecknet-server
+      - name: mobile overflow + coarse-pointer controls
+        run: npm run test:mobile && SCHRECKNET_MOBILE_WIDTH=320 npm run test:mobile
+        working-directory: frontend
+        env:
+          SCHRECKNET_CHROME_CHANNEL: chrome
       - name: exact composition + browser/native semantic parity + offline smoke
         run: npm run test:semantic
         working-directory: frontend

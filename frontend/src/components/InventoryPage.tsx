@@ -96,13 +96,13 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
   }
 
   return (
-    <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+    <div className="grid min-w-0 gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xs uppercase tracking-wide text-ink-dim">Text import / export</h2>
-        <button onClick={doExport} className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink">
+        <button onClick={doExport} className="min-h-10 rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink sm:min-h-0">
           Export .txt
         </button>
-        <label className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink">
+        <label className="flex min-h-10 cursor-pointer items-center rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink sm:min-h-0">
           Load .txt
           <input
             type="file"
@@ -115,7 +115,7 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
             }}
           />
         </label>
-        <button onClick={() => setOpen((o) => !o)} className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink">
+        <button onClick={() => setOpen((o) => !o)} className="min-h-10 rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink sm:min-h-0">
           {open ? 'Hide import' : 'Import text…'}
         </button>
       </div>
@@ -183,17 +183,17 @@ function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+    <div className="grid min-w-0 gap-3 rounded-lg border border-line bg-surface p-4">
       <h2 className="text-xs uppercase tracking-wide text-ink-dim">Add / remove a precon</h2>
       <p className="text-xs text-ink-dim">
         Card quantities per precon aren't tracked by the data source, so this adds or removes one
         copy of each distinct card in the deck's known pool, not a full ready-to-play count.
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <select
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-line bg-ground px-3 py-1.5 text-sm text-ink outline-none focus:border-blood-hi"
+          className="min-h-10 w-full min-w-0 max-w-full rounded-lg border border-line bg-ground px-3 py-1.5 text-sm text-ink outline-none focus:border-blood-hi sm:min-h-0 sm:flex-1"
         >
           <option value="">Choose a precon…</option>
           {precons.map((p) => (
@@ -205,14 +205,14 @@ function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
         <button
           onClick={() => apply('add')}
           disabled={!selectedPrecon || busy !== null}
-          className="rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50"
+          className="min-h-10 rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50 sm:min-h-0"
         >
           {busy === 'add' ? 'Adding…' : 'Add to inventory'}
         </button>
         <button
           onClick={() => apply('remove')}
           disabled={!selectedPrecon || busy !== null}
-          className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:opacity-50"
+          className="min-h-10 rounded-lg border border-line px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:opacity-50 sm:min-h-0"
         >
           {busy === 'remove' ? 'Removing…' : 'Remove from inventory'}
         </button>
@@ -320,7 +320,7 @@ export default function InventoryPage() {
   const libraryCount = libraryCards.reduce((sum, c) => sum + c.qty, 0)
 
   return (
-    <div className="grid gap-5">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-2xl text-ink">Inventory</h1>
         <span className="text-xs text-ink-dim">
