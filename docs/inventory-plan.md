@@ -239,13 +239,30 @@ qty 3, Deck B fixed qty 2, 0 owned) — deck list showed 3/2 missing respectivel
 per-card override toggle cycled Flexible → Fixed → cleared correctly; a clone
 of Deck A came back `inventory_mode: 'excluded'`. tsc --noEmit clean.
 
-### I4 — Missing cards & proxy synergy
+### I4 — Missing cards & proxy synergy  ☑ complete
 - Global "missing" view (on the inventory page): union of all inventory-participating
   decks' missing cards, exportable as a text want-list.
 - Per-deck missing list in the editor (expandable, per the mockup).
 - Proxy sheet: "only missing copies" toggle.
 - **DoD:** want-list export matches a hand-computed fixture; proxy toggle prints
   exactly `missing` copies (live-verified with a 3x-owned-1 example).
+
+Shipped: `inventoryStore.computeGlobalMissing`/`exportGlobalMissingText` (raw,
+unclamped pooled missing per card across every non-excluded deck — a
+deliberately different number from any one deck's own clamped report, since
+this answers "what do I need to buy overall") surfaced in `InventoryPage.tsx`'s
+new `MissingCardsPanel`; `DeckEditor.tsx`'s missing-count summary is now an
+expandable disclosure listing each missing card; `ProxySheet.tsx`'s "Only
+missing copies" checkbox, backed by a **simple** owned-vs-deck-qty comparison
+in `proxySheet.ts` — intentionally NOT the pooled claim math, because most
+decks default to `inventory_mode: 'excluded'` where that math reports 0
+regardless of ownership, which would make the toggle useless on ordinary
+decks. Two different definitions of "missing" now coexist by design; both are
+documented at their call sites to keep that legible. Live-verified: a
+Deflection fixture (deck qty 3, owned 1, deck mode fixed) showed "2 copies
+missing" in both the deck editor's disclosure and the inventory page's
+want-list (exported as "2x Deflection"), and the proxy toggle went from
+printing 3 copies to exactly 2 — the literal 3-owned-1 DoD example.
 
 ### I5 — Search integration
 - "Owned" badge in crypt/library result rows; "only owned" toggle. Implementation:
