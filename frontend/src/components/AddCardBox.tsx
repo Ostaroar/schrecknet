@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
+import { useUiStrings } from '../lib/i18n'
 
 export default function AddCardBox({
   kind,
@@ -9,6 +10,7 @@ export default function AddCardBox({
   kind: 'crypt' | 'library'
   onAdd: (cardId: number) => void | Promise<void>
 }) {
+  const ui = useUiStrings().addCardBox
   const [text, setText] = useState('')
   const [results, setResults] = useState<{ id: number; name: string; sub: string }[]>([])
 
@@ -32,7 +34,7 @@ export default function AddCardBox({
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
       <input
         className="min-w-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-        placeholder={`Add ${kind} card by name…`}
+        placeholder={kind === 'crypt' ? ui.placeholderCrypt : ui.placeholderLibrary}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
