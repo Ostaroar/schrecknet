@@ -15,6 +15,7 @@ export interface UiStrings {
     librarySearch: string
     decks: string
     inventory: string
+    limited: string
     precons: string
     rules: string
     changelog: string
@@ -174,6 +175,7 @@ const en: UiStrings = {
     librarySearch: 'library search',
     decks: 'decks',
     inventory: 'inventory',
+    limited: 'limited',
     precons: 'precons',
     rules: 'rules',
     changelog: 'changelog',
@@ -253,6 +255,7 @@ const es: UiStrings = {
     librarySearch: 'buscar biblioteca',
     decks: 'mazos',
     inventory: 'inventario',
+    limited: 'formato limitado',
     precons: 'premontados',
     rules: 'reglas',
     changelog: 'novedades',
@@ -336,6 +339,7 @@ const fr: UiStrings = {
     librarySearch: 'recherche bibliothèque',
     decks: 'decks',
     inventory: 'inventaire',
+    limited: 'format limité',
     precons: 'préconstruits',
     rules: 'règles',
     changelog: 'nouveautés',

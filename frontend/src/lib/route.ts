@@ -17,6 +17,7 @@ export type Route =
   | { page: 'diff' }
   | { page: 'precons' }
   | { page: 'inventory' }
+  | { page: 'limited' }
   | { page: 'rules' }
   | { page: 'changelog' }
   | { page: 'help' }
@@ -38,6 +39,7 @@ export function parseHash(hash: string): Route {
   if (path === 'diff') return { page: 'diff' }
   if (path === 'precons') return { page: 'precons' }
   if (path === 'inventory') return { page: 'inventory' }
+  if (path === 'limited') return { page: 'limited' }
   if (path === 'rules') return { page: 'rules' }
   if (path === 'changelog') return { page: 'changelog' }
   if (path === 'help') return { page: 'help' }
@@ -70,6 +72,8 @@ export function routeTo(route: Route): string {
       return '#/precons'
     case 'inventory':
       return '#/inventory'
+    case 'limited':
+      return '#/limited'
     case 'rules':
       return '#/rules'
     case 'changelog':

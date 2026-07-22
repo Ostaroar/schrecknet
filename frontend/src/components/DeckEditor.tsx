@@ -31,6 +31,7 @@ import { navigate } from '../lib/route'
 import { CardTypeSymbol, DisciplineSymbol } from './VtesSymbol'
 import AddCardBox from './AddCardBox'
 import { organizeDeckCards, type DeckCryptSort } from '../lib/core'
+import { useLimitedFormat, isFormatActive, isCardLegalInFormat, getCardSetsMap } from '../lib/limitedFormat'
 
 function StatsDistribution({
   label,
@@ -472,6 +473,8 @@ export default function DeckEditor({ id }: { id: number }) {
   const [overrides, setOverrides] = useState<Map<number, 'fixed' | 'flexible'>>(new Map())
   const [missingByCard, setMissingByCard] = useState<Map<number, number>>(new Map())
   const [missingExpanded, setMissingExpanded] = useState(false)
+  const [cardSets, setCardSets] = useState<Map<number, string[]>>(new Map())
+  const [limitedFormat] = useLimitedFormat()
 
   const refresh = async () => {
     try {
@@ -488,6 +491,7 @@ export default function DeckEditor({ id }: { id: number }) {
       setStats(await computeDeckStats(c))
       setOverrides(await listDeckCardOverrides(id))
       setMissingByCard(d.inventory_mode === 'excluded' ? new Map() : await computeDeckMissing(c.map((card) => card.id)))
+      setCardSets(await getCardSetsMap(c.map((card) => card.id)))
       setStatus('ready')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -557,6 +561,14 @@ export default function DeckEditor({ id }: { id: number }) {
         .filter((entry) => entry.missing > 0)
         .sort((a, b) => a.card.name.localeCompare(b.card.name)),
     [cards, missingByCard],
+  )
+  const limitedFormatActive = isFormatActive(limitedFormat)
+  const limitedViolations = useMemo(
+    () =>
+      limitedFormatActive
+        ? cards.filter((card) => !isCardLegalInFormat(card.id, cardSets.get(card.id) ?? [], card.kind, limitedFormat))
+        : [],
+    [cards, cardSets, limitedFormat, limitedFormatActive],
   )
 
   if (status === 'loading') return <p className="text-sm text-ink-dim">Loading deck…</p>
@@ -670,6 +682,16 @@ export default function DeckEditor({ id }: { id: number }) {
               <ul className="grid gap-0.5 text-blood-hi">
                 {stats.violations.map((v, i) => <li key={i}>{v}</li>)}
               </ul>
+            )}
+            {limitedFormatActive && (
+              limitedViolations.length === 0 ? (
+                <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">Limited Format Legal</span>
+              ) : (
+                <span className="text-blood-hi">
+                  {limitedViolations.length} card{limitedViolations.length === 1 ? '' : 's'} not in the active
+                  limited format: {limitedViolations.map((c) => c.name).join(', ')}
+                </span>
+              )
             )}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
