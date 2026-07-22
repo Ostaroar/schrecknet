@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
 import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
+import CardTimingWindows from './CardTimingWindows'
 import { navigate } from '../lib/route'
 import CardText from './CardText'
 import { CardTypeSummary, DisciplineBadge } from './VtesSymbol'
@@ -126,6 +127,8 @@ export default function CardPage({ id }: { id: number }) {
           </p>
         )}
       </section>
+
+      {card.kind === 'library' && card.types && <CardTimingWindows types={card.types} />}
 
       {card.rulings.length > 0 && (
         <section className="grid gap-2 text-sm">
