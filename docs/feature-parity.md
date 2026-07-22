@@ -192,8 +192,12 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       open: 2-Players variant within V5 ✎ (keep only if the V5 pool supports
       it) — separate, unstarted. V5 base-format legality is live.
 - ☑ Deck tags: user (free-text) tags — live (frontend/src/lib/deckStore.ts,
-      frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
-      archetype tags still not done ✎
+      frontend/src/components/DeckEditor.tsx, DeckList.tsx). ☑ Auto-derived
+      archetype tags — `lib/archetypeTags.ts` heuristically names Stealth
+      Bleed, Big Stick Melee, Vote Kingdom, Fast Master, Swarm, and Star
+      Vampire from a deck's own library-type distribution, `card_traits`, and
+      crypt shape, each with a flavor blurb and a one-click "+ tag" into the
+      existing free-text tag system (no new tagging mechanism)
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☑ Clone / copy deck — live, from both the deck list and the editor
 - ☑ Import: paste text, Lackey-style `"<qty>x <name>"` — live

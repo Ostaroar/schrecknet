@@ -176,9 +176,12 @@ docs/feature-parity.md's scope note).
   offline; `draw_hand` exposes the same deterministic operation through MCP and
   `POST /api/v1/decks/draw-hand` so a returned seed can reproduce a draw.
 - ☑ User tags — live (frontend/src/lib/deckStore.ts: listTags/addTag/removeTag,
-  frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
-  archetype tags and branches/revisions still not done (larger items, out of
-  scope for the user-tags pass)
+  frontend/src/components/DeckEditor.tsx, DeckList.tsx). ☑ Auto-derived
+  archetype tags — heuristic scan over library types/card_traits/crypt shape
+  (`lib/archetypeTags.ts`) names Stealth Bleed, Big Stick Melee, Vote Kingdom,
+  Fast Master, Swarm, Star Vampire with one-click "+ tag" into the same
+  free-text tag system; deck editor's new Archetype Scan panel. ☐
+  branches/revisions still not done (larger item, tied to Phase 3 sync)
 - ☑ Deck-in-URL sharing — live: `core/src/share.rs` (compiled to WASM, same as
   legality) encodes crypt+library (card_id, qty) pairs into a compact,
   URL-safe base64url token; `#/share/<token>` decodes and previews it, with a
