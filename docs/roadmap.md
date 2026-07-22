@@ -238,7 +238,8 @@ design, decisions, and visualization options in
 - ☑ Impulse / priority interactive widget: a 5-seat table with predator/prey, stepping
   and animating the context-specific pass orders (combat / directed-at-one /
   directed-at-set / undirected), sourced from `gameloop.json`'s `impulseOrders`
-- ☐ Card-DB integration (the differentiator): map FSM timing windows → card types, then
-  deck-aware "when can I play this?" — a rules trainer no other VTES tool has
+- ☑ Card-DB integration (the differentiator): card pages show "when can I play this?"
+  from a hand-distilled card-type → hook mapping (frontend-only, `lib/cardTiming.ts`).
+  Deck-aware view (scan an open deck, not just one card) is still open.
 - ☐ (Optional, own ADR) executable statechart (e.g. XState) as one source of truth for
   the diagram, the trainer's step engine, and rules-consistency tests

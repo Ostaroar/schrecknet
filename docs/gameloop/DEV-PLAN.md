@@ -145,7 +145,7 @@ Shipped as `ImpulseOrderWidget.tsx` behind an "Impulse & priority order" entry p
 fixed, the pass-order logic itself comes straight from the JSON. Step/Previous/Next and an
 auto-play toggle; live-verified for combat and directed-at-a-set contexts.
 
-### M5 — Card-DB integration (the differentiator)
+### M5 — Card-DB integration (the differentiator)  ☑ complete
 - Map hooks → card types (from `gameloop.json.hooks`), then answer **"when can I play
   this?"**: on a card page highlight its legal window(s) on the turn/combat timeline;
   from an open deck, show which cards can fire at each step.
@@ -156,6 +156,18 @@ auto-play toggle; live-verified for combat and directed-at-a-set contexts.
   fine — make the call explicitly and note it.
 - **DoD:** verified against real cards (e.g. a Reaction card lights up the reaction
   windows; a Combat card lights up combat steps); parity across surfaces if server-exposed.
+
+Shipped as `CardTimingWindows.tsx` on the library card page (`CardPage.tsx`), backed by
+`lib/cardTiming.ts`. **Domain-logic placement call:** kept frontend-only and
+presentational — `gameloop.json`'s `hook.cardTypes` isn't populated by the M1 distiller
+yet (all empty arrays in the current DOT), so the card-type → hook mapping is a small
+hand-distilled table in `cardTiming.ts`, not a server capability; nothing to mirror
+through MCP/REST since no server surface exposes it. Revisit as a shared-core capability
+if the distiller starts populating `hook.cardTypes` from the DOT, or if deck-level
+"which cards can fire now" (the still-open per-deck view) needs it server-side. Deck-aware
+drill-down (scanning an open deck's cards) is not yet built — only the single-card view.
+Live-verified: Bait and Switch (Reaction) → reaction window only; Aid from Bats (Combat) →
+all four combat-round windows.
 
 ### M6 — (Optional) executable statechart  ← needs its own ADR
 - If the engine-spec ambition is picked up: model the loop as an executable statechart
