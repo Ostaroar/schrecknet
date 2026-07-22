@@ -176,8 +176,12 @@ try {
   }
   const deckRoute = new URL(page.url()).hash.slice(2)
   await checkRoute(deckRoute)
+  await page.getByRole('button', { name: 'Review', exact: true }).click()
+  await page.waitForFunction(() => location.hash.endsWith('/review'))
+  await page.getByText('Deck review', { exact: true }).waitFor()
+  await checkRoute(new URL(page.url()).hash.slice(2))
 
-  console.log(`mobile layout contract passed across ${routes.length + 1} routes at ${viewportWidth}px`)
+  console.log(`mobile layout contract passed across ${routes.length + 2} routes at ${viewportWidth}px`)
 } finally {
   await browser?.close()
   if (server.exitCode === null && server.signalCode === null) {

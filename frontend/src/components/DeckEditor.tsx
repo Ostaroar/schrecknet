@@ -606,6 +606,12 @@ export default function DeckEditor({ id }: { id: number }) {
             Clone
           </button>
           <button
+            onClick={() => navigate({ page: 'review', deckId: id })}
+            className="text-xs text-ink-dim hover:text-ink-muted"
+          >
+            Review
+          </button>
+          <button
             onClick={() => navigate({ page: 'proxy', deckId: id })}
             className="text-xs text-ink-dim hover:text-ink-muted"
           >

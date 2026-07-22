@@ -162,6 +162,8 @@ docs/feature-parity.md's scope note).
 - ☑ VDB-style deck organization: library grouped by canonical type combination
   and crypt sortable by capacity, clan, group, name, or quantity; ordering,
   grouping, and quantity totals are shared native/WASM Rust behavior
+- ☑ Deck review route: offline readable summary of Rust/WASM-derived legality,
+  capacity, type, discipline, and cost distributions at `#/decks/{id}/review`
 - ☑ Editable deck author/description metadata + clipboard text export; local
   user-data schema is now upgraded through the shared `migrations/` SQL set
 - ☑ Local `.txt` deck import (browser-only file read; nothing uploaded)

@@ -12,6 +12,7 @@ export type Route =
   | { page: 'decks' }
   | { page: 'deck'; id: number }
   | { page: 'proxy'; deckId: number }
+  | { page: 'review'; deckId: number }
   | { page: 'share'; token: string }
   | { page: 'diff' }
   | { page: 'precons' }
@@ -27,6 +28,8 @@ export function parseHash(hash: string): Route {
   if (cardMatch) return { page: 'card', id: Number(cardMatch[1]) }
   const proxyMatch = /^decks\/(\d+)\/proxy$/.exec(path)
   if (proxyMatch) return { page: 'proxy', deckId: Number(proxyMatch[1]) }
+  const reviewMatch = /^decks\/(\d+)\/review$/.exec(path)
+  if (reviewMatch) return { page: 'review', deckId: Number(reviewMatch[1]) }
   const deckMatch = /^decks\/(\d+)$/.exec(path)
   if (deckMatch) return { page: 'deck', id: Number(deckMatch[1]) }
   const shareMatch = /^share\/(.+)$/.exec(path)
@@ -57,6 +60,8 @@ export function routeTo(route: Route): string {
       return `#/decks/${route.id}`
     case 'proxy':
       return `#/decks/${route.deckId}/proxy`
+    case 'review':
+      return `#/decks/${route.deckId}/review`
     case 'share':
       return `#/share/${route.token}`
     case 'diff':

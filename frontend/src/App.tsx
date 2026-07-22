@@ -4,6 +4,7 @@ import LibrarySearch from './components/LibrarySearch'
 import CardPage from './components/CardPage'
 import DeckList from './components/DeckList'
 import DeckEditor from './components/DeckEditor'
+import DeckReview from './components/DeckReview'
 import InventoryPage from './components/InventoryPage'
 import ProxySheet from './components/ProxySheet'
 import SharedDeckPreview from './components/SharedDeckPreview'
@@ -41,6 +42,7 @@ export default function App() {
     route.page === 'deck' ||
     route.page === 'decks' ||
     route.page === 'proxy' ||
+    route.page === 'review' ||
     route.page === 'share' ||
     route.page === 'diff' ||
     route.page === 'precons' ||
@@ -84,6 +86,7 @@ export default function App() {
       {route.page !== 'card' &&
         route.page !== 'deck' &&
         route.page !== 'proxy' &&
+        route.page !== 'review' &&
         route.page !== 'share' &&
         route.page !== 'diff' && (
         <nav className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
@@ -126,6 +129,8 @@ export default function App() {
           <DeckEditor id={route.id} />
         ) : route.page === 'proxy' ? (
           <ProxySheet deckId={route.deckId} />
+        ) : route.page === 'review' ? (
+          <DeckReview id={route.deckId} />
         ) : route.page === 'share' ? (
           <SharedDeckPreview token={route.token} />
         ) : route.page === 'diff' ? (

@@ -207,7 +207,10 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       additions, removals, quantity changes, and unchanged cards; comparison
       logic runs in the shared Rust core. Revision comparison follows when
       branches/revisions are implemented.
-- ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a deck
+- ☑ Deck review page (`#/decks/{id}/review`) — local/offline walkthrough of
+      deck size, capacity range/average, V5 legality, library composition,
+      discipline footprint, and blood/pool cost curves; all aggregates reuse
+      the existing Rust/WASM statistics pipeline
 - ☑ Share deck via URL (deck-in-URL encoding for anonymous users) — live:
       `core/src/share.rs`, `#/share/<token>` preview + import page
 - ☑ Missing cards vs. inventory ("what do I need to buy") — deck editor's
