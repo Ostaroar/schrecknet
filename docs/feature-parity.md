@@ -184,12 +184,12 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       overrides, ported from vdb's `LimitedStore.js` (banned wins over allowed,
       allowed wins over set membership — verified by reading the source
       directly), local-only (`localStorage`, single active format, matching
-      vdb's one-format-at-a-time model), JSON import/export, and a deck-editor
-      legality line alongside V5 legality. ☐ still open: surfacing the format
-      as a search filter (crypt/library "in format" badge, mirroring the
-      inventory "owned" badge pattern) — the editor and deck legality check
-      work without it. ☐ 2-Players variant within V5 ✎ (keep only if the V5
-      pool supports it) — separate, unstarted. V5 base-format legality is live.
+      vdb's one-format-at-a-time model), JSON import/export, a deck-editor
+      legality line alongside V5 legality, and an "Out of format" badge +
+      "Only in format" toggle in crypt/library search (mirrors the inventory
+      "owned" badge/filter, composes with every other search filter). ☐ still
+      open: 2-Players variant within V5 ✎ (keep only if the V5 pool supports
+      it) — separate, unstarted. V5 base-format legality is live.
 - ☑ Deck tags: user (free-text) tags — live (frontend/src/lib/deckStore.ts,
       frontend/src/components/DeckEditor.tsx, DeckList.tsx); ☐ auto-derived
       archetype tags still not done ✎
