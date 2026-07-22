@@ -37,8 +37,10 @@ import type { DisciplineRequirement } from '../lib/disciplineFilter'
 import type { RequirementLogic } from '../lib/requirementFilter'
 import { orderCryptCards } from '../lib/core'
 import { useSearchDeck } from '../lib/useSearchDeck'
+import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
 import { DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
+import OwnedBadge from './OwnedBadge'
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
@@ -85,7 +87,9 @@ export default function CryptSearch() {
   const [searchError, setSearchError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
   const [sort, setSort] = useState<CryptSort | 'relevance'>('capacity_desc')
+  const [onlyOwned, setOnlyOwned] = useState(false)
   const deck = useSearchDeck()
+  const owned = useInventoryOwnedMap()
 
   useEffect(() => {
     Promise.all([
@@ -172,7 +176,7 @@ export default function CryptSearch() {
     sort,
   ])
 
-  const displayResults = results
+  const displayResults = onlyOwned ? results.filter((c) => (owned.get(c.id) ?? 0) > 0) : results
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -347,6 +351,17 @@ export default function CryptSearch() {
           }
         >
           .*Regex
+        </button>
+        <button
+          onClick={() => setOnlyOwned((v) => !v)}
+          aria-pressed={onlyOwned}
+          title="Show only cards you own"
+          className={
+            'rounded-lg border px-2.5 py-2 text-xs ' +
+            (onlyOwned ? 'border-gold bg-gold/10 text-gold' : 'border-line bg-surface text-ink-dim hover:text-ink-muted')
+          }
+        >
+          Only owned
         </button>
         <SemanticModeControl
           enabled={semanticMode}
@@ -682,14 +697,16 @@ export default function CryptSearch() {
                           similarity {c.semanticScore.toFixed(3)}
                         </span>
                       )}
-                      <span className="mt-0.5 block truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
+                      <span className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
                         {c.clan} · G{c.grp}
+                        <OwnedBadge qty={owned.get(c.id) ?? 0} />
                       </span>
                     </span>
-                    <span className="hidden gap-1 sm:flex">
+                    <span className="hidden items-center gap-1 sm:flex">
                       {c.disciplines.map((d) => (
                         <DisciplineBadge key={d.code} {...d} compact />
                       ))}
+                      <OwnedBadge qty={owned.get(c.id) ?? 0} />
                     </span>
                     <span className="hidden text-right text-xs uppercase tracking-wide text-ink-muted lg:block">
                       {c.sect ? `${c.sect} · ` : ''}
