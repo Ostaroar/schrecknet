@@ -4,6 +4,7 @@ import LibrarySearch from './components/LibrarySearch'
 import CardPage from './components/CardPage'
 import DeckList from './components/DeckList'
 import DeckEditor from './components/DeckEditor'
+import InventoryPage from './components/InventoryPage'
 import ProxySheet from './components/ProxySheet'
 import SharedDeckPreview from './components/SharedDeckPreview'
 import DeckDiff from './components/DeckDiff'
@@ -16,7 +17,7 @@ import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings } from './lib/i18n'
 import { useHashRoute, navigate } from './lib/route'
 
-const TABS = ['crypt', 'library', 'decks', 'precons', 'rules', 'help', 'about'] as const
+const TABS = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'help', 'about'] as const
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
@@ -42,6 +43,7 @@ export default function App() {
     route.page === 'share' ||
     route.page === 'diff' ||
     route.page === 'precons' ||
+    route.page === 'inventory' ||
     route.page === 'rules'
 
   return (
@@ -99,13 +101,15 @@ export default function App() {
                   ? ui.nav.librarySearch
                   : t === 'decks'
                     ? ui.nav.decks
-                    : t === 'precons'
-                      ? ui.nav.precons
-                      : t === 'rules'
-                        ? ui.nav.rules
-                        : t === 'help'
-                          ? ui.nav.help
-                          : ui.nav.about}
+                    : t === 'inventory'
+                      ? ui.nav.inventory
+                      : t === 'precons'
+                        ? ui.nav.precons
+                        : t === 'rules'
+                          ? ui.nav.rules
+                          : t === 'help'
+                            ? ui.nav.help
+                            : ui.nav.about}
             </button>
           ))}
         </nav>
@@ -124,6 +128,8 @@ export default function App() {
           <DeckDiff />
         ) : route.page === 'precons' ? (
           <PreconBrowser />
+        ) : route.page === 'inventory' ? (
+          <InventoryPage />
         ) : route.page === 'rules' ? (
           <RulesPage />
         ) : route.page === 'help' ? (

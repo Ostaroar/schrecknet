@@ -4,7 +4,9 @@
 // by later milestones (deck editor cross-referencing, missing-cards view);
 // this module is deliberately storage-only. See docs/inventory-plan.md.
 
+import { query as cardsQuery } from './db'
 import { query as userQuery, run as userRun } from './userDb'
+import { parseDeckText, formatDeckText } from './core'
 
 export interface InventoryEntry {
   cardId: number
@@ -16,6 +18,46 @@ export async function listInventory(): Promise<InventoryEntry[]> {
     'SELECT card_id, qty FROM inventory ORDER BY card_id ASC',
   )
   return rows.map((r) => ({ cardId: r.card_id, qty: r.qty }))
+}
+
+export interface InventoryCardDetail {
+  id: number
+  qty: number
+  kind: 'crypt' | 'library'
+  name: string
+  clan: string | null
+  capacity: number | null
+  types: string[]
+}
+
+/** Owned cards joined with live cards.sqlite data — never denormalized into user.sqlite. */
+export async function getInventoryCardDetails(): Promise<InventoryCardDetail[]> {
+  const rows = await listInventory()
+  if (rows.length === 0) return []
+  const qtyById = new Map(rows.map((r) => [r.cardId, r.qty]))
+  const placeholders = rows.map((_, i) => `?${i + 1}`).join(',')
+  const cards = await cardsQuery<{
+    id: number
+    kind: string
+    name: string
+    clan: string
+    capacity: number | null
+    types: string | null
+  }>(
+    `SELECT id, kind, name, clan, capacity, types FROM cards WHERE id IN (${placeholders})`,
+    rows.map((r) => r.cardId),
+  )
+  return cards
+    .map((c) => ({
+      id: c.id,
+      qty: qtyById.get(c.id) ?? 0,
+      kind: c.kind as 'crypt' | 'library',
+      name: c.name,
+      clan: c.clan || null,
+      capacity: c.capacity,
+      types: c.types ? (JSON.parse(c.types) as string[]) : [],
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export async function getInventoryQty(cardId: number): Promise<number> {
@@ -81,4 +123,47 @@ export async function setDeckCardOverride(
       'ON CONFLICT(deck_id, card_id) DO UPDATE SET mode = ?3',
     [deckId, cardId, mode],
   )
+}
+
+/** Formats the inventory as a plain-text (Lackey/JOL-style) card list for export. */
+export async function exportInventoryText(): Promise<string> {
+  const cards = await getInventoryCardDetails()
+  const crypt = cards.filter((c) => c.kind === 'crypt').map((c) => ({ name: c.name, qty: c.qty }))
+  const library = cards.filter((c) => c.kind === 'library').map((c) => ({ name: c.name, qty: c.qty }))
+  return formatDeckText(crypt, library)
+}
+
+async function resolveByName(name: string): Promise<{ id: number; name: string } | null> {
+  const rows = await cardsQuery<{ id: number; name: string }>(
+    `SELECT id, name FROM cards WHERE name = ?1 COLLATE NOCASE OR name_ascii = ?1 COLLATE NOCASE LIMIT 1`,
+    [name],
+  )
+  return rows[0] ?? null
+}
+
+export interface InventoryImportResult {
+  added: number
+  unresolved: string[]
+}
+
+/**
+ * Parses a plain-text card list, resolves each name against cards.sqlite
+ * (case-insensitive, ASCII-folded), and adds the quantities to the existing
+ * inventory. Names that don't resolve to a known V5-pool card are reported,
+ * not silently dropped.
+ */
+export async function importInventoryText(text: string): Promise<InventoryImportResult> {
+  const lines = await parseDeckText(text)
+  const unresolved: string[] = []
+  let added = 0
+  for (const line of lines) {
+    const match = await resolveByName(line.name)
+    if (!match) {
+      unresolved.push(line.name)
+      continue
+    }
+    await adjustInventoryQty(match.id, line.qty)
+    added++
+  }
+  return { added, unresolved }
 }

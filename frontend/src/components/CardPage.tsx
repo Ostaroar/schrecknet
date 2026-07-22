@@ -3,6 +3,7 @@ import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
 import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
 import CardTimingWindows from './CardTimingWindows'
+import InventoryOwnedControl from './InventoryOwnedControl'
 import { navigate } from '../lib/route'
 import CardText from './CardText'
 import { CardTypeSummary, DisciplineBadge } from './VtesSymbol'
@@ -85,6 +86,7 @@ export default function CardPage({ id }: { id: number }) {
             ))}
           </div>
         )}
+        <InventoryOwnedControl cardId={card.id} />
       </header>
 
       <div className="flex flex-wrap items-start gap-5">

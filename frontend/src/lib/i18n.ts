@@ -12,6 +12,7 @@ export interface UiStrings {
     cryptSearch: string
     librarySearch: string
     decks: string
+    inventory: string
     precons: string
     rules: string
     help: string
@@ -66,6 +67,7 @@ const en: UiStrings = {
     cryptSearch: 'crypt search',
     librarySearch: 'library search',
     decks: 'decks',
+    inventory: 'inventory',
     precons: 'precons',
     rules: 'rules',
     help: 'help',
@@ -122,6 +124,7 @@ const es: UiStrings = {
     cryptSearch: 'buscar cripta',
     librarySearch: 'buscar biblioteca',
     decks: 'mazos',
+    inventory: 'inventario',
     precons: 'premontados',
     rules: 'reglas',
     help: 'ayuda',
@@ -181,6 +184,7 @@ const fr: UiStrings = {
     cryptSearch: 'recherche crypte',
     librarySearch: 'recherche bibliothèque',
     decks: 'decks',
+    inventory: 'inventaire',
     precons: 'préconstruits',
     rules: 'règles',
     help: 'aide',
