@@ -474,7 +474,9 @@ try {
   let activeKind = null
   async function showKind(kind) {
     if (activeKind !== kind) {
-      await page.getByRole('button', { name: `${kind} search`, exact: true }).click()
+      // Navigation labels are localized by the persisted card-text language.
+      // Route hooks are deliberately language-independent.
+      await page.locator(`nav button[data-route="${kind}"]`).click()
       await page.waitForFunction((expected) => location.hash === `#/${expected}`, kind)
       await page.getByPlaceholder('Name / text').waitFor()
       activeKind = kind
