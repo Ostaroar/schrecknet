@@ -226,7 +226,7 @@ across deck editor / proxy / search / card pages:
   (sum for fixed, max for flexible, plus a per-card override granularity this
   session's design missed at first) — see docs/inventory-plan.md § 1a
 - ☑ I2 `#/inventory` page: add/edit/remove, text import/export, card-page owned count
-- ☐ I3 deck ↔ inventory cross-referencing (per-deck mode, owned/missing badges)
+- ☑ I3 deck ↔ inventory cross-referencing (per-deck mode, owned/missing badges)
 - ☐ I4 missing-cards want-list + "print only missing" proxy toggle
 - ☐ I5 search integration (owned badge, only-owned filter — browser-local only)
 

@@ -214,7 +214,7 @@ data pipeline — the UI states this rather than implying a ready-to-play count.
 Live-verified: adding Fifth Edition — Malkavian (30 cards) took the inventory
 from empty to 9 crypt/21 library at qty 1 each; Remove reversed it exactly.
 
-### I3 — Deck ↔ inventory cross-referencing
+### I3 — Deck ↔ inventory cross-referencing  ☑ complete
 - Deck editor: `inventory_mode` selector (excluded/flexible/fixed — label them
   human-readably, e.g. "not in inventory / shares copies / owns copies" ✎ vdb's
   wording), per-card owned/missing badges driven by `core` usage math, deck summary
@@ -222,6 +222,22 @@ from empty to 9 crypt/21 library at qty 1 each; Remove reversed it exactly.
 - **DoD:** two decks sharing a card in flexible mode show shared (not doubled)
   usage; a fixed deck claims copies exclusively; verified live with a constructed
   example; qty edits update badges reactively.
+
+Shipped: `inventoryStore.getClaimsForCards`/`computeDeckMissing`/`getInventoryQtyMap`
+(pooled claims across every non-excluded deck, per-card override winning over the
+deck default), `DeckEditor.tsx`'s `InventoryModeSelector` (labels per DEV-PLAN's
+suggestion), per-card `InventoryBadge` (Fixed/Flexible pill, click-to-override,
+raw missing count) and a deck-summary total clamped to the deck's own qty per
+vdb's presentation rule (§ 1a) — the raw per-card number and the clamped deck
+total are deliberately shown side by side so the distinction is visible, not
+hidden. `DeckList.tsx` mode + missing chips per deck. `createDeck`/`cloneDeck`
+never set `inventory_mode` explicitly, so the schema's `DEFAULT 'excluded'`
+already gives clone-resets-to-excluded for free — verified rather than assumed.
+Live-verified with a constructed two-deck fixture (Deflection: Deck A flexible
+qty 3, Deck B fixed qty 2, 0 owned) — deck list showed 3/2 missing respectively
+(flexible max 3 + fixed sum 2 = 5, clamped to each deck's own qty); the
+per-card override toggle cycled Flexible → Fixed → cleared correctly; a clone
+of Deck A came back `inventory_mode: 'excluded'`. tsc --noEmit clean.
 
 ### I4 — Missing cards & proxy synergy
 - Global "missing" view (on the inventory page): union of all inventory-participating
