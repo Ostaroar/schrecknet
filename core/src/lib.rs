@@ -11,6 +11,7 @@ pub mod crypt_metadata;
 pub mod diff;
 pub mod draw;
 pub mod dtext;
+pub mod inventory;
 pub mod legality;
 pub mod requirements;
 pub mod search_plan;

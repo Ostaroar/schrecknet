@@ -3,6 +3,7 @@ use rusqlite::Connection;
 const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0001_user_data.sql"),
     include_str!("../../migrations/0002_deck_author.sql"),
+    include_str!("../../migrations/0003_inventory.sql"),
 ];
 
 pub fn migrate(path: &str) -> rusqlite::Result<()> {
@@ -39,8 +40,65 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
+        let inventory_mode_columns: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('decks') WHERE name = 'inventory_mode'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let inventory_tables: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'
+                 AND name IN ('inventory', 'deck_card_inventory_overrides')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(version, MIGRATIONS.len());
         assert_eq!(author_columns, 1);
+        assert_eq!(inventory_mode_columns, 1);
+        assert_eq!(inventory_tables, 2);
+    }
+
+    #[test]
+    fn inventory_mode_defaults_to_excluded_for_existing_decks() {
+        let connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE decks(
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                 );
+                 CREATE TABLE deck_cards(
+                    deck_id INTEGER NOT NULL,
+                    card_id INTEGER NOT NULL,
+                    qty INTEGER NOT NULL,
+                    PRIMARY KEY (deck_id, card_id)
+                 );
+                 CREATE TABLE deck_tags(
+                    deck_id INTEGER NOT NULL,
+                    tag TEXT NOT NULL,
+                    PRIMARY KEY (deck_id, tag)
+                 );
+                 PRAGMA user_version = 1;
+                 ALTER TABLE decks ADD COLUMN author TEXT;
+                 PRAGMA user_version = 2;
+                 INSERT INTO decks VALUES (1, 'Existing', NULL, 'created', 'updated', NULL);",
+            )
+            .unwrap();
+
+        migrate_connection(&connection).unwrap();
+
+        let mode: String = connection
+            .query_row("SELECT inventory_mode FROM decks WHERE id = 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(mode, "excluded");
     }
 
     #[test]

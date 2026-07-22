@@ -22,6 +22,7 @@ import init, {
   capacity_stats as capacityStatsWasm,
   category_distribution as categoryDistributionWasm,
   rank_semantic_cards as rankSemanticCardsWasm,
+  inventory_missing as inventoryMissingWasm,
 } from '../wasm/schrecknet_core.js'
 
 let ready: Promise<void> | null = null
@@ -296,6 +297,16 @@ export async function computeCapacityStats(entries: { capacity: number; qty: num
   if (!raw) return null
   const [count, min, max, averageHundredths] = raw.split('\t').map(Number)
   return { count, min, max, average: averageHundredths / 100 }
+}
+
+/**
+ * Missing copies for one card: `fixedQtys` sum (exclusive claims), `flexibleQtys`
+ * take the max (shared pool), then subtract `owned`, floored at zero. Ported from
+ * vdb's own algorithm — see core/src/inventory.rs and docs/inventory-plan.md § 1a.
+ */
+export async function computeMissingQty(fixedQtys: number[], flexibleQtys: number[], owned: number): Promise<number> {
+  await ensureReady()
+  return inventoryMissingWasm(new Uint16Array(fixedQtys), new Uint16Array(flexibleQtys), owned)
 }
 
 export async function computeDistribution(entries: WeightedEntry[]): Promise<DistributionEntry[]> {

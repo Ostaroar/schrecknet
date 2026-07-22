@@ -221,8 +221,10 @@ the browser's `user.sqlite` (OPFS) and works offline; Phase 3 later syncs it
 unchanged. Plan, data model, core-math placement, and the full integration map
 across deck editor / proxy / search / card pages:
 [docs/inventory-plan.md](inventory-plan.md)._
-- ☐ I1 schema + `inventoryStore` + `core/src/inventory.rs` usage/missing math
-  (✎ verify vdb's flexible/fixed claiming semantics first)
+- ☑ I1 schema + `inventoryStore` + `core/src/inventory.rs` usage/missing math.
+  ✎ vdb's claiming semantics verified by reading `smeea/vdb` source directly
+  (sum for fixed, max for flexible, plus a per-card override granularity this
+  session's design missed at first) — see docs/inventory-plan.md § 1a
 - ☐ I2 `#/inventory` page: add/edit/remove, text import/export, card-page owned count
 - ☐ I3 deck ↔ inventory cross-referencing (per-deck mode, owned/missing badges)
 - ☐ I4 missing-cards want-list + "print only missing" proxy toggle

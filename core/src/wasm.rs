@@ -332,6 +332,23 @@ pub fn category_distribution(labels: Vec<String>, qtys: Vec<u16>) -> Result<Stri
         .join("\n"))
 }
 
+/// Missing copies for a single card: `fixed_qtys` sum (exclusive claims),
+/// `flexible_qtys` take the max (shared pool), then subtract `owned`,
+/// floored at zero. See `core/src/inventory.rs` for the ported algorithm.
+#[wasm_bindgen]
+pub fn inventory_missing(fixed_qtys: Vec<u16>, flexible_qtys: Vec<u16>, owned: u16) -> u16 {
+    let claims: Vec<crate::inventory::Claim> = fixed_qtys
+        .into_iter()
+        .map(|qty| (qty, crate::inventory::ClaimMode::Fixed))
+        .chain(
+            flexible_qtys
+                .into_iter()
+                .map(|qty| (qty, crate::inventory::ClaimMode::Flexible)),
+        )
+        .collect();
+    crate::inventory::missing_for_card(&claims, owned)
+}
+
 /// Exact semantic ranking over row-major candidate embeddings.
 ///
 /// Returns `card_id\tscore` rows. Query inference and SQLite reads stay in the

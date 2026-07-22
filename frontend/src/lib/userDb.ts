@@ -1,7 +1,7 @@
-// Local, writable user data (decks — inventory later) — a separate OPFS
-// database from cards.sqlite, owned by userDbWorker.ts. Same worker-per-DB
-// pattern as db.ts; kept as a distinct file/worker/pool because this data is
-// locally created and mutated, never fetched from the server.
+// Local, writable user data (decks, inventory) — a separate OPFS database
+// from cards.sqlite, owned by userDbWorker.ts. Same worker-per-DB pattern as
+// db.ts; kept as a distinct file/worker/pool because this data is locally
+// created and mutated, never fetched from the server.
 
 interface Pending {
   resolve: (value: never) => void

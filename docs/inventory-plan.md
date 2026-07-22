@@ -31,11 +31,38 @@ server actually stores inventories*. Until then, do not add a server surface. Pu
 derived computations (usage/missing math) go in shared Rust `core/` from day one so
 the server reuses them unchanged in Phase 3.
 
+## 1a. ✎ Verified against `smeea/vdb` (2026-07-22)
+
+Read directly: `frontend/src/utils/getMissing.js`, `commons.js`'s `getHardTotal`/
+`getSoftMax`, `hooks/useDeckMissing.js`, `context/DeckStore.js`'s
+`deckToggleInventoryState`/`cardToggleInventoryState`. Confirmed model:
+
+- Each deck has a default claim mode, cycled `'' (excluded) → S (soft) → H (hard) → ''`
+  by `deckToggleInventoryState`. Toggling the deck default **clears every per-card
+  override** on that deck (`DeckStore.js`'s switch on `field === INVENTORY_TYPE`).
+- **Individual cards within a deck can override the deck's default** — a small pin
+  (hard) / shuffle (soft) icon per card, toggled independently
+  (`cardToggleInventoryState`). This is more granular than originally assumed; the
+  data model below carries it as an overrides table.
+- Math (`getHardTotal`/`getSoftMax`, `getMissing`): hard/fixed claims **sum** across
+  decks (exclusive reservation); soft/flexible claims take the **max** across decks
+  (shared pool). `missing = hard_total + soft_max − owned`, and vdb clamps the
+  *reported* missing count to the deck's own requested qty (`miss > q ? q : miss`) —
+  i.e. a deck never asks you to buy more than it itself needs, even if other decks'
+  claims inflate the raw missing number. This clamp is a **presentation-layer**
+  concern (per-deck view only); the raw `core::inventory::missing_for_card` value is
+  what a global want-list (I4) should use.
+- Confirms the originally-planned sum-vs-max split was correct; the per-card override
+  granularity was the piece this note updates.
+
+This resolves the ✎ that gated I1. `core/src/inventory.rs` ships with this verified
+algorithm and cites this section in its doc comment.
+
 ## 2. Data model
 
-New migration `migrations/0003_inventory.sql` (browser `userDbWorker.ts` MIGRATIONS
-array **and** `server/src/user_db.rs` MIGRATIONS — the shared-migrations invariant;
-bump `PRAGMA user_version` to 3):
+Migration `migrations/0003_inventory.sql` (browser `userDbWorker.ts` MIGRATIONS array
+**and** `server/src/user_db.rs` MIGRATIONS — the shared-migrations invariant; bumps
+`PRAGMA user_version` to 3). **Shipped as of I1:**
 
 ```sql
 BEGIN;
@@ -45,11 +72,19 @@ CREATE TABLE IF NOT EXISTS inventory(
   qty INTEGER NOT NULL CHECK(qty > 0)   -- owned copies; delete row instead of qty=0
 );
 
--- Per-deck inventory participation, vdb-style. ✎ verify exact vdb semantics:
--- vdb decks carry an "inventory type": excluded (default) / flexible / fixed.
--- Fixed decks claim their copies exclusively; flexible decks share the pool.
+-- Deck-level default claim (verified against vdb, § 1a above).
 ALTER TABLE decks ADD COLUMN inventory_mode TEXT NOT NULL DEFAULT 'excluded'
-  CHECK(inventory_mode IN ('excluded','flexible','fixed'));
+  CHECK(inventory_mode IN ('excluded','fixed','flexible'));
+
+-- Per-card override of the deck default (vdb's pin/shuffle toggle, § 1a).
+-- Only rows that differ from the deck default are stored; changing a deck's
+-- inventory_mode clears its overrides (inventoryStore.setDeckInventoryMode does this).
+CREATE TABLE IF NOT EXISTS deck_card_inventory_overrides(
+  deck_id INTEGER NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+  card_id INTEGER NOT NULL,
+  mode TEXT NOT NULL CHECK(mode IN ('fixed','flexible')),
+  PRIMARY KEY (deck_id, card_id)
+);
 
 PRAGMA user_version = 3;
 COMMIT;
@@ -60,27 +95,33 @@ Notes:
   a follow-up migration is cheap).
 - `card_id` is not FK-constrained (cards live in a different database file); the app
   layer resolves names/details against `cards.sqlite` exactly like `deck_cards` does.
-- The server's `app.sqlite` gets the same table for free via shared migrations — it
-  simply stays empty until Phase 3 writes to it.
+- The server's `app.sqlite` gets the same tables for free via shared migrations — they
+  simply stay empty until Phase 3 writes to them.
 
-## 3. Domain logic placement (core/ Rust → WASM)
+## 3. Domain logic placement (core/ Rust → WASM) — shipped as of I1
 
-The *storage* is plain CRUD (frontend `inventoryStore.ts`, patterned on
-`deckStore.ts`). The *math* is domain logic and goes in `core/src/inventory.rs`,
-compiled to WASM like `legality.rs`/`stats.rs`/`diff.rs`:
+The *storage* is plain CRUD (`frontend/src/lib/inventoryStore.ts`, patterned on
+`deckStore.ts`: `listInventory`, `getInventoryQty`, `setInventoryQty`,
+`adjustInventoryQty`, `getDeckInventoryMode`, `setDeckInventoryMode`,
+`listDeckCardOverrides`, `setDeckCardOverride`). The *math* is domain logic and lives
+in `core/src/inventory.rs`, compiled to WASM (`inventory_missing` in `wasm.rs`,
+verified building for `wasm32-unknown-unknown`) like `legality.rs`/`stats.rs`/`diff.rs`:
 
+```rust
+pub fn missing_for_card(claims: &[(u16 /* qty */, ClaimMode)], owned: u16) -> u16
 ```
-usage(inventory, decks) -> per-card { owned, used_flexible, used_fixed, missing }
-```
 
-- `used_fixed` = sum of qty over decks with `inventory_mode='fixed'`.
-- `used_flexible` = **max** (not sum) of qty over flexible decks — flexible decks
-  share copies. ✎ verify against vdb's `useInventory` logic in `smeea/vdb` before
-  freezing this; encode whatever vdb actually does in a Rust unit test with a
-  hand-computed fixture.
-- `missing` = max(0, used_fixed + used_flexible − owned) per card.
-- Deck-level view: for one deck, per-card `owned_free` (after other decks' claims)
-  and a deck summary (how many cards/copies missing).
+- Fixed claims sum, flexible claims take the max, combined additively, then
+  saturating-subtract `owned`, floored at zero (see § 1a for the citation). 5 Rust
+  unit tests cover: flexible-max-not-sum, fixed-sum, fixed+flexible combined, owning
+  enough, and no claims.
+- Deck-id attribution (which decks use a card, for per-deck UI) is **not** part of
+  this function — callers resolve claims per card from `deck_cards` +
+  `inventory_mode` + `deck_card_inventory_overrides` and pass in the resulting
+  `(qty, mode)` list. Keeps the core function a pure, easily-tested reduction.
+- vdb's per-deck presentation clamp (`min(missing, deck's own qty)`) is **not** in
+  `core/` — it's a view concern for I3's deck editor, applied on top of the raw
+  `missing_for_card` result.
 
 Rationale: Phase 3's server needs the identical computation for synced inventories;
 putting it in `core/` now means the server calls the same function later and the
@@ -93,7 +134,7 @@ consciously deferred with a note.
 
 | Existing feature | Interaction | Milestone |
 |---|---|---|
-| **Deck editor** (`DeckEditor.tsx`) | Per-card owned/missing badge; deck `inventory_mode` selector; deck summary "N copies missing". The mockup (`docs/mockups/design-r1.html`) already shows "Inventory: 4 cards missing ▾" in the builder — follow it. | I3 |
+| **Deck editor** (`DeckEditor.tsx`) | Per-card owned/missing badge; deck `inventory_mode` selector; per-card pin (fixed) / shuffle (flexible) override icon, matching vdb's granularity (§ 1a); deck summary "N copies missing" using vdb's per-deck clamp (missing capped at the deck's own qty). The mockup (`docs/mockups/design-r1.html`) already shows "Inventory: 4 cards missing ▾" in the builder — follow it. | I3 |
 | **Deck list** (`DeckList.tsx`) | Show each deck's inventory mode + missing count chip. | I3 |
 | **Missing-cards view** ("what do I need to buy", feature-parity § Deck) | Per-deck and global: aggregated missing list, exportable as text. Cross-references `usage()`. | I4 |
 | **Crypt/Library search** | "Owned" badge on result rows; an "only owned" / "in inventory" filter toggle. Frontend-only filter (post-filter on the result set or JOIN into the local query) — **do not** add an inventory param to server search: the server has no inventory until Phase 3, and both-or-neither forbids a browser-only search param on the shared surface. The browser's SQL runs locally, so a local JOIN against `user.sqlite` is fine — but note the two DBs are separate SQLite files in separate workers: fetch the inventory id-set first and filter in TS, don't try cross-database JOINs. | I5 |
@@ -112,7 +153,7 @@ consciously deferred with a note.
 
 ## 5. Milestones (vertical slices, in order)
 
-### I1 — Schema + store + core math
+### I1 — Schema + store + core math  ☑ complete
 - Migration 0003 (both migration arrays), `frontend/src/lib/inventoryStore.ts`
   (list/get/setQty CRUD following `deckStore.ts` conventions), `core/src/inventory.rs`
   with the usage/missing computation compiled to WASM and exposed via
@@ -124,6 +165,18 @@ consciously deferred with a note.
   without_data_loss`).
 - **DoD:** all Rust tests green; live check that an existing deck database migrates
   cleanly and CRUD round-trips through the worker.
+
+Shipped: `migrations/0003_inventory.sql` (`inventory` table, `decks.inventory_mode`,
+`deck_card_inventory_overrides`), `core/src/inventory.rs::missing_for_card` (5 unit
+tests, all green) + `wasm.rs::inventory_missing` binding + `core.ts::computeMissingQty`
+wrapper, `frontend/src/lib/inventoryStore.ts` (list/get/set/adjust qty, deck mode +
+per-card override CRUD). `cargo test --workspace` (83 tests) and
+`cargo clippy --workspace --all-targets -- -D warnings` both clean; wasm32 target
+builds. Live-verified in the browser: `computeMissingQty([2,2],[3,4],3) === 5`
+(4 fixed + 4 flexible-max − 3 owned) matching the Rust test fixture exactly, and
+`inventoryStore` CRUD (`setInventoryQty`/`listInventory`/`getInventoryQty`) round-trips
+through the OPFS worker with no existing-data-loss on migration. § 1a's vdb
+verification is folded into the schema (per-card overrides) and the core doc comment.
 
 ### I2 — Inventory page (`#/inventory`)
 - Route + nav tab (+ i18n strings). Table of owned cards: name (localized), type/clan
