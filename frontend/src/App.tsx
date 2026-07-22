@@ -147,7 +147,8 @@ export default function App() {
 
       <CommandPalette />
 
-      <footer className="grid gap-2 py-6 text-center text-xs text-ink-dim">
+      <footer className="grid justify-items-center gap-2 py-6 text-center text-xs text-ink-dim">
+        <img src="/dark-pack-logo.png" alt="Dark Pack" className="h-10 w-10" />
         <span>{ui.footer.copyright}</span>
         <span>{ui.footer.disclaimer}</span>
         <span className="flex justify-center gap-3">

@@ -256,15 +256,18 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)
 - ☐ Keyboard-first UX on desktop, touch-first on mobile
-- 🌓 Dark Pack legal notice on every page footer ✎ — required elements per the
+- ☑ Dark Pack legal notice on every page footer ✎ — required elements per the
       [Dark Pack Agreement](https://www.paradoxinteractive.com/games/world-of-darkness/community/dark-pack-agreement):
-      Dark Pack logo, copyright/trademark notice, and a "not official World of
-      Darkness material" disclaimer. Blocking for any future monetization
-      (donations/sponsorships). Copyright/trademark notice (corrected to the
-      agreement's exact wording — verified via a fetched summary of the
-      agreement page, not a lawyer review, so double-check before relying on
-      it) and the disclaimer now render in the site-wide footer and About page,
-      localized in en/es/fr. **Still missing: the actual Dark Pack logo
-      asset** — that file is provided directly to signed licensees, not
-      publicly downloadable, so it needs the project owner to supply it before
-      this item can be fully checked off.
+      logo, copyright/trademark notice, and a "not official World of Darkness
+      material" disclaimer, all three now rendering in the site-wide footer
+      (and the copyright/disclaimer text also in the About page's credits),
+      localized in en/es/fr. There's no license/signup for this agreement —
+      per the agreement page itself, placing the logo on the site is what
+      binds you to its terms; the free asset pack (including the logo) is
+      linked from that same page. `frontend/public/dark-pack-logo.png` is the
+      official red-circle mark from that pack, downsized for web (240×240,
+      ~45KB) — full pack kept out of the repo (`.gitignore`'d) since it's
+      hundreds of MB and only this one asset is needed. Copyright/disclaimer
+      wording verified via a fetched summary of the agreement page, not a
+      lawyer review — double-check before relying on it for anything beyond
+      this hobby project.
