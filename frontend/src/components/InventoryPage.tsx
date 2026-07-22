@@ -2,11 +2,15 @@ import { useEffect, useState } from 'react'
 import {
   getInventoryCardDetails,
   setInventoryQty,
+  adjustInventoryQtyForCards,
   exportInventoryText,
   importInventoryText,
   type InventoryCardDetail,
   type InventoryImportResult,
 } from '../lib/inventoryStore'
+import { listPrecons, type PreconSummary } from '../lib/precons'
+import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
+import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
 import AddCardBox from './AddCardBox'
 
@@ -139,6 +143,82 @@ function ImportExportPanel({ onImported }: { onImported: () => void }) {
   )
 }
 
+function AddPreconPanel({ onChanged }: { onChanged: () => void }) {
+  const [precons, setPrecons] = useState<PreconSummary[]>([])
+  const [selected, setSelected] = useState('')
+  const [busy, setBusy] = useState<'add' | 'remove' | null>(null)
+  const [status, setStatus] = useState('')
+
+  useEffect(() => {
+    listPrecons().then(setPrecons)
+  }, [])
+
+  const selectedPrecon = precons.find((p) => `${p.set}:${p.precon}` === selected) ?? null
+
+  const preconCardIds = async (): Promise<number[]> => {
+    if (!selectedPrecon) return []
+    const { set, precon } = selectedPrecon
+    const [crypt, library] = await Promise.all([
+      searchCrypt({ ...emptyCryptFilters, precons: [{ set, precon }] }),
+      searchLibrary({ ...emptyLibraryFilters, precons: [{ set, precon }] }),
+    ])
+    return [...crypt.map((c) => c.id), ...library.map((c) => c.id)]
+  }
+
+  const apply = async (mode: 'add' | 'remove') => {
+    if (!selectedPrecon) return
+    setBusy(mode)
+    const cardIds = await preconCardIds()
+    await adjustInventoryQtyForCards(cardIds, mode === 'add' ? 1 : -1)
+    setStatus(
+      mode === 'add'
+        ? `Added 1 copy each of ${cardIds.length} cards.`
+        : `Removed 1 copy each of ${cardIds.length} cards.`,
+    )
+    setBusy(null)
+    onChanged()
+  }
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+      <h2 className="text-xs uppercase tracking-wide text-ink-dim">Add / remove a precon</h2>
+      <p className="text-xs text-ink-dim">
+        Card quantities per precon aren't tracked by the data source, so this adds or removes one
+        copy of each distinct card in the deck's known pool, not a full ready-to-play count.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={selected}
+          onChange={(event) => setSelected(event.target.value)}
+          className="min-w-0 flex-1 rounded-lg border border-line bg-ground px-3 py-1.5 text-sm text-ink outline-none focus:border-blood-hi"
+        >
+          <option value="">Choose a precon…</option>
+          {precons.map((p) => (
+            <option key={`${p.set}:${p.precon}`} value={`${p.set}:${p.precon}`}>
+              {p.set} — {p.precon} ({p.card_count} cards)
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => apply('add')}
+          disabled={!selectedPrecon || busy !== null}
+          className="rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50"
+        >
+          {busy === 'add' ? 'Adding…' : 'Add to inventory'}
+        </button>
+        <button
+          onClick={() => apply('remove')}
+          disabled={!selectedPrecon || busy !== null}
+          className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:opacity-50"
+        >
+          {busy === 'remove' ? 'Removing…' : 'Remove from inventory'}
+        </button>
+      </div>
+      {status && <p className="text-xs text-ink-dim">{status}</p>}
+    </div>
+  )
+}
+
 export default function InventoryPage() {
   const [cards, setCards] = useState<InventoryCardDetail[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -187,6 +267,7 @@ export default function InventoryPage() {
       </div>
 
       <ImportExportPanel onImported={refresh} />
+      <AddPreconPanel onChanged={refresh} />
 
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="grid gap-2">

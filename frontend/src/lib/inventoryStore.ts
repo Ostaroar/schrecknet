@@ -84,6 +84,19 @@ export async function adjustInventoryQty(cardId: number, delta: number): Promise
   return next
 }
 
+/**
+ * Adjusts several cards' owned quantity by the same delta — used for
+ * add/remove-a-precon, since precon quantities aren't tracked by the data
+ * pipeline (KRCG's export records which printings existed, not each deck's
+ * exact copy counts; see lib/precons.ts). One copy per distinct card is the
+ * only quantity this can know, so `delta` is expected to be ±1.
+ */
+export async function adjustInventoryQtyForCards(cardIds: number[], delta: number): Promise<void> {
+  for (const cardId of cardIds) {
+    await adjustInventoryQty(cardId, delta)
+  }
+}
+
 export type InventoryMode = 'excluded' | 'fixed' | 'flexible'
 
 export async function getDeckInventoryMode(deckId: number): Promise<InventoryMode> {
