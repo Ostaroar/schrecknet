@@ -209,6 +209,8 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
 
 ## Inventory (`/inventory`)
+_Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-first
+(no account needed), synced later in Phase 3._
 - ☐ Add crypt/library cards with quantities
 - ☐ Import/export inventory (text/file) ✎
 - ☐ Usage view: how many copies used across decks, missing counts

@@ -209,8 +209,24 @@ docs/feature-parity.md's scope note).
 
 ## Phase 3 — Accounts & sync
 - Register/login/reset (parity) + passkeys; server-synced decks & branches
-- Inventory management with deck cross-referencing
+- Inventory **sync** (the inventory feature itself is local-first and pulled
+  forward — full design & milestones in [docs/inventory-plan.md](inventory-plan.md);
+  Phase 3 only adds server storage + the `get_inventory`/`update_inventory`
+  MCP+REST surface)
 - MCP/REST authenticated surface
+
+## Phase 2.5 — Local inventory (pulled forward from Phase 3)
+_Design decision (2026-07-22): inventory needs no account — like decks it lives in
+the browser's `user.sqlite` (OPFS) and works offline; Phase 3 later syncs it
+unchanged. Plan, data model, core-math placement, and the full integration map
+across deck editor / proxy / search / card pages:
+[docs/inventory-plan.md](inventory-plan.md)._
+- ☐ I1 schema + `inventoryStore` + `core/src/inventory.rs` usage/missing math
+  (✎ verify vdb's flexible/fixed claiming semantics first)
+- ☐ I2 `#/inventory` page: add/edit/remove, text import/export, card-page owned count
+- ☐ I3 deck ↔ inventory cross-referencing (per-deck mode, owned/missing badges)
+- ☐ I4 missing-cards want-list + "print only missing" proxy toggle
+- ☐ I5 search integration (owned badge, only-owned filter — browser-local only)
 
 ## Phase 4 — Polish & v1.0
 - Full feature-parity audit vs vdb.im (side-by-side golden tests)
