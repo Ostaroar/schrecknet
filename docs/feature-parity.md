@@ -20,11 +20,12 @@ the V5-legal pool at build time — options with zero matching cards don't rende
 Legality = V5 rules (+ custom limited formats within the pool); "standard 60–90"
 checks are replaced by V5 deck-construction rules.
 
-Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during implementation
+Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior against vdb.im during implementation
 
 ## Navigation / Shell
-- ☐ Top navigation: Account/Login, About, Inventory, Decks, Crypt, Library —
-      About/Decks/Crypt/Library live; Account and Inventory follow their features
+- 🌓 Top navigation: Account/Login, About, Inventory, Decks, Crypt, Library —
+      About/Decks/Crypt/Library/Inventory live; Account is Phase 3 (needs
+      server auth first)
 - ☑ Quick card search by name — ⌘K/Ctrl+K command palette, prefix-ranked,
       across both kinds, keyboard-driven (↑↓/Enter/Esc), jumps to the card page
 - ☑ Language switcher for card texts — persisted global choice, applied to
@@ -199,7 +200,9 @@ Legend: ☐ todo · ☑ done · ✎ verify exact behavior against vdb.im during 
 - ☐ Deck review page (`/review`) ✎ — annotated walkthrough of a deck
 - ☑ Share deck via URL (deck-in-URL encoding for anonymous users) — live:
       `core/src/share.rs`, `#/share/<token>` preview + import page
-- ☐ Missing cards vs. inventory ("what do I need to buy")
+- ☑ Missing cards vs. inventory ("what do I need to buy") — deck editor's
+      expandable missing-cards list + inventory page's collection-wide,
+      exportable want-list (see [inventory-plan.md](inventory-plan.md) I4)
 - ☑ Precon decks browser — live at `#/precons`, all 32 official V5 precons
       grouped by set (list_precons: MCP + REST + browser). ✎ known
       limitation, not a bug: card *quantities* per precon deck aren't
@@ -253,8 +256,15 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       diff updates
 - ☐ Card images served efficiently (original: pre-generated per-language images)
 - ☐ Keyboard-first UX on desktop, touch-first on mobile
-- ☐ Dark Pack legal notice on every page footer ✎ — required elements per the
+- 🌓 Dark Pack legal notice on every page footer ✎ — required elements per the
       [Dark Pack Agreement](https://www.paradoxinteractive.com/games/world-of-darkness/community/dark-pack-agreement):
-      Dark Pack logo, copyright/trademark notice (already in README.md), and a
-      "not official World of Darkness material" disclaimer. Blocking for any
-      future monetization (donations/sponsorships).
+      Dark Pack logo, copyright/trademark notice, and a "not official World of
+      Darkness material" disclaimer. Blocking for any future monetization
+      (donations/sponsorships). Copyright/trademark notice (corrected to the
+      agreement's exact wording — verified via a fetched summary of the
+      agreement page, not a lawyer review, so double-check before relying on
+      it) and the disclaimer now render in the site-wide footer and About page,
+      localized in en/es/fr. **Still missing: the actual Dark Pack logo
+      asset** — that file is provided directly to signed licensees, not
+      publicly downloadable, so it needs the project owner to supply it before
+      this item can be fully checked off.

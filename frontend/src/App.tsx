@@ -149,6 +149,7 @@ export default function App() {
 
       <footer className="grid gap-2 py-6 text-center text-xs text-ink-dim">
         <span>{ui.footer.copyright}</span>
+        <span>{ui.footer.disclaimer}</span>
         <span className="flex justify-center gap-3">
           <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">{ui.footer.help}</button>
           <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">{ui.footer.about}</button>

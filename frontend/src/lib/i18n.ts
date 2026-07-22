@@ -25,6 +25,7 @@ export interface UiStrings {
   }
   footer: {
     copyright: string
+    disclaimer: string
     help: string
     about: string
   }
@@ -80,7 +81,8 @@ const en: UiStrings = {
   },
   footer: {
     copyright:
-      "Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission under the Dark Pack agreement. All rights reserved.",
+      'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com.',
+    disclaimer: 'SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive. It is not official World of Darkness material.',
     help: 'Help',
     about: 'About',
   },
@@ -115,7 +117,7 @@ const en: UiStrings = {
     creditsAnd: 'and card data and rulings from',
     creditsCardData: '. The source code is available under the MIT license.',
     creditsRights:
-      'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB and are used with permission under the Dark Pack agreement. All rights reserved.',
+      'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com. SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive; it is not official World of Darkness material.',
   },
 }
 
@@ -137,7 +139,9 @@ const es: UiStrings = {
   },
   footer: {
     copyright:
-      'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso bajo el acuerdo Dark Pack. Todos los derechos reservados.',
+      'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com.',
+    disclaimer:
+      'SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive. No es material oficial de World of Darkness.',
     help: 'Ayuda',
     about: 'Acerca de',
   },
@@ -175,7 +179,7 @@ const es: UiStrings = {
     creditsAnd: 'y en los datos de cartas y erratas de',
     creditsCardData: '. El código fuente está disponible bajo licencia MIT.',
     creditsRights:
-      'Parte de este material es propiedad y marca registrada de Paradox Interactive AB y se usa con permiso bajo el acuerdo Dark Pack. Todos los derechos reservados.',
+      'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com. SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive; no es material oficial de World of Darkness.',
   },
 }
 
@@ -197,7 +201,9 @@ const fr: UiStrings = {
   },
   footer: {
     copyright:
-      "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission dans le cadre de l'accord Dark Pack. Tous droits réservés.",
+      "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission. Tous droits réservés. Pour plus d'informations, visitez worldofdarkness.com.",
+    disclaimer:
+      "SchreckNet est un contenu de fans non officiel, non approuvé par et sans affiliation avec Paradox Interactive. Ce n'est pas du matériel officiel World of Darkness.",
     help: 'Aide',
     about: 'À propos',
   },
@@ -235,7 +241,7 @@ const fr: UiStrings = {
     creditsAnd: 'ainsi que sur les données de cartes et erratas de',
     creditsCardData: '. Le code source est disponible sous licence MIT.',
     creditsRights:
-      "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission dans le cadre de l'accord Dark Pack. Tous droits réservés.",
+      "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission. Tous droits réservés. Pour plus d'informations, visitez worldofdarkness.com. SchreckNet est un contenu de fans non officiel, non approuvé par et sans affiliation avec Paradox Interactive ; ce n'est pas du matériel officiel World of Darkness.",
   },
 }
 
