@@ -281,10 +281,17 @@ across deck editor / proxy / search / card pages:
   the page's real first-paint content, not something to casually defer without
   a UX cost. `wasm`/`cards.sqlite` are correctly excluded per the budget's own
   wording (stream/cache separately, verified immutable-cached since S6).
-  Search-latency (p95 < 16ms) still has no real measurement — semantic search
-  timing is golden-tested (`e2e/semantic-smoke.mjs`), exact/regex search
-  latency is not instrumented anywhere yet. Both remain open; noted here as
-  measured-but-unmet rather than left as an unverified aspirational bullet.
+  Search-latency **now measured** (2026-07-24, server-side processing time via
+  `TraceLayer`'s access-log latency against a local build, exact/regex/filtered
+  crypt+library queries): found and fixed a real budget miss — filtered
+  library search (`discipline_logic=only`) was **~50ms p95**, filtered crypt
+  ~28ms, because `card_disciplines`/`printings` had no index on `card_id` and
+  `core/src/search_plan.rs`'s correlated subqueries did a full table scan per
+  candidate row. Added `card_disciplines_card_idx`/`printings_card_idx`
+  (schema v9, docs/data.md) — all six representative queries (exact-name,
+  regex, filtered, crypt+library) now sit at **2-9ms p95**, under budget.
+  Client-perceived latency (add network/browser overhead) isn't measured, but
+  the dominant cost — server processing — now has real headroom.
 - Accessibility pass (WCAG AA), keyboard map, docs
 
 ## Phase 5 — VTES v5 game-loop / rules reference (additive, beyond vdb parity)

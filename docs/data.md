@@ -62,6 +62,12 @@ CREATE TABLE cards(
                                    -- URLs only, never image files) [schema v2]
 );
 CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior BOOLEAN);
+CREATE INDEX card_disciplines_card_idx ON card_disciplines(card_id); -- schema v9;
+                       -- search_plan.rs's discipline filters are correlated
+                       -- subqueries against this table per candidate row —
+                       -- unindexed, `discipline_logic=only` search was ~50ms
+                       -- server-side (server/src/main.rs's TraceLayer access
+                       -- log measured it); indexed, ~2ms
 CREATE TABLE card_capacity_requirements(
   card_id INT PRIMARY KEY,
   min_capacity INT,                -- “N or more” / “above N” normalized bound
@@ -83,6 +89,8 @@ CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
                        -- but "copies" was omitted from the source; anniversary
                        -- products are normalized to their official 100-card
                        -- deck, excluding separately packaged bonus cards)
+CREATE INDEX printings_card_idx ON printings(card_id); -- schema v9; same
+                       -- correlated-subquery reasoning as card_disciplines above
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);   -- KRCG rulings
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);

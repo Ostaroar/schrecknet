@@ -32,6 +32,7 @@ CREATE TABLE cards(
   image_url TEXT
 );
 CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
+CREATE INDEX card_disciplines_card_idx ON card_disciplines(card_id);
 CREATE TABLE card_capacity_requirements(
   card_id INT PRIMARY KEY,
   min_capacity INT,
@@ -46,6 +47,7 @@ CREATE TABLE card_requirements(
 CREATE TABLE card_traits(card_id INT, trait TEXT);
 CREATE INDEX card_traits_card_trait_idx ON card_traits(card_id, trait);
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);
+CREATE INDEX printings_card_idx ON printings(card_id);
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
@@ -204,7 +206,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '8'), ('data_version', '11'), ('scope', 'v5'),
+         ('schema_version', '9'), ('data_version', '12'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -224,16 +226,23 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // tables; v4: added card_embeddings for local semantic search; v5:
         // normalized derived library capacity requirements into their own table;
         // v6: added normalized official VEKN requirement tokens; v7: added
-        // printings.precon_copies; v8: added the KRCG crypt path).
-        // data_version changes whenever emitted content changes (v11 preserves
+        // printings.precon_copies; v8: added the KRCG crypt path; v9: added
+        // card_disciplines/printings card_id indexes — discipline_logic=only
+        // and precon-filtered search were doing a correlated-subquery table
+        // scan per candidate row, ~50ms server-side for the slowest query;
+        // indexed, ~2ms).
+        // data_version changes whenever emitted content changes (v12 removes
+        // Sabbat Preconstructed — a Standard Constructed reprint product, not
+        // V5 — from V5_SET_NAMES and adds the previously-missing Fall of
+        // London/Shadows of Berlin sets, see docs/adr/0012; v11 preserves
         // KRCG's new Sabbat path field; v10 adds
         // omitted modern BCP precons and separates anniversary bonus cards
         // from their real 100-card decks; v9 fills printings.precon_copies
         // from KRCG's per-printing "copies" field; v8 fills card_traits plus
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
-        "schema_version": 8,
-        "data_version": 11,
+        "schema_version": 9,
+        "data_version": 12,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
