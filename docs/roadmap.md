@@ -325,9 +325,13 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   `replaceState` instead of 404ing. Live-verified against the real server: deep
   link reload, no-reload in-app navigation, browser back/forward, legacy-hash
   redirect all confirmed working.
-- ☐ S3 build-time static prerendering for all 662 card pages (real HTML + title/
-  description/OG/Twitter/JSON-LD, `schrecknet-data` build step, served by the
-  existing `axum` static file handler — no new server code)
+- ☑ S3 build-time static prerendering for all 662 card pages (real HTML + title/
+  description/OG/Twitter/JSON-LD, new `schrecknet-data prerender` subcommand,
+  served by a small new `GET /cards/{id}` handler — corrected from this doc's
+  earlier "no new server code" claim). Live-verified locally against the real
+  server binary + a real browser; the new Dockerfile `prerender-build` stage
+  is **not yet verified with an actual `docker build`** (no Docker available
+  in-session) — check the next `docker.yml` CI run before relying on it.
 - ☐ S4 prerender secondary routes (`/rules`, `/precons`, `/help`, `/about`,
   `/changelog`) + sitemap regenerated against real paths
 - ☐ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers,

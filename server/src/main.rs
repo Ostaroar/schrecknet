@@ -23,6 +23,7 @@ use tower_http::services::{ServeDir, ServeFile};
 pub struct AppState {
     pub data_dir: String,
     pub app_db: String,
+    pub static_dir: String,
     pub semantic: Arc<semantic_search::SemanticSearchService>,
 }
 
@@ -62,6 +63,7 @@ async fn main() {
     let state = AppState {
         data_dir: data_dir.clone(),
         app_db: app_db.clone(),
+        static_dir: static_dir.clone(),
         semantic: Arc::clone(&semantic),
     };
 
@@ -100,6 +102,11 @@ async fn main() {
             "/api/v1/groups/{code}/leaderboard",
             get(api::get_group_leaderboard),
         )
+        // Build-time-prerendered static card page (docs/seo-geo-aeo-plan.md
+        // § 4.3, S3) — falls back to the SPA shell for an id with no
+        // prerendered file (unknown id; the SPA's own "card not found" UI
+        // takes it from there).
+        .route("/cards/{id}", get(api::get_prerendered_card))
         .with_state(state)
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.

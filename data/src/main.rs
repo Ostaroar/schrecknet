@@ -8,6 +8,7 @@
 mod gameloop;
 mod ingest;
 mod krcg;
+mod prerender;
 mod semantic;
 mod v5pool;
 mod vekn;
@@ -66,14 +67,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &parse_path(&args, "--source", gameloop::DEFAULT_SOURCE),
             &parse_path(&args, "--out", gameloop::DEFAULT_OUTPUT),
         ),
+        Some("prerender") => prerender_cards(&args),
         _ => {
             eprintln!(
                 "usage:\n  schrecknet-data build [--out <dir>]\n  \
-                 schrecknet-data gameloop [--source <dot>] [--out <json>]"
+                 schrecknet-data gameloop [--source <dot>] [--out <json>]\n  \
+                 schrecknet-data prerender --db <cards.sqlite> --template <index.html> \
+                 --out <dir> [--base-url <url>]"
             );
             std::process::exit(2);
         }
     }
+}
+
+fn prerender_cards(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = parse_path(args, "--db", "dist/cards.sqlite");
+    let template_path = parse_path(args, "--template", "frontend/dist/index.html");
+    let out_dir = parse_path(args, "--out", "frontend/dist");
+    let base_url = args
+        .iter()
+        .position(|a| a == "--base-url")
+        .and_then(|i| args.get(i + 1))
+        .cloned();
+
+    let conn = rusqlite::Connection::open(&db_path)?;
+    let template = std::fs::read_to_string(&template_path)?;
+    let written = prerender::write_card_pages(&conn, &template, &out_dir, base_url.as_deref())?;
+    println!(
+        "prerendered {written} card pages into {}/cards/",
+        out_dir.display()
+    );
+    Ok(())
 }
 
 fn parse_path(args: &[String], flag: &str, default: &str) -> PathBuf {

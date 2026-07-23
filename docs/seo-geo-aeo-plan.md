@@ -125,9 +125,10 @@ writes a real static HTML document to e.g. `dist/cards/{id}/index.html` containi
   on top for interactivity (search, add-to-deck, language switch) — this is
   progressive enhancement, not a second rendering stack; the static markup **is**
   the first paint, React mounts over it afterward
-`server/src/main.rs` serves these directly (a static file at a real path takes
-priority over the SPA-shell fallback automatically once `/cards/{id}/index.html`
-exists in the static dir tree — no new server code, same `ServeDir`).
+*(As implemented: a flat `cards/{id}.html` file plus a small explicit
+`GET /cards/{id}` route reading it turned out simpler than a nested
+`cards/{id}/index.html` tree relying purely on `ServeDir`'s directory
+semantics — see the S3 milestone note below for what actually shipped.)*
 
 ### 4.4 Prerender secondary routes (S4)
 Same mechanism, much smaller: `#/rules` → `/rules/index.html` (i.e. the current
@@ -216,11 +217,46 @@ DOKS node pool:
   `server/src/main.rs` needed zero changes — its existing `ServeDir` fallback
   already served `index.html` for any unmatched path. `tsc --noEmit` clean.
 
-### S3 — Prerendered card pages
-- `schrecknet-data` prerender step (§ 4.3); server serves them at `/cards/{id}`
-- **DoD:** `curl`ing a card URL with no JS returns real card text, correct
-  title/description/OG tags, and valid JSON-LD; SPA still boots and is fully
-  interactive on top when opened in a real browser.
+### S3 — Prerendered card pages ☑
+- `data/src/prerender.rs` + a new `schrecknet-data prerender` subcommand: reads
+  every card from `cards.sqlite`, HTML-escapes the (untrusted, externally
+  sourced) card text, and writes one static file per card to
+  `{out}/cards/{id}.html` — real `<title>`/description/OG/Twitter/canonical/
+  JSON-LD in `<head>`, and real semantic HTML (name, clan/type summary,
+  disciplines, card text, printings, artists, Dark Pack notice) inside
+  `<div id="root">` instead of leaving it empty. Reuses the frontend's own
+  built `index.html` as a template via plain string find/replace (own
+  controlled input, no HTML-parser dependency) — its hashed `<script>`/`<link>`
+  tags carry over untouched, so the SPA still boots on top for interactivity.
+  `--base-url` is optional; omitted, the page just skips the canonical link and
+  JSON-LD `url` rather than baking in a wrong domain (none is chosen yet, see
+  § 5). A small new `GET /cards/{id}` axum handler
+  (`server/src/api.rs::get_prerendered_card`) reads the matching static file
+  and falls back to the SPA shell for an id with none (unknown id — the SPA's
+  existing client-side "card not found" UI takes it from there). This is a
+  correction to this doc's earlier "no new server code" framing: a ~15-line
+  static-file-read handler was needed after all, since `ServeDir`'s directory/
+  trailing-slash semantics didn't cleanly map a flat `{id}.html` file onto an
+  extension-less `/cards/{id}` URL.
+- **Dockerfile:** a new `prerender-build` stage (Debian trixie, matching
+  `rust-build`'s glibc) runs the compiled `schrecknet-data` binary against
+  `rust-build`'s `cards.sqlite` and `web-build`'s built `dist/`, writing the
+  `cards/` folder into that same `dist/` before the final distroless stage
+  copies it. Confirmed the `prerender` subcommand doesn't touch fastembed/ort
+  (`otool -L` on a local build shows no linked ONNX runtime dylib — `ort`
+  dlopens it lazily on first *use*, which `prerender` never triggers), so this
+  stage doesn't need the exact ONNX-capable runtime the final image does.
+  **Not yet verified with a real `docker build`** (no Docker daemon in this
+  session) — will be exercised by `docker.yml` on the next push to `main`;
+  check that run before relying on this in production.
+- **DoD:** live-verified locally against the real (non-Docker) server binary:
+  `curl http://127.0.0.1:8000/cards/201733` with no JS returns real card text,
+  the correct title/description/OG tags, and valid JSON-LD (`cargo test -p
+  schrecknet-data` also covers escaping + template substitution in isolation);
+  an unknown id falls back to the SPA shell; opening the same URL in a real
+  browser renders the full interactive SPA on top with no console errors.
+  `cargo test --workspace` and `cargo clippy --workspace --all-targets -- -D
+  warnings` both clean.
 
 ### S4 — Prerender secondary routes + sitemap regeneration tied to real paths
 - `/rules`, `/precons`, `/help`, `/about`, `/changelog` (§ 4.4); `sitemap.xml`

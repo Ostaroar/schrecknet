@@ -3,7 +3,7 @@
 
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Json};
+use axum::response::{Html, IntoResponse, Json};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
@@ -83,6 +83,25 @@ pub async fn get_card(State(state): State<AppState>, Path(id): Path<i64>) -> imp
         Ok(Ok(None)) => (StatusCode::NOT_FOUND, "card not found").into_response(),
         Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+/// Serves the build-time-prerendered static HTML for one card id at the same
+/// real path the SPA itself navigates to (docs/seo-geo-aeo-plan.md § 4.3).
+/// Falls back to the SPA shell for an id with no prerendered file — same
+/// "not found" UX as before, just resolved client-side instead of a bare 404.
+pub async fn get_prerendered_card(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    let card_path = format!("{}/cards/{id}.html", state.static_dir);
+    if let Ok(html) = tokio::fs::read_to_string(&card_path).await {
+        return Html(html).into_response();
+    }
+    let index_path = format!("{}/index.html", state.static_dir);
+    match tokio::fs::read_to_string(&index_path).await {
+        Ok(html) => Html(html).into_response(),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     }
 }
 
