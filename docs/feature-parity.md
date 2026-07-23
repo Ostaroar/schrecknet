@@ -33,11 +33,13 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       are derived from the V5 data at build time (currently EN/ES/FR, with
       PT-BR appearing automatically when the source provides it) ✎
 - 🌓 Interface localization — navigation, shell, Help/About, primary Crypt/
-      Library search controls and result status, and the inventory page are
-      translated in EN/ES/FR via one typed catalog; browser smoke coverage
-      switches languages on both search routes. Decks, limited-format editor,
-      precons, rules, `AddCardBox`'s shared placeholder text, and secondary
-      tooltips/accessibility labels remain English-only follow-up work.
+      Library search controls and result status, the inventory page, the
+      shared `AddCardBox` placeholder, the precons browser, and the deck list
+      are translated in EN/ES/FR via one typed catalog; browser smoke
+      coverage switches languages on both search routes. The deck editor
+      (largest remaining surface), limited-format editor, rules pages, and
+      secondary tooltips/accessibility labels remain English-only follow-up
+      work.
 - ☑ Responsive mobile layout — measured at 320px and 360px across Crypt,
       Library, Decks (including a populated editor), Inventory, Precons,
       Rules, Changelog, Help, About, and Card Detail; CI rejects viewport overflow and
