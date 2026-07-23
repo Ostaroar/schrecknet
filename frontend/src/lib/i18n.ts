@@ -324,7 +324,7 @@ const en: UiStrings = {
   about: {
     eyebrow: 'About SchreckNet',
     title: 'The V5 card library and deck workbench.',
-    lead: 'SchreckNet is a ground-up, offline-first rebuild of VDB focused exclusively on VTES Fifth Edition card research and deck building. Tournament archives, community rankings, and playtest-program features are intentionally outside its scope.',
+    lead: 'SchreckNet is an independent, ground-up, offline-first application focused exclusively on VTES Fifth Edition card research and deck building. VDB is a feature and behavior reference; SchreckNet does not reuse or depend on its source code. Tournament archives, community rankings, and playtest-program features are intentionally outside its scope.',
     travelTitle: 'Built to travel',
     travel1: 'Card search and local decks keep working after the app and V5 database have been cached.',
     travel2: 'Your anonymous decks live in a separate writable SQLite database in this browser.',
@@ -332,8 +332,8 @@ const en: UiStrings = {
     engine1: 'Rust domain logic runs natively on the server and as WebAssembly in the browser.',
     engine2: 'SQLite is the storage layer on both sides; MCP and REST share the same card services.',
     creditsTitle: 'Credits',
-    creditsBuildsOn: 'SchreckNet builds on',
-    creditsAnd: 'and card data and rulings from',
+    creditsBuildsOn: 'SchreckNet uses',
+    creditsAnd: 'as a feature and behavior reference; card data and rulings come from',
     creditsCardData: '. The source code is available under the MIT license.',
     creditsRights:
       'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com. SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive; it is not official World of Darkness material.',
@@ -430,7 +430,7 @@ const es: UiStrings = {
   about: {
     eyebrow: 'Acerca de SchreckNet',
     title: 'La biblioteca de cartas y el taller de mazos de V5.',
-    lead: 'SchreckNet es una reconstrucción de VDB hecha desde cero y sin conexión, centrada exclusivamente en la investigación de cartas y la construcción de mazos de VTES Quinta Edición. Los archivos de torneos, las clasificaciones comunitarias y las funciones del programa de pruebas quedan deliberadamente fuera de su alcance.',
+    lead: 'SchreckNet es una aplicación independiente, creada desde cero y sin conexión, centrada exclusivamente en la investigación de cartas y la construcción de mazos de VTES Quinta Edición. VDB sirve como referencia de funciones y comportamiento; SchreckNet no reutiliza ni depende de su código fuente. Los archivos de torneos, las clasificaciones comunitarias y las funciones del programa de pruebas quedan deliberadamente fuera de su alcance.',
     travelTitle: 'Hecho para viajar',
     travel1: 'La búsqueda de cartas y los mazos locales siguen funcionando después de que la app y la base de datos V5 se hayan guardado en caché.',
     travel2: 'Tus mazos anónimos viven en una base de datos SQLite separada y con permisos de escritura en este navegador.',
@@ -438,8 +438,8 @@ const es: UiStrings = {
     engine1: 'La lógica de dominio en Rust se ejecuta de forma nativa en el servidor y como WebAssembly en el navegador.',
     engine2: 'SQLite es la capa de almacenamiento en ambos lados; MCP y REST comparten los mismos servicios de cartas.',
     creditsTitle: 'Créditos',
-    creditsBuildsOn: 'SchreckNet se basa en',
-    creditsAnd: 'y en los datos de cartas y erratas de',
+    creditsBuildsOn: 'SchreckNet usa',
+    creditsAnd: 'como referencia de funciones y comportamiento; los datos de cartas y erratas proceden de',
     creditsCardData: '. El código fuente está disponible bajo licencia MIT.',
     creditsRights:
       'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com. SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive; no es material oficial de World of Darkness.',
@@ -536,7 +536,7 @@ const fr: UiStrings = {
   about: {
     eyebrow: 'À propos de SchreckNet',
     title: 'La bibliothèque de cartes et l\'atelier de decks V5.',
-    lead: "SchreckNet est une reconstruction de VDB entièrement repensée et hors ligne, dédiée exclusivement à la recherche de cartes et à la construction de decks pour VTES Cinquième Édition. Les archives de tournois, classements communautaires et fonctionnalités du programme de playtest sont volontairement hors de son périmètre.",
+    lead: "SchreckNet est une application indépendante, conçue de zéro et hors ligne, dédiée exclusivement à la recherche de cartes et à la construction de decks pour VTES Cinquième Édition. VDB sert de référence fonctionnelle et comportementale ; SchreckNet ne réutilise pas son code source et n'en dépend pas. Les archives de tournois, classements communautaires et fonctionnalités du programme de playtest sont volontairement hors de son périmètre.",
     travelTitle: 'Conçu pour voyager',
     travel1: "La recherche de cartes et les decks locaux continuent de fonctionner une fois l'application et la base V5 mises en cache.",
     travel2: 'Vos decks anonymes vivent dans une base SQLite distincte, accessible en écriture, dans ce navigateur.',
@@ -544,8 +544,8 @@ const fr: UiStrings = {
     engine1: 'La logique métier en Rust tourne nativement sur le serveur et en WebAssembly dans le navigateur.',
     engine2: 'SQLite est la couche de stockage des deux côtés ; MCP et REST partagent les mêmes services de cartes.',
     creditsTitle: 'Crédits',
-    creditsBuildsOn: 'SchreckNet s\'appuie sur',
-    creditsAnd: 'ainsi que sur les données de cartes et erratas de',
+    creditsBuildsOn: 'SchreckNet utilise',
+    creditsAnd: 'comme référence fonctionnelle et comportementale ; les données de cartes et erratas proviennent de',
     creditsCardData: '. Le code source est disponible sous licence MIT.',
     creditsRights:
       "Une partie de ce matériel est protégée par le droit d'auteur et les marques de Paradox Interactive AB, et est utilisée avec permission. Tous droits réservés. Pour plus d'informations, visitez worldofdarkness.com. SchreckNet est un contenu de fans non officiel, non approuvé par et sans affiliation avec Paradox Interactive ; ce n'est pas du matériel officiel World of Darkness.",
@@ -642,7 +642,7 @@ const de: UiStrings = {
   about: {
     eyebrow: 'Über SchreckNet',
     title: 'Die V5-Kartenbibliothek und Deck-Werkstatt.',
-    lead: 'SchreckNet ist ein von Grund auf neu gebauter, offline-first Nachbau von VDB, der sich ausschließlich auf die Kartenrecherche und den Deckbau von VTES Fifth Edition konzentriert. Turnierarchive, Community-Ranglisten und Playtest-Programm-Funktionen liegen bewusst außerhalb des Umfangs.',
+    lead: 'SchreckNet ist eine eigenständige, von Grund auf entwickelte Offline-first-Anwendung für VTES-Fifth-Edition-Kartenrecherche und Deckbau. VDB dient als Referenz für Funktionen und Bedienverhalten; SchreckNet übernimmt dessen Quellcode nicht und ist technisch nicht davon abhängig. Turnierarchive, Community-Ranglisten und Playtest-Programm-Funktionen liegen bewusst außerhalb des Umfangs.',
     travelTitle: 'Für unterwegs gebaut',
     travel1: 'Kartensuche und lokale Decks funktionieren weiter, nachdem die App und die V5-Datenbank zwischengespeichert wurden.',
     travel2: 'Deine anonymen Decks liegen in einer separaten, beschreibbaren SQLite-Datenbank in diesem Browser.',
@@ -650,8 +650,8 @@ const de: UiStrings = {
     engine1: 'Die Rust-Domänenlogik läuft nativ auf dem Server und als WebAssembly im Browser.',
     engine2: 'SQLite ist die Speicherschicht auf beiden Seiten; MCP und REST teilen sich dieselben Kartendienste.',
     creditsTitle: 'Danksagungen',
-    creditsBuildsOn: 'SchreckNet baut auf',
-    creditsAnd: 'sowie auf Kartendaten und Urteilen von',
+    creditsBuildsOn: 'SchreckNet nutzt',
+    creditsAnd: 'als Funktions- und Verhaltensreferenz; Kartendaten und Regelentscheidungen stammen von',
     creditsCardData: '. Der Quellcode ist unter der MIT-Lizenz verfügbar.',
     creditsRights:
       'Teile des Materials sind Copyright und Marken von Paradox Interactive AB und werden mit Genehmigung verwendet. Alle Rechte vorbehalten. Weitere Informationen unter worldofdarkness.com. SchreckNet ist inoffizieller Fan-Inhalt und wird von Paradox Interactive weder unterstützt noch ist es damit verbunden; es handelt sich nicht um offizielles World-of-Darkness-Material.',

@@ -5,8 +5,10 @@ This file is the canonical, tool-agnostic instruction set for any AI coding agen
 
 ## What this project is
 
-**SchreckNet** — a ground-up rebuild of [smeea/vdb](https://github.com/smeea/vdb)
-(the VTES card search / deck builder at vdb.im) with:
+**SchreckNet** — an independent, ground-up VTES card-search and deck-building
+application. [smeea/vdb](https://github.com/smeea/vdb) (vdb.im) is a feature
+and behavior reference; SchreckNet does not reuse or depend on its source code.
+Its architecture consists of:
 
 - **WebAssembly**: one Rust `core/` crate for all domain logic, compiled to WASM for
   the browser and linked natively into the server
@@ -29,7 +31,7 @@ add them even if a vdb-parity instinct says to. Deck-in-URL sharing and common
 plaintext import/export formats (Lackey, JOL) stay in scope — that's deck
 building interop, not a tournament feature.
 
-**Prime directive: feature parity.** The rebuild must not lose a single vdb feature.
+**Prime directive: feature parity.** The independent implementation must not lose a single in-scope vdb feature.
 `docs/feature-parity.md` is the authoritative checklist — when you implement something,
 check it off there in the same PR. When behavior is ambiguous, verify against the live
 site (https://vdb.im) and the original source (https://github.com/smeea/vdb); items

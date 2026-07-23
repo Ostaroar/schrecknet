@@ -1,8 +1,9 @@
 # Architecture — SchreckNet
 
-A ground-up rebuild of [VDB](https://github.com/smeea/vdb) (React 19 + Flask + SQLAlchemy)
-as an offline-first, WebAssembly-powered app with SQLite as the single storage technology
-and MCP as the primary machine API. **Scope: the V5 format only**, card search/research
+An independent, ground-up, offline-first and WebAssembly-powered application,
+with SQLite as the single storage technology and MCP as the primary machine API.
+[VDB](https://github.com/smeea/vdb) is a feature and behavior reference, not a
+codebase or runtime dependency. **Scope: the V5 format only**, card search/research
 + deck building — no tournament or community-data features (TWD/TDA/PDA/playtest
 program; see docs/feature-parity.md's scope note). The card pool is the VEKN V5-legal
 list, filtered at data-pipeline time (see docs/data.md); all filter options derive

@@ -1,8 +1,9 @@
 # SchreckNet
 
-A ground-up rebuild of [VDB](https://github.com/smeea/vdb) — card search and
-deck building for **Vampire: The Eternal Struggle (VTES)** — with a modern
-engine.
+An independent, ground-up card-search and deck-building application for
+**Vampire: The Eternal Struggle (VTES)**, with a modern engine.
+[VDB](https://github.com/smeea/vdb) is used as a feature and behavior
+reference; SchreckNet does not reuse or depend on its source code.
 
 **Scope: this site hosts the V5 format exclusively**, and covers card search/research
 + deck building only — no tournament or community-data features (no TWD/TDA/PDA
