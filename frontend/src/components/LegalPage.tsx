@@ -56,7 +56,10 @@ export default function LegalPage() {
         <p>
           SchreckNet ist ein privat betriebenes, nicht-kommerzielles Hobbyprojekt einer
           Privatperson. Es besteht keine Gewinnerzielungsabsicht; der Betrieb erfolgt nicht im
-          Rahmen einer gewerblichen Tätigkeit.
+          Rahmen einer gewerblichen Tätigkeit. Die im Footer verlinkte Unterstützungsmöglichkeit
+          über Ko-fi dient ausschließlich der freiwilligen Deckung der Betriebskosten. Es werden
+          dafür keinerlei Gegenleistungen angeboten — keine Mitgliedschaften, Vorteile,
+          Zusatzfunktionen oder Waren.
         </p>
       </LegalSection>
 
@@ -139,7 +142,20 @@ export default function LegalPage() {
           Datenschutzhinweisen von KRCG.
         </p>
 
-        <p className="text-xs uppercase tracking-wide text-ink-dim">6. Ihre Rechte</p>
+        <p className="text-xs uppercase tracking-wide text-ink-dim">
+          6. Unterstützung über Ko-fi
+        </p>
+        <p>
+          Der Footer enthält einen Link zu einer Spendenseite bei Ko-fi (Ko-fi Labs Ltd.,
+          Vereinigtes Königreich). Beim bloßen Aufruf dieser Website werden keine Daten an Ko-fi
+          übertragen; es sind keine Inhalte von Ko-fi eingebunden. Erst wenn Sie den Link
+          anklicken, verlassen Sie diese Website und es gilt die Datenschutzerklärung von Ko-fi.
+          Zahlungsdaten werden ausschließlich dort verarbeitet; wir erhalten und speichern keine
+          Zahlungsdaten. Spenden sind rein freiwillig und ohne Gegenleistung; es werden keine
+          Mitgliedschaften oder kostenpflichtigen Funktionen angeboten.
+        </p>
+
+        <p className="text-xs uppercase tracking-wide text-ink-dim">7. Ihre Rechte</p>
         <p>
           Sie haben gegenüber dem Verantwortlichen das Recht auf Auskunft (Art. 15 DSGVO),
           Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18),
