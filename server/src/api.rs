@@ -183,6 +183,8 @@ where
 /// Body for POST .../games — `code` comes from the path, not the body.
 #[derive(serde::Deserialize)]
 pub struct LogGameBody {
+    #[serde(default)]
+    pub write_passphrase: Option<String>,
     pub played_at: String,
     #[serde(default)]
     pub notes: Option<String>,
@@ -216,6 +218,7 @@ pub async fn log_group_game(
             conn,
             &LogGameParams {
                 code,
+                write_passphrase: body.write_passphrase,
                 played_at: body.played_at,
                 notes: body.notes,
                 results: body.results,
@@ -248,14 +251,20 @@ pub async fn get_group_leaderboard(
 pub async fn delete_group_game(
     State(state): State<AppState>,
     Path((code, game_id)): Path<(String, i64)>,
+    body: Option<Json<DeleteGameBody>>,
 ) -> impl IntoResponse {
+    let write_passphrase = body.and_then(|Json(body)| body.write_passphrase);
     let app_db = state.app_db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<bool, GameGroupError> {
         let conn = game_groups::open(&app_db)?;
-        Ok(game_groups::delete_game(
+        game_groups::delete_game(
             &conn,
-            &DeleteGameParams { code, game_id },
-        )?)
+            &DeleteGameParams {
+                code,
+                write_passphrase,
+                game_id,
+            },
+        )
     })
     .await;
 
@@ -277,6 +286,7 @@ pub async fn update_group_game(
             conn,
             &UpdateGameParams {
                 code,
+                write_passphrase: body.write_passphrase,
                 game_id,
                 played_at: body.played_at,
                 notes: body.notes,
@@ -287,12 +297,23 @@ pub async fn update_group_game(
     .await
 }
 
+#[derive(serde::Deserialize)]
+pub struct DeleteGameBody {
+    #[serde(default)]
+    pub write_passphrase: Option<String>,
+}
+
 fn game_group_error_response(error: GameGroupError) -> axum::response::Response {
     match error {
-        GameGroupError::EmptyResults => {
+        GameGroupError::EmptyResults | GameGroupError::PassphraseTooShort => {
             (StatusCode::BAD_REQUEST, error.to_string()).into_response()
         }
-        GameGroupError::CodeGenerationFailed | GameGroupError::Sqlite(_) => {
+        GameGroupError::WriteAccessDenied => {
+            (StatusCode::FORBIDDEN, error.to_string()).into_response()
+        }
+        GameGroupError::CodeGenerationFailed
+        | GameGroupError::PasswordHash
+        | GameGroupError::Sqlite(_) => {
             (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
         }
     }

@@ -178,6 +178,11 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
   seating order; every history entry and export names each player's predator and prey.
 - ☑ Edit a logged game through atomic REST + MCP update operations. The group code
   scopes updates, and replacing metadata/results happens in one SQLite transaction.
+- ☑ Optional write passphrase per group. The share code grants read access; Argon2id
+  protects log/update/delete operations across REST, MCP, and the frontend. Existing
+  groups remain open for backward compatibility. The passphrase is kept only for the
+  browser session and only its salted hash is stored server-side. A separate optional
+  read passphrase is deferred because it needs an authenticated read-session design.
 - ☑ Per-deck-archetype tie-in reuses `lib/archetypeTags.ts`. Optional archetypes
   persist per result and the private group view aggregates games, average VP, wins,
   and win rate; there is no public or cross-group ranking.

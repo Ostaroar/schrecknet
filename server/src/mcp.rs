@@ -172,9 +172,9 @@ impl SchreckNetMcp {
 
     #[tool(
         description = "Create a private game group for tracking casual play with a group of \
-        friends — no accounts, just a random shareable code. Returns the group's code, name, \
-        and creation time; share the code with the group so anyone can log games or read the \
-        leaderboard."
+        friends — no accounts, just a random shareable code and optional write passphrase. \
+        Returns the group's code, name, creation time, and protection status. The code grants \
+        read access; protected groups require `write_passphrase` for mutations."
     )]
     async fn create_game_group(
         &self,
@@ -199,7 +199,8 @@ impl SchreckNetMcp {
     #[tool(
         description = "Log a finished VTES game for a private game group: the date played, \
         optional notes, and one result per player (name, optional deck name, VP, and whether \
-        they won). Returns null if the group code doesn't exist."
+        they won). Protected groups require `write_passphrase`. Returns null if the group code \
+        doesn't exist."
     )]
     async fn log_group_game(
         &self,
@@ -213,22 +214,22 @@ impl SchreckNetMcp {
         description = "Delete one logged game from a private game group by its id (as returned \
         by log_group_game/list_group_games). The game must belong to the group identified by \
         `code` — an id from a different group is refused. Returns true if deleted, false if the \
-        code or game id didn't match anything. This cannot be undone."
+        code or game id didn't match anything. Protected groups require `write_passphrase`. \
+        This cannot be undone."
     )]
     async fn delete_group_game(
         &self,
         Parameters(params): Parameters<DeleteGameParams>,
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open_app()?;
-        json_value(
-            &game_groups::delete_game(&conn, &params).map_err(|e| game_group_error(e.into()))?,
-        )
+        json_value(&game_groups::delete_game(&conn, &params).map_err(game_group_error)?)
     }
 
     #[tool(
         description = "Replace one logged game's date, notes, ordered seating/results, deck names, \
         archetypes, VP, and game-win markers. The game must belong to the private group identified \
-        by `code`. Returns null if the code or game id does not match."
+        by `code`. Protected groups require `write_passphrase`. Returns null if the code or game \
+        id does not match."
     )]
     async fn update_group_game(
         &self,
@@ -280,10 +281,14 @@ impl SchreckNetMcp {
 
 fn game_group_error(error: GameGroupError) -> rmcp::ErrorData {
     match error {
-        GameGroupError::EmptyResults => rmcp::ErrorData::invalid_params(error.to_string(), None),
-        GameGroupError::CodeGenerationFailed | GameGroupError::Sqlite(_) => {
-            rmcp::ErrorData::internal_error(error.to_string(), None)
+        GameGroupError::EmptyResults
+        | GameGroupError::PassphraseTooShort
+        | GameGroupError::WriteAccessDenied => {
+            rmcp::ErrorData::invalid_params(error.to_string(), None)
         }
+        GameGroupError::CodeGenerationFailed
+        | GameGroupError::PasswordHash
+        | GameGroupError::Sqlite(_) => rmcp::ErrorData::internal_error(error.to_string(), None),
     }
 }
 

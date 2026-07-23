@@ -7,11 +7,13 @@ import {
   getActiveGroupCode,
   getGameGroup,
   getGroupLeaderboard,
+  getSessionWritePassphrase,
   getStoredGroupCodes,
   listGroupGames,
   logGroupGame,
   removeStoredGroupCode,
   setActiveGroupCode,
+  setSessionWritePassphrase,
   updateGroupGame,
   type GameRecord,
   type GroupInfo,
@@ -60,6 +62,10 @@ export default function TablePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [createName, setCreateName] = useState('')
+  const [createPassphrase, setCreatePassphrase] = useState('')
+  const [createPassphraseConfirm, setCreatePassphraseConfirm] = useState('')
+  const [writePassphrase, setWritePassphrase] = useState('')
+  const [unlockInput, setUnlockInput] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState('')
@@ -100,7 +106,11 @@ export default function TablePage() {
   }
 
   useEffect(() => {
-    if (code) void refresh(code)
+    if (code) {
+      setWritePassphrase(getSessionWritePassphrase(code))
+      setUnlockInput('')
+      void refresh(code)
+    }
     else setGroup(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
@@ -131,13 +141,25 @@ export default function TablePage() {
 
   const handleCreate = async () => {
     if (!createName.trim()) return
+    if (createPassphrase && createPassphrase.length < 8) {
+      setError(ui.passphraseTooShort)
+      return
+    }
+    if (createPassphrase && createPassphrase !== createPassphraseConfirm) {
+      setError(ui.passphrasesDiffer)
+      return
+    }
     setBusy(true)
     setError('')
     try {
-      const info = await createGameGroup(createName.trim())
+      const info = await createGameGroup(createName.trim(), createPassphrase)
+      if (createPassphrase) setSessionWritePassphrase(info.code, createPassphrase)
       addStoredGroupCode(info.code)
       setJoinedCodes(getStoredGroupCodes())
       setCreateName('')
+      setCreatePassphrase('')
+      setCreatePassphraseConfirm('')
+      setWritePassphrase(createPassphrase)
       setCode(info.code)
       setShowJoinAnother(false)
     } catch (err) {
@@ -150,6 +172,24 @@ export default function TablePage() {
   const handleSwitch = (nextCode: string) => {
     setActiveGroupCode(nextCode)
     setCode(nextCode)
+  }
+
+  const unlockEditing = () => {
+    if (!code || !unlockInput) return
+    setSessionWritePassphrase(code, unlockInput)
+    setWritePassphrase(unlockInput)
+    setUnlockInput('')
+  }
+
+  const handleWriteError = (err: unknown, setter: (message: string) => void) => {
+    const message = errorMessage(err)
+    if (message === 'incorrect write passphrase' && code) {
+      setSessionWritePassphrase(code, '')
+      setWritePassphrase('')
+      setter(ui.wrongPassphrase)
+      return
+    }
+    setter(message)
   }
 
   const handleLeave = () => {
@@ -213,8 +253,8 @@ export default function TablePage() {
     try {
       const payload = { played_at: playedAt, notes: notes.trim() || null, results }
       const saved = editingGameId
-        ? await updateGroupGame(code, editingGameId, payload)
-        : await logGroupGame(code, payload)
+        ? await updateGroupGame(code, writePassphrase, editingGameId, payload)
+        : await logGroupGame(code, writePassphrase, payload)
       if (!saved) {
         setLogError(ui.groupMissing)
         return
@@ -222,7 +262,7 @@ export default function TablePage() {
       resetForm()
       await refresh(code)
     } catch (err) {
-      setLogError(errorMessage(err))
+      handleWriteError(err, setLogError)
     } finally {
       setLogBusy(false)
     }
@@ -233,11 +273,11 @@ export default function TablePage() {
     setDeletingGameId(game.id)
     setError('')
     try {
-      if (!(await deleteGroupGame(code, game.id))) setError(ui.alreadyDeleted)
+      if (!(await deleteGroupGame(code, writePassphrase, game.id))) setError(ui.alreadyDeleted)
       if (editingGameId === game.id) resetForm()
       await refresh(code)
     } catch (err) {
-      setError(errorMessage(err))
+      handleWriteError(err, setError)
     } finally {
       setDeletingGameId(null)
     }
@@ -289,6 +329,7 @@ export default function TablePage() {
   }
 
   const showCreateJoinForms = joinedCodes.length === 0 || showJoinAnother
+  const canWrite = Boolean(group && (!group.write_protected || writePassphrase))
   const updateRow = (index: number, patch: Partial<PlayerRow>) =>
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)))
 
@@ -309,6 +350,8 @@ export default function TablePage() {
         <div className="grid gap-2 rounded-lg border border-line bg-surface p-4">
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.createGroup}</h2>
           <input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder={ui.groupExample} className="rounded-lg border border-line bg-ground p-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none" />
+          <input type="password" autoComplete="new-password" value={createPassphrase} onChange={(e) => setCreatePassphrase(e.target.value)} placeholder={ui.writePassphraseOptional} className="rounded-lg border border-line bg-ground p-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none" />
+          {createPassphrase && <input type="password" autoComplete="new-password" value={createPassphraseConfirm} onChange={(e) => setCreatePassphraseConfirm(e.target.value)} placeholder={ui.confirmPassphrase} className="rounded-lg border border-line bg-ground p-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none" />}
           <button onClick={handleCreate} disabled={busy || !createName.trim()} className="justify-self-start rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{ui.create}</button>
         </div>
         <div className="grid gap-2 rounded-lg border border-line bg-surface p-4">
@@ -323,6 +366,15 @@ export default function TablePage() {
           <div><h2 className="font-display text-xl text-ink">{group.name}</h2><p className="mt-1 text-sm text-ink-muted">{ui.shareCode} <button onClick={() => void navigator.clipboard.writeText(group.code).then(() => { setCopyFeedback(ui.copied); setTimeout(() => setCopyFeedback(''), 1500) })} className="rounded-md border border-line bg-raised px-2 py-0.5 font-mono text-xs text-ink">{group.code}</button> {copyFeedback && <span className="text-xs text-ink-dim">{copyFeedback}</span>}</p></div>
           <button onClick={handleLeave} className="ml-auto rounded-lg border border-line px-2.5 py-1 text-xs text-ink-dim hover:text-blood-hi">{ui.leaveGroup}</button>
         </div>
+        {group.write_protected && !canWrite && <section className="grid gap-2 rounded-lg border border-gold/30 bg-gold/5 p-4">
+          <h2 className="text-xs uppercase tracking-wide text-gold">{ui.editingLocked}</h2>
+          <p className="text-sm text-ink-muted">{ui.editingLockedHelp}</p>
+          <div className="flex flex-wrap gap-2">
+            <input type="password" autoComplete="current-password" value={unlockInput} onChange={(e) => setUnlockInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && unlockEditing()} placeholder={ui.writePassphrase} className="min-w-[220px] flex-1 rounded-lg border border-line bg-ground p-2 text-sm text-ink" />
+            <button onClick={unlockEditing} disabled={!unlockInput} className="rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{ui.unlockEditing}</button>
+          </div>
+        </section>}
+        {group.write_protected && canWrite && <p className="text-xs text-gold">{ui.editingUnlocked}</p>}
         {loading && <p className="text-sm text-ink-dim">{ui.loading}</p>}
 
         <section className="grid gap-2 rounded-lg border border-line bg-surface p-4">
@@ -330,7 +382,7 @@ export default function TablePage() {
           {leaderboard.length === 0 ? <p className="text-sm text-ink-dim">{ui.noGamesFirst}</p> : <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead><tr className="text-xs uppercase tracking-wide text-ink-dim">{[ui.player, ui.games, ui.totalVp, ui.avgVp, ui.wins, ui.winRate].map((heading) => <th key={heading} className="py-1 pr-3">{heading}</th>)}</tr></thead><tbody>{leaderboard.map((entry) => <tr key={entry.player_name} className="border-t border-line"><td className="py-1 pr-3 text-ink">{entry.player_name}</td><td>{entry.games_played}</td><td>{entry.total_vp}</td><td>{entry.average_vp.toFixed(2)}</td><td>{entry.wins}</td><td>{(entry.win_rate * 100).toFixed(0)}%</td></tr>)}</tbody></table></div>}
         </section>
 
-        <section className="grid gap-3 rounded-lg border border-line bg-surface p-4">
+        {canWrite && <section className="grid gap-3 rounded-lg border border-line bg-surface p-4">
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">{editingGameId ? ui.editGame : ui.logGame}</h2>
           <div className="flex flex-wrap gap-3"><label className="grid gap-1 text-xs text-ink-dim">{ui.datePlayed}<input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} className="rounded-lg border border-line bg-ground p-2 text-sm text-ink" /></label><label className="grid min-w-[200px] flex-1 gap-1 text-xs text-ink-dim">{ui.notes}<input value={notes} onChange={(e) => setNotes(e.target.value)} className="rounded-lg border border-line bg-ground p-2 text-sm text-ink" /></label></div>
           <div className="grid gap-2">{rows.map((row, index) => <div key={index} className="grid gap-2 rounded-lg border border-line/70 bg-ground p-2 sm:grid-cols-[auto_1fr_1fr_1fr_4rem_auto_auto] sm:items-center">
@@ -344,14 +396,14 @@ export default function TablePage() {
           </div>)}<button onClick={() => setRows((current) => [...current, emptyRow()])} className="justify-self-start rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted">{ui.addPlayer}</button></div>
           {logError && <p className="text-xs text-blood-hi">{logError}</p>}
           <div className="flex gap-2"><button onClick={handleLogGame} disabled={logBusy} className="rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{editingGameId ? ui.saveChanges : ui.logGame}</button>{editingGameId && <button onClick={resetForm} className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink-muted">{ui.cancel}</button>}</div>
-        </section>
+        </section>}
 
         {archetypes.length > 0 && <section className="grid gap-2 rounded-lg border border-line bg-surface p-4"><h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.archetypePerformance}</h2><div className="overflow-x-auto"><table className="w-full min-w-[420px] text-left text-sm"><thead><tr className="text-xs uppercase tracking-wide text-ink-dim"><th>{ui.archetype}</th><th>{ui.games}</th><th>{ui.avgVp}</th><th>{ui.wins}</th><th>{ui.winRate}</th></tr></thead><tbody>{archetypes.map(([id, total]) => <tr key={id} className="border-t border-line"><td className="py-1 text-ink">{archetypeLabel(id)}</td><td>{total.games}</td><td>{(total.vp / total.games).toFixed(2)}</td><td>{total.wins}</td><td>{(total.wins / total.games * 100).toFixed(0)}%</td></tr>)}</tbody></table></div></section>}
 
         <section className="grid gap-2 rounded-lg border border-line bg-surface p-4">
           <div className="flex flex-wrap items-center gap-2"><h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.recentGames}</h2>{games.length > 0 && <div className="ml-auto flex gap-2"><button onClick={() => exportGames('csv')} className="rounded-lg border border-line px-2 py-1 text-xs text-ink-muted">{ui.exportCsv}</button><button onClick={() => exportGames('txt')} className="rounded-lg border border-line px-2 py-1 text-xs text-ink-muted">{ui.exportText}</button></div>}</div>
           {games.length === 0 ? <p className="text-sm text-ink-dim">{ui.noGames}</p> : <div className="grid gap-3">{games.map((game) => <article key={game.id} className="rounded-lg border border-line bg-ground p-3">
-            <div className="flex flex-wrap items-baseline gap-2 text-sm"><span className="font-semibold text-ink">{game.played_at}</span>{game.notes && <span className="text-ink-muted">{game.notes}</span>}<button onClick={() => editGame(game)} className="ml-auto text-xs text-ink-dim hover:text-ink">{ui.edit}</button><button onClick={() => void handleDeleteGame(game)} disabled={deletingGameId === game.id} aria-label={ui.deleteAria(game.played_at)} className="text-xs text-ink-dim hover:text-blood-hi disabled:opacity-50">{deletingGameId === game.id ? ui.deleting : ui.delete}</button></div>
+            <div className="flex flex-wrap items-baseline gap-2 text-sm"><span className="font-semibold text-ink">{game.played_at}</span>{game.notes && <span className="text-ink-muted">{game.notes}</span>}{canWrite && <><button onClick={() => editGame(game)} className="ml-auto text-xs text-ink-dim hover:text-ink">{ui.edit}</button><button onClick={() => void handleDeleteGame(game)} disabled={deletingGameId === game.id} aria-label={ui.deleteAria(game.played_at)} className="text-xs text-ink-dim hover:text-blood-hi disabled:opacity-50">{deletingGameId === game.id ? ui.deleting : ui.delete}</button></>}</div>
             <div className="mt-2 grid gap-1.5 sm:grid-cols-2">{game.results.map((result, seat, results) => <div key={seat} className={'rounded-lg border px-2 py-1.5 text-xs ' + (result.game_win ? 'border-blood bg-blood/10 text-blood-hi' : 'border-line text-ink-muted')}><div><strong>{ui.seat(seat + 1)} · {result.player_name}</strong> — {result.vp} VP{result.game_win ? ' 🏆' : ''}</div><div className="text-[11px] text-ink-dim">{ui.predator(results[(seat - 1 + results.length) % results.length]?.player_name ?? '—')} · {ui.prey(results[(seat + 1) % results.length]?.player_name ?? '—')}</div>{(result.deck_name || result.archetype_id) && <div className="text-[11px]">{result.deck_name ?? '—'}{result.archetype_id ? ` · ${archetypeLabel(result.archetype_id)}` : ''}</div>}</div>)}</div>
           </article>)}</div>}
         </section>

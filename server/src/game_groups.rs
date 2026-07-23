@@ -1,10 +1,14 @@
 //! Private friend-group casual play log + leaderboard (docs/game-groups-plan.md).
 //! Server-only shared state in `app.sqlite` — no accounts: a group is identified
-//! by a random shareable code (SQLite `randomblob`, no new `rand` crate); whoever
-//! has the code can log games or read the board. This is the first capability
+//! by a random shareable code (SQLite `randomblob`, no new `rand` crate). The code
+//! grants read access; an optional Argon2 passphrase protects mutations. This is
 //! that reads/writes `app.sqlite` (previously migrated at startup only). MCP and
 //! REST both call these exact functions — AGENTS.md hard rule #2.
 
+use argon2::{
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use rusqlite::{Connection, OptionalExtension};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,6 +23,9 @@ pub fn open(path: &str) -> rusqlite::Result<Connection> {
 pub struct CreateGroupParams {
     /// Display name for the group, e.g. "Thursday Night Coterie".
     pub name: String,
+    /// Optional write passphrase. When set, every game mutation must provide it.
+    #[serde(default)]
+    pub write_passphrase: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -26,6 +33,7 @@ pub struct GroupInfo {
     pub code: String,
     pub name: String,
     pub created_at: String,
+    pub write_protected: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -52,6 +60,8 @@ pub struct PlayerResultInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct DeleteGameParams {
     pub code: String,
+    #[serde(default)]
+    pub write_passphrase: Option<String>,
     /// The game's id, as returned by log_group_game/list_group_games.
     pub game_id: i64,
 }
@@ -59,6 +69,8 @@ pub struct DeleteGameParams {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UpdateGameParams {
     pub code: String,
+    #[serde(default)]
+    pub write_passphrase: Option<String>,
     pub game_id: i64,
     pub played_at: String,
     #[serde(default)]
@@ -69,6 +81,8 @@ pub struct UpdateGameParams {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct LogGameParams {
     pub code: String,
+    #[serde(default)]
+    pub write_passphrase: Option<String>,
     /// ISO date the game was played, e.g. "2026-07-23".
     pub played_at: String,
     #[serde(default)]
@@ -109,6 +123,9 @@ pub enum GameGroupError {
     Sqlite(rusqlite::Error),
     EmptyResults,
     CodeGenerationFailed,
+    PassphraseTooShort,
+    WriteAccessDenied,
+    PasswordHash,
 }
 
 impl From<rusqlite::Error> for GameGroupError {
@@ -127,6 +144,11 @@ impl std::fmt::Display for GameGroupError {
             Self::CodeGenerationFailed => {
                 formatter.write_str("could not generate a unique group code, try again")
             }
+            Self::PassphraseTooShort => {
+                formatter.write_str("write passphrase must contain at least 8 characters")
+            }
+            Self::WriteAccessDenied => formatter.write_str("incorrect write passphrase"),
+            Self::PasswordHash => formatter.write_str("could not secure the group passphrase"),
         }
     }
 }
@@ -134,22 +156,74 @@ impl std::fmt::Display for GameGroupError {
 impl std::error::Error for GameGroupError {}
 
 const CODE_GENERATION_ATTEMPTS: u32 = 5;
+const MIN_PASSPHRASE_CHARS: usize = 8;
+
+fn hash_passphrase(
+    conn: &Connection,
+    passphrase: Option<&str>,
+) -> Result<Option<String>, GameGroupError> {
+    let Some(passphrase) = passphrase.filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if passphrase.chars().count() < MIN_PASSPHRASE_CHARS {
+        return Err(GameGroupError::PassphraseTooShort);
+    }
+    let salt_bytes: Vec<u8> = conn.query_row("SELECT randomblob(16)", [], |row| row.get(0))?;
+    let salt = SaltString::encode_b64(&salt_bytes).map_err(|_| GameGroupError::PasswordHash)?;
+    Argon2::default()
+        .hash_password(passphrase.as_bytes(), &salt)
+        .map(|hash| Some(hash.to_string()))
+        .map_err(|_| GameGroupError::PasswordHash)
+}
+
+fn authorized_group_id(
+    conn: &Connection,
+    code: &str,
+    passphrase: Option<&str>,
+) -> Result<Option<i64>, GameGroupError> {
+    let group = conn
+        .query_row(
+            "SELECT id, write_passphrase_hash FROM game_groups WHERE code = ?1",
+            [code],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<String>>(1)?)),
+        )
+        .optional()?;
+    let Some((id, stored_hash)) = group else {
+        return Ok(None);
+    };
+    let Some(stored_hash) = stored_hash else {
+        return Ok(Some(id));
+    };
+    let Some(passphrase) = passphrase else {
+        return Err(GameGroupError::WriteAccessDenied);
+    };
+    let parsed = PasswordHash::new(&stored_hash).map_err(|_| GameGroupError::PasswordHash)?;
+    if Argon2::default()
+        .verify_password(passphrase.as_bytes(), &parsed)
+        .is_err()
+    {
+        return Err(GameGroupError::WriteAccessDenied);
+    }
+    Ok(Some(id))
+}
 
 pub fn create_group(
     conn: &Connection,
     params: &CreateGroupParams,
 ) -> Result<GroupInfo, GameGroupError> {
+    let write_passphrase_hash = hash_passphrase(conn, params.write_passphrase.as_deref())?;
     for _ in 0..CODE_GENERATION_ATTEMPTS {
         let result = conn.query_row(
-            "INSERT INTO game_groups (code, name, created_at)
-             VALUES (upper(hex(randomblob(4))), ?1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-             RETURNING code, name, created_at",
-            [&params.name],
+            "INSERT INTO game_groups (code, name, created_at, write_passphrase_hash)
+             VALUES (upper(hex(randomblob(4))), ?1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ?2)
+             RETURNING code, name, created_at, write_passphrase_hash IS NOT NULL",
+            rusqlite::params![params.name, write_passphrase_hash],
             |row| {
                 Ok(GroupInfo {
                     code: row.get(0)?,
                     name: row.get(1)?,
                     created_at: row.get(2)?,
+                    write_protected: row.get(3)?,
                 })
             },
         );
@@ -171,13 +245,15 @@ pub fn get_group(
     params: &GroupCodeParams,
 ) -> rusqlite::Result<Option<GroupInfo>> {
     conn.query_row(
-        "SELECT code, name, created_at FROM game_groups WHERE code = ?1",
+        "SELECT code, name, created_at, write_passphrase_hash IS NOT NULL
+         FROM game_groups WHERE code = ?1",
         [&params.code],
         |row| {
             Ok(GroupInfo {
                 code: row.get(0)?,
                 name: row.get(1)?,
                 created_at: row.get(2)?,
+                write_protected: row.get(3)?,
             })
         },
     )
@@ -219,7 +295,8 @@ pub fn log_game(
     if params.results.is_empty() {
         return Err(GameGroupError::EmptyResults);
     }
-    let Some(gid) = group_id(conn, &params.code)? else {
+    let Some(gid) = authorized_group_id(conn, &params.code, params.write_passphrase.as_deref())?
+    else {
         return Ok(None);
     };
 
@@ -264,6 +341,9 @@ pub fn update_game(
     if params.results.is_empty() {
         return Err(GameGroupError::EmptyResults);
     }
+    if authorized_group_id(conn, &params.code, params.write_passphrase.as_deref())?.is_none() {
+        return Ok(None);
+    }
     let transaction = conn.unchecked_transaction()?;
     let changed = transaction.execute(
         "UPDATE group_games SET played_at = ?1, notes = ?2
@@ -306,7 +386,10 @@ pub fn update_game(
 /// different group can never be deleted by guessing — the id alone isn't
 /// enough, it must also belong to the group the caller has the code for.
 /// Returns false if the code is unknown or the game doesn't belong to it.
-pub fn delete_game(conn: &Connection, params: &DeleteGameParams) -> rusqlite::Result<bool> {
+pub fn delete_game(conn: &Connection, params: &DeleteGameParams) -> Result<bool, GameGroupError> {
+    if authorized_group_id(conn, &params.code, params.write_passphrase.as_deref())?.is_none() {
+        return Ok(false);
+    }
     let changed = conn.execute(
         "DELETE FROM group_games
          WHERE id = ?1 AND group_id = (SELECT id FROM game_groups WHERE code = ?2)",
@@ -408,14 +491,131 @@ mod tests {
     #[test]
     fn creates_groups_with_unique_codes() {
         let conn = seed();
-        let a = create_group(&conn, &CreateGroupParams { name: "A".into() }).unwrap();
-        let b = create_group(&conn, &CreateGroupParams { name: "B".into() }).unwrap();
+        let a = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "A".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
+        let b = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "B".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         assert_ne!(a.code, b.code);
         assert_eq!(a.code.len(), 8);
         assert!(a
             .code
             .chars()
             .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase()));
+        assert!(!a.write_protected);
+    }
+
+    #[test]
+    fn protected_groups_require_the_correct_passphrase_for_every_mutation() {
+        let conn = seed();
+        let phrase = "blood moon covenant";
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "Protected".into(),
+                write_passphrase: Some(phrase.into()),
+            },
+        )
+        .unwrap();
+        assert!(group.write_protected);
+        assert!(get_group(
+            &conn,
+            &GroupCodeParams {
+                code: group.code.clone()
+            }
+        )
+        .unwrap()
+        .is_some());
+
+        let stored_hash: String = conn
+            .query_row(
+                "SELECT write_passphrase_hash FROM game_groups WHERE code = ?1",
+                [&group.code],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(stored_hash.starts_with("$argon2"));
+        assert!(!stored_hash.contains(phrase));
+
+        let mut log = LogGameParams {
+            code: group.code.clone(),
+            write_passphrase: None,
+            played_at: "2026-07-23".into(),
+            notes: None,
+            results: vec![player("Alex", 1.0, true)],
+        };
+        assert!(matches!(
+            log_game(&conn, &log),
+            Err(GameGroupError::WriteAccessDenied)
+        ));
+        log.write_passphrase = Some("wrong phrase".into());
+        assert!(matches!(
+            log_game(&conn, &log),
+            Err(GameGroupError::WriteAccessDenied)
+        ));
+        log.write_passphrase = Some(phrase.into());
+        let game = log_game(&conn, &log).unwrap().unwrap();
+
+        assert!(matches!(
+            update_game(
+                &conn,
+                &UpdateGameParams {
+                    code: group.code.clone(),
+                    write_passphrase: Some("wrong phrase".into()),
+                    game_id: game.id,
+                    played_at: "2026-07-24".into(),
+                    notes: None,
+                    results: vec![player("Alex", 2.0, true)],
+                }
+            ),
+            Err(GameGroupError::WriteAccessDenied)
+        ));
+        assert!(matches!(
+            delete_game(
+                &conn,
+                &DeleteGameParams {
+                    code: group.code.clone(),
+                    write_passphrase: None,
+                    game_id: game.id,
+                }
+            ),
+            Err(GameGroupError::WriteAccessDenied)
+        ));
+        assert!(delete_game(
+            &conn,
+            &DeleteGameParams {
+                code: group.code,
+                write_passphrase: Some(phrase.into()),
+                game_id: game.id,
+            }
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn rejects_short_group_passphrases() {
+        let conn = seed();
+        assert!(matches!(
+            create_group(
+                &conn,
+                &CreateGroupParams {
+                    name: "Protected".into(),
+                    write_passphrase: Some("short".into()),
+                }
+            ),
+            Err(GameGroupError::PassphraseTooShort)
+        ));
     }
 
     #[test]
@@ -428,6 +628,7 @@ mod tests {
         assert!(list_games(&conn, &missing).unwrap().is_none());
         assert!(leaderboard(&conn, &missing).unwrap().is_none());
         let log = LogGameParams {
+            write_passphrase: None,
             code: "NOPE0000".into(),
             played_at: "2026-07-23".into(),
             notes: None,
@@ -445,8 +646,16 @@ mod tests {
     #[test]
     fn rejects_a_game_with_no_players() {
         let conn = seed();
-        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "G".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         let log = LogGameParams {
+            write_passphrase: None,
             code: group.code,
             played_at: "2026-07-23".into(),
             notes: None,
@@ -461,12 +670,20 @@ mod tests {
     #[test]
     fn leaderboard_aggregates_vp_and_wins_across_games() {
         let conn = seed();
-        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "G".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
 
         // Game 1: Alex wins with 2 VP, Sam gets 1, Jo gets 1, Kai gets 0.
         log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 played_at: "2026-07-20".into(),
                 notes: None,
@@ -484,6 +701,7 @@ mod tests {
         log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 played_at: "2026-07-22".into(),
                 notes: Some("rematch".into()),
@@ -540,10 +758,18 @@ mod tests {
     #[test]
     fn deleting_a_group_cascades_to_its_games_and_results() {
         let conn = seed();
-        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "G".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 played_at: "2026-07-23".into(),
                 notes: None,
@@ -570,10 +796,18 @@ mod tests {
     #[test]
     fn deletes_a_game_and_its_results_and_updates_the_leaderboard() {
         let conn = seed();
-        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "G".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         let game = log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 played_at: "2026-07-23".into(),
                 notes: None,
@@ -586,6 +820,7 @@ mod tests {
         let deleted = delete_game(
             &conn,
             &DeleteGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 game_id: game.id,
             },
@@ -618,11 +853,26 @@ mod tests {
     #[test]
     fn delete_game_refuses_a_game_id_from_a_different_group() {
         let conn = seed();
-        let group_a = create_group(&conn, &CreateGroupParams { name: "A".into() }).unwrap();
-        let group_b = create_group(&conn, &CreateGroupParams { name: "B".into() }).unwrap();
+        let group_a = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "A".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
+        let group_b = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "B".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         let game = log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group_a.code.clone(),
                 played_at: "2026-07-23".into(),
                 notes: None,
@@ -636,6 +886,7 @@ mod tests {
         let deleted = delete_game(
             &conn,
             &DeleteGameParams {
+                write_passphrase: None,
                 code: group_b.code,
                 game_id: game.id,
             },
@@ -652,10 +903,18 @@ mod tests {
     #[test]
     fn delete_game_on_unknown_code_or_game_id_is_a_no_op() {
         let conn = seed();
-        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "G".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         assert!(!delete_game(
             &conn,
             &DeleteGameParams {
+                write_passphrase: None,
                 code: "NOPE0000".into(),
                 game_id: 1,
             },
@@ -664,6 +923,7 @@ mod tests {
         assert!(!delete_game(
             &conn,
             &DeleteGameParams {
+                write_passphrase: None,
                 code: group.code,
                 game_id: 999,
             },
@@ -674,10 +934,18 @@ mod tests {
     #[test]
     fn updates_a_game_atomically_and_round_trips_archetypes() {
         let conn = seed();
-        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let group = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "G".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         let game = log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 played_at: "2026-07-20".into(),
                 notes: None,
@@ -690,6 +958,7 @@ mod tests {
         let updated = update_game(
             &conn,
             &UpdateGameParams {
+                write_passphrase: None,
                 code: group.code.clone(),
                 game_id: game.id,
                 played_at: "2026-07-21".into(),
@@ -736,11 +1005,26 @@ mod tests {
     #[test]
     fn update_refuses_other_groups_and_empty_results_without_changing_the_game() {
         let conn = seed();
-        let group_a = create_group(&conn, &CreateGroupParams { name: "A".into() }).unwrap();
-        let group_b = create_group(&conn, &CreateGroupParams { name: "B".into() }).unwrap();
+        let group_a = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "A".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
+        let group_b = create_group(
+            &conn,
+            &CreateGroupParams {
+                name: "B".into(),
+                write_passphrase: None,
+            },
+        )
+        .unwrap();
         let game = log_game(
             &conn,
             &LogGameParams {
+                write_passphrase: None,
                 code: group_a.code.clone(),
                 played_at: "2026-07-20".into(),
                 notes: Some("original".into()),
@@ -753,6 +1037,7 @@ mod tests {
         assert!(update_game(
             &conn,
             &UpdateGameParams {
+                write_passphrase: None,
                 code: group_b.code,
                 game_id: game.id,
                 played_at: "2026-07-22".into(),
@@ -766,6 +1051,7 @@ mod tests {
             update_game(
                 &conn,
                 &UpdateGameParams {
+                    write_passphrase: None,
                     code: group_a.code.clone(),
                     game_id: game.id,
                     played_at: "2026-07-22".into(),

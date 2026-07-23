@@ -6,6 +6,8 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0003_inventory.sql"),
     include_str!("../../migrations/0004_game_groups.sql"),
     include_str!("../../migrations/0005_game_group_archetypes.sql"),
+    include_str!("../../migrations/0006_inventory_precons.sql"),
+    include_str!("../../migrations/0007_game_group_write_passphrase.sql"),
 ];
 
 pub fn migrate(path: &str) -> rusqlite::Result<()> {
@@ -73,12 +75,21 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
+        let group_passphrase_columns: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('game_groups')
+                 WHERE name = 'write_passphrase_hash'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(version, MIGRATIONS.len());
         assert_eq!(author_columns, 1);
         assert_eq!(inventory_mode_columns, 1);
         assert_eq!(inventory_tables, 2);
         assert_eq!(game_group_tables, 3);
         assert_eq!(archetype_columns, 1);
+        assert_eq!(group_passphrase_columns, 1);
     }
 
     #[test]

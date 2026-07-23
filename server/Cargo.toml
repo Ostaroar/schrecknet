@@ -16,6 +16,7 @@ serde = { workspace = true, features = ["derive"] }
 schemars = "1.2.1"
 rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 regex = "1.13.1"
+argon2 = "0.5.3"
 
 [dev-dependencies]
 serde_urlencoded = "0.7.1"

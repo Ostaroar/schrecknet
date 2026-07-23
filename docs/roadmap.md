@@ -325,6 +325,10 @@ model as a shared document link. Full design, data model, and milestone breakdow
   predator/prey display, atomic edit/delete over matching REST + MCP operations,
   private archetype-performance summaries reusing `lib/archetypeTags.ts`, and
   complete CSV/text history export. No public or cross-group rankings.
+- ☑ G5 optional group write protection: migration 0007 stores only a salted
+  Argon2id hash; all REST/MCP mutations enforce the passphrase while the group
+  code remains a read-only share capability. Existing groups stay writable.
+  Optional read protection remains a separate future access-session milestone.
 
 ## Phase 7 — SEO / GEO / AEO (additive, owner-requested)
 _Requested directly by the project owner (2026-07-23): the site needs to be findable
