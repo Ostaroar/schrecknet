@@ -90,8 +90,17 @@ export default function LegalPage() {
           übertragene Datenmenge, Browserkennung). Diese Verarbeitung ist für den Betrieb und die
           Sicherheit der Website erforderlich (Art. 6 Abs. 1 lit. f DSGVO). Die Daten werden nicht
           mit anderen Datenquellen zusammengeführt und nach kurzer Zeit gelöscht. Das Hosting
-          erfolgt bei einem externen Infrastruktur-Anbieter; mit diesem besteht, soweit
-          erforderlich, ein Auftragsverarbeitungsvertrag.
+          erfolgt bei DigitalOcean LLC; mit DigitalOcean besteht ein Auftragsverarbeitungsvertrag auf
+          Basis von dessen{' '}
+          <a
+            className="text-blood-hi underline decoration-blood/40 underline-offset-2 hover:text-ink"
+            href="https://www.digitalocean.com/legal/data-processing-agreement"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Data Processing Agreement
+          </a>
+          .
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
