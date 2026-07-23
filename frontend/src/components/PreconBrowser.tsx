@@ -41,7 +41,7 @@ function PreconDetail({
   }, [set, precon])
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-4">
       <div className="flex items-center gap-3">
         <button onClick={onClose} className="text-xs text-ink-dim hover:text-ink-muted">
           {ui.backToPrecons}
@@ -147,18 +147,18 @@ export default function PreconBrowser() {
         <p className="mt-1 text-xs text-ink-dim">{ui.ownedOverviewNote}</p>
       </div>
       {[...bySet.entries()].map(([set, items]) => (
-        <section key={set} className="grid gap-2">
+        <section key={set} className="grid min-w-0 gap-2">
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">{set}</h2>
-          <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
+          <div className="min-w-0 divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {items.map((p) => {
               const ownedQty = owned.get(`${p.set}:${p.precon}`) ?? 0
               return (
                 <button
                   key={p.precon}
                   onClick={() => setSelected(p)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
+                  className="flex min-w-0 w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-raised sm:gap-3 sm:px-4"
                 >
-                  <span className="flex-1 truncate">{p.precon}</span>
+                  <span className="min-w-0 flex-1 truncate">{p.precon}</span>
                   <span
                     className={
                       ownedQty > 0
