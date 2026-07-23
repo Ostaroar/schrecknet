@@ -232,6 +232,27 @@ export interface UiStrings {
     delete: string
     confirmDelete: (name: string) => string
   }
+  limitedFormat: {
+    title: string
+    introActive: string
+    introInactive: string
+    importExportTitle: string
+    exportTxt: string
+    loadTxt: string
+    importText: string
+    hideImport: string
+    resetFormat: string
+    importPlaceholder: string
+    loadFormat: string
+    importError: string
+    allowedSets: string
+    allowedCrypt: string
+    allowedLibrary: string
+    bannedCrypt: string
+    bannedLibrary: string
+    none: string
+    removeAria: (name: string) => string
+  }
 }
 
 const en: UiStrings = {
@@ -324,6 +345,9 @@ const en: UiStrings = {
   },
   decks: {
     newDeckPlaceholder: 'New deck name', createDeck: 'Create deck', compareTwoDecks: 'Compare two decks →', loading: 'Loading decks…', loadError: (error) => `Couldn't load your decks: ${error}`, noDecks: 'No decks yet — decks are stored locally in this browser (no account needed).', ownsCopies: 'Owns copies', sharesCopies: 'Shares copies', missingSuffix: (count) => `${count} missing`, byAuthor: (author) => `by ${author}`, clone: 'Clone', delete: 'Delete', confirmDelete: (name) => `Delete "${name}"? This can't be undone.`,
+  },
+  limitedFormat: {
+    title: 'Limited format', introActive: 'Build a custom card pool for a limited/draft event: pick allowed sets, then allow or ban individual cards on top. This format is active — decks show its legality alongside V5 legality.', introInactive: 'Build a custom card pool for a limited/draft event: pick allowed sets, then allow or ban individual cards on top. Empty for now, so it has no effect on decks.', importExportTitle: 'Import / export', exportTxt: 'Export .txt', loadTxt: 'Load .txt', importText: 'Import text…', hideImport: 'Hide import', resetFormat: 'Reset format', importPlaceholder: 'Paste an exported limited-format .txt', loadFormat: 'Load format', importError: "Couldn't parse that file — expected the JSON exported from this page.", allowedSets: 'Allowed sets', allowedCrypt: 'Allowed crypt cards', allowedLibrary: 'Allowed library cards', bannedCrypt: 'Banned crypt cards', bannedLibrary: 'Banned library cards', none: 'None', removeAria: (name) => `Remove ${name}`,
   },
 }
 
@@ -422,6 +446,9 @@ const es: UiStrings = {
   decks: {
     newDeckPlaceholder: 'Nombre del mazo nuevo', createDeck: 'Crear mazo', compareTwoDecks: 'Comparar dos mazos →', loading: 'Cargando mazos…', loadError: (error) => `No se pudieron cargar tus mazos: ${error}`, noDecks: 'Aún no hay mazos — los mazos se guardan localmente en este navegador (sin necesidad de cuenta).', ownsCopies: 'Posee copias', sharesCopies: 'Comparte copias', missingSuffix: (count) => `${count} faltantes`, byAuthor: (author) => `por ${author}`, clone: 'Clonar', delete: 'Eliminar', confirmDelete: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`,
   },
+  limitedFormat: {
+    title: 'Formato limitado', introActive: 'Crea un conjunto de cartas personalizado para un evento limitado/draft: elige las ediciones permitidas y luego permite o prohíbe cartas individuales. Este formato está activo — los mazos muestran su legalidad junto a la legalidad V5.', introInactive: 'Crea un conjunto de cartas personalizado para un evento limitado/draft: elige las ediciones permitidas y luego permite o prohíbe cartas individuales. Está vacío por ahora, así que no afecta a los mazos.', importExportTitle: 'Importar / exportar', exportTxt: 'Exportar .txt', loadTxt: 'Cargar .txt', importText: 'Importar texto…', hideImport: 'Ocultar importación', resetFormat: 'Restablecer formato', importPlaceholder: 'Pega un formato limitado exportado .txt', loadFormat: 'Cargar formato', importError: 'No se pudo interpretar ese archivo — se esperaba el JSON exportado desde esta página.', allowedSets: 'Ediciones permitidas', allowedCrypt: 'Cartas de cripta permitidas', allowedLibrary: 'Cartas de biblioteca permitidas', bannedCrypt: 'Cartas de cripta prohibidas', bannedLibrary: 'Cartas de biblioteca prohibidas', none: 'Ninguna', removeAria: (name) => `Quitar ${name}`,
+  },
 }
 
 const fr: UiStrings = {
@@ -519,6 +546,9 @@ const fr: UiStrings = {
   decks: {
     newDeckPlaceholder: 'Nom du nouveau deck', createDeck: 'Créer un deck', compareTwoDecks: 'Comparer deux decks →', loading: 'Chargement des decks…', loadError: (error) => `Impossible de charger vos decks : ${error}`, noDecks: "Pas encore de decks — les decks sont stockés localement dans ce navigateur (aucun compte requis).", ownsCopies: 'Possède des copies', sharesCopies: 'Partage des copies', missingSuffix: (count) => `${count} manquante${count === 1 ? '' : 's'}`, byAuthor: (author) => `par ${author}`, clone: 'Cloner', delete: 'Supprimer', confirmDelete: (name) => `Supprimer « ${name} » ? Cette action est irréversible.`,
   },
+  limitedFormat: {
+    title: 'Format limité', introActive: 'Construisez un pool de cartes personnalisé pour un événement limité/draft : choisissez les extensions autorisées, puis autorisez ou interdisez des cartes individuelles. Ce format est actif — les decks affichent sa légalité à côté de la légalité V5.', introInactive: 'Construisez un pool de cartes personnalisé pour un événement limité/draft : choisissez les extensions autorisées, puis autorisez ou interdisez des cartes individuelles. Vide pour le moment, donc sans effet sur les decks.', importExportTitle: 'Import / export', exportTxt: 'Exporter .txt', loadTxt: 'Charger .txt', importText: 'Importer texte…', hideImport: "Masquer l'import", resetFormat: 'Réinitialiser le format', importPlaceholder: 'Collez un format limité exporté .txt', loadFormat: 'Charger le format', importError: "Impossible d'analyser ce fichier — le JSON exporté depuis cette page était attendu.", allowedSets: 'Extensions autorisées', allowedCrypt: 'Cartes de crypte autorisées', allowedLibrary: 'Cartes de bibliothèque autorisées', bannedCrypt: 'Cartes de crypte interdites', bannedLibrary: 'Cartes de bibliothèque interdites', none: 'Aucune', removeAria: (name) => `Retirer ${name}`,
+  },
 }
 
 // German UI strings ship with no card-text data (KRCG/VEKN don't provide German
@@ -615,6 +645,9 @@ const de: UiStrings = {
   },
   decks: {
     newDeckPlaceholder: 'Name des neuen Decks', createDeck: 'Deck erstellen', compareTwoDecks: 'Zwei Decks vergleichen →', loading: 'Lade Decks…', loadError: (error) => `Deine Decks konnten nicht geladen werden: ${error}`, noDecks: 'Noch keine Decks — Decks werden lokal in diesem Browser gespeichert (kein Konto nötig).', ownsCopies: 'Besitzt Exemplare', sharesCopies: 'Teilt Exemplare', missingSuffix: (count) => `${count} fehlend`, byAuthor: (author) => `von ${author}`, clone: 'Klonen', delete: 'Löschen', confirmDelete: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`,
+  },
+  limitedFormat: {
+    title: 'Limitiertes Format', introActive: 'Baue einen eigenen Kartenpool für ein Limited-/Draft-Event: wähle erlaubte Sets, erlaube oder verbanne dann einzelne Karten. Dieses Format ist aktiv — Decks zeigen seine Legalität neben der V5-Legalität an.', introInactive: 'Baue einen eigenen Kartenpool für ein Limited-/Draft-Event: wähle erlaubte Sets, erlaube oder verbanne dann einzelne Karten. Momentan leer, wirkt sich also nicht auf Decks aus.', importExportTitle: 'Importieren / Exportieren', exportTxt: 'Exportieren .txt', loadTxt: 'Laden .txt', importText: 'Text importieren…', hideImport: 'Import ausblenden', resetFormat: 'Format zurücksetzen', importPlaceholder: 'Füge ein exportiertes Limited-Format .txt ein', loadFormat: 'Format laden', importError: 'Die Datei konnte nicht gelesen werden — erwartet wurde das von dieser Seite exportierte JSON.', allowedSets: 'Erlaubte Sets', allowedCrypt: 'Erlaubte Kryptakarten', allowedLibrary: 'Erlaubte Bibliothekskarten', bannedCrypt: 'Verbannte Kryptakarten', bannedLibrary: 'Verbannte Bibliothekskarten', none: 'Keine', removeAria: (name) => `${name} entfernen`,
   },
 }
 
