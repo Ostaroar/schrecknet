@@ -1,6 +1,6 @@
 # Game Groups — Private Playgroup Tracker + Leaderboard (Design & Dev Plan)
 
-Status: **G1 shipped, G2 next** (2026-07-23). Requested directly by the project
+Status: **G1–G3 shipped, G4 optional/deferred** (2026-07-23). Requested directly by the project
 owner: a way for a regular friend group to log the games they play together and see
 a simple leaderboard. This document is the working spec — milestone-by-milestone,
 same style as [docs/inventory-plan.md](inventory-plan.md) and
@@ -134,21 +134,24 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
   unit tests plus a live 2-game/4-player curl fixture matching hand-computed VP/win
   aggregates exactly; `cargo clippy --workspace --all-targets -- -D warnings` clean.
 
-### G2 — Frontend: create/join + leaderboard view
+### G2 — Frontend: create/join + leaderboard view ☑
 - `lib/gameGroups.ts` REST client. `#/table` route + nav tab. Create-group and
   join-by-code forms; persist the active code in `localStorage`
   (`schrecknet.game-group-code`). Leaderboard table (games played, total VP, average
-  VP, wins, win rate), sorted by wins then average VP.
+  VP, wins, win rate), sorted by wins then total VP (matches the server's
+  `ORDER BY` in `game_groups::leaderboard`).
 - **DoD:** live-verified: create a group, note the code, leaderboard renders empty
-  state correctly.
+  state correctly. — **Done** (2026-07-23), verified in-browser.
 
-### G3 — Log-game form + game history
+### G3 — Log-game form + game history ☑
 - Form to add a game: date (defaults to today), optional notes, dynamic list of
   players (name, optional deck name, VP, GW checkbox — validate VPs are non-negative
-  and at most one GW per game client-side before submit, server is the source of
-  truth regardless). Recent-games list underneath, newest first.
+  client-side before submit, server is the source of truth regardless). Recent-games
+  list underneath, newest first.
 - **DoD:** logging a real game updates the leaderboard immediately; live-verified with
-  a 4-player fixture matching a hand-computed leaderboard.
+  a 4-player fixture matching a hand-computed leaderboard. — **Done** (2026-07-23):
+  logged two games in-browser (create → log → leaderboard → leave/rejoin by code),
+  numbers match the same fixture used in the Rust tests exactly.
 
 ### G4 — (Optional follow-ups, not blocking)
 - Localize `TablePage.tsx` (en/es/fr/de), matching the rest of the interface.

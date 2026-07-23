@@ -281,7 +281,7 @@ design, decisions, and visualization options in
 - ☐ (Optional, own ADR) executable statechart (e.g. XState) as one source of truth for
   the diagram, the trainer's step engine, and rules-consistency tests
 
-## Phase 6 — Game groups: private playgroup tracker + leaderboard (additive, owner-requested)
+## Phase 6 — Game groups: private playgroup tracker + leaderboard (additive, owner-requested) — core shipped 2026-07-23
 _Requested directly by the project owner (2026-07-23): their regular friend group wants
 to log the games they play together and see a leaderboard. **Explicitly scoped as a
 private, code-gated tool — never a public archive or cross-group ranking** — so it
@@ -295,10 +295,11 @@ model as a shared document link. Full design, data model, and milestone breakdow
   matching REST under `/api/v1/groups` — this is the **first server capability that
   reads/writes `app.sqlite`** (previously migrated at startup only, never queried).
   `cargo test --workspace` green + manual curl round-trip verified.
-- ☐ G2 frontend: `lib/gameGroups.ts` REST client, `#/table` route + nav tab,
-  create-group/join-by-code forms, leaderboard table
-- ☐ G3 log-game form (date, notes, per-player name/deck/VP/game-win) + recent-games
-  history list
+- ☑ G2 frontend: `lib/gameGroups.ts` REST client, `#/table` route + nav tab,
+  create-group/join-by-code forms, leaderboard table. Live-verified in-browser.
+- ☑ G3 log-game form (date, notes, per-player name/deck/VP/game-win) + recent-games
+  history list. Live-verified: 4-player 2-game fixture, leaderboard matches
+  hand-computed numbers exactly; leave/rejoin by code round-trips.
 - ☐ G4 (optional follow-ups): localize the page, seating/predator-prey chain per
   game, edit/delete a logged game, archetype-performance tie-in with
   `lib/archetypeTags.ts`, CSV/text export
