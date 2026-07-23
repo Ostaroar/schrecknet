@@ -277,6 +277,10 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       score tolerance in CI; the smoke test also kills the server before reloading and
       querying again. See ADR 0006; exact and regex search remain available without
       loading the model
+- ☐ Game groups: private, code-gated playgroup game log + leaderboard — owner-requested
+      (2026-07-23), explicitly scoped as private/non-public so it stays clear of the
+      tournament/community-data exclusion (same tier as the seating randomizer). See
+      [docs/game-groups-plan.md](game-groups-plan.md); tracked in roadmap.md Phase 6
 
 ## Non-functional parity
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with

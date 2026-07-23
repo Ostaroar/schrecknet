@@ -280,3 +280,24 @@ design, decisions, and visualization options in
   Deck-aware view (scan an open deck, not just one card) is still open.
 - ☐ (Optional, own ADR) executable statechart (e.g. XState) as one source of truth for
   the diagram, the trainer's step engine, and rules-consistency tests
+
+## Phase 6 — Game groups: private playgroup tracker + leaderboard (additive, owner-requested)
+_Requested directly by the project owner (2026-07-23): their regular friend group wants
+to log the games they play together and see a leaderboard. **Explicitly scoped as a
+private, code-gated tool — never a public archive or cross-group ranking** — so it
+stays clear of the tournament/community-data exclusion; same tier as the seating
+randomizer. No accounts needed: a random shareable code identifies a group, same trust
+model as a shared document link. Full design, data model, and milestone breakdown in
+[docs/game-groups-plan.md](game-groups-plan.md)._
+- ☐ G1 schema (`migrations/0004_game_groups.sql`) + `server/src/game_groups.rs`
+  (create/get group, log game, list games, leaderboard) + MCP `create_game_group`/
+  `get_game_group`/`log_group_game`/`list_group_games`/`get_group_leaderboard` +
+  matching REST under `/api/v1/groups` — this is the **first server capability that
+  reads/writes `app.sqlite`** (previously migrated at startup only, never queried)
+- ☐ G2 frontend: `lib/gameGroups.ts` REST client, `#/table` route + nav tab,
+  create-group/join-by-code forms, leaderboard table
+- ☐ G3 log-game form (date, notes, per-player name/deck/VP/game-win) + recent-games
+  history list
+- ☐ G4 (optional follow-ups): localize the page, seating/predator-prey chain per
+  game, edit/delete a logged game, archetype-performance tie-in with
+  `lib/archetypeTags.ts`, CSV/text export
