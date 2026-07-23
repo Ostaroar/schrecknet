@@ -487,15 +487,17 @@ try {
     return conceptInput
   }
 
-  async function browserSearch(golden, expectedFirstId) {
+  async function browserSearch(golden) {
     const input = await showKind(golden.kind)
+    await input.fill('')
+    await page.waitForFunction(
+      () => document.querySelectorAll('main button[data-card-id]').length === 0,
+    )
     const started = performance.now()
     await input.fill(golden.query)
     await page.waitForFunction(
-      (cardId) =>
-        document.querySelector('main button[data-card-id]')?.getAttribute('data-card-id') ===
-        String(cardId),
-      expectedFirstId,
+      (minimum) => document.querySelectorAll('main button[data-semantic-score]').length >= minimum,
+      fixture.parity_top_n,
       { timeout: 120_000 },
     )
     const elapsedMs = performance.now() - started
@@ -534,7 +536,7 @@ try {
       )
     }
 
-    const browserResult = await browserSearch(golden, nativeHits[0].id)
+    const browserResult = await browserSearch(golden)
     const nativeParityHits = nativeHits.slice(0, fixture.parity_top_n)
     const browserIds = browserResult.hits.map((hit) => hit.id)
     const nativeIds = nativeParityHits.map((hit) => hit.id)
