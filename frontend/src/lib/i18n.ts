@@ -17,6 +17,7 @@ export interface UiStrings {
     inventory: string
     limited: string
     precons: string
+    table: string
     rules: string
     changelog: string
     help: string
@@ -263,6 +264,7 @@ const en: UiStrings = {
     inventory: 'inventory',
     limited: 'limited',
     precons: 'precons',
+    table: 'table',
     rules: 'rules',
     changelog: 'changelog',
     help: 'help',
@@ -359,6 +361,7 @@ const es: UiStrings = {
     inventory: 'inventario',
     limited: 'formato limitado',
     precons: 'premontados',
+    table: 'mesa',
     rules: 'reglas',
     changelog: 'novedades',
     help: 'ayuda',
@@ -459,6 +462,7 @@ const fr: UiStrings = {
     inventory: 'inventaire',
     limited: 'format limité',
     precons: 'préconstruits',
+    table: 'table',
     rules: 'règles',
     changelog: 'nouveautés',
     help: 'aide',
@@ -563,6 +567,7 @@ const de: UiStrings = {
     inventory: 'Inventar',
     limited: 'Limitiert',
     precons: 'Vorkonstruiert',
+    table: 'Tisch',
     rules: 'Regeln',
     changelog: 'Änderungen',
     help: 'Hilfe',

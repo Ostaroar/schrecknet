@@ -14,13 +14,14 @@ import RulesPage from './components/RulesPage'
 import CommandPalette from './components/CommandPalette'
 import ChangelogPage from './components/ChangelogPage'
 import LimitedFormatPage from './components/LimitedFormatPage'
+import TablePage from './components/TablePage'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
 import { useHashRoute, navigate } from './lib/route'
 
-const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'precons', 'rules', 'changelog', 'help', 'about'] as const
+const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'table', 'precons', 'rules', 'changelog', 'help', 'about'] as const
 const LANGUAGE_FLAGS: Record<string, string> = { en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪' }
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
     route.page === 'precons' ||
     route.page === 'inventory' ||
     route.page === 'limited' ||
+    route.page === 'table' ||
     route.page === 'rules'
 
   return (
@@ -109,6 +111,8 @@ export default function App() {
                       ? ui.nav.inventory
                       : t === 'limited'
                         ? ui.nav.limited
+                        : t === 'table'
+                          ? ui.nav.table
                         : t === 'precons'
                           ? ui.nav.precons
                           : t === 'rules'
@@ -142,6 +146,8 @@ export default function App() {
           <InventoryPage />
         ) : route.page === 'limited' ? (
           <LimitedFormatPage />
+        ) : route.page === 'table' ? (
+          <TablePage />
         ) : route.page === 'rules' ? (
           <RulesPage />
         ) : route.page === 'changelog' ? (

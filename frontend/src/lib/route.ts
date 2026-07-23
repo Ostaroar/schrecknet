@@ -1,5 +1,5 @@
 // Minimal hash routing (#/crypt, #/library, #/cards/123, #/decks, #/decks/5,
-// #/decks/5/proxy, #/share/<token>, #/diff, #/precons, #/inventory, #/help,
+// #/decks/5/proxy, #/share/<token>, #/diff, #/precons, #/inventory, #/table, #/help,
 // #/rules, #/changelog, #/about). Deliberately not a router library — AGENTS.md requires an ADR
 // for new runtime deps, and this many routes still doesn't justify one.
 
@@ -18,6 +18,7 @@ export type Route =
   | { page: 'precons' }
   | { page: 'inventory' }
   | { page: 'limited' }
+  | { page: 'table' }
   | { page: 'rules' }
   | { page: 'changelog' }
   | { page: 'help' }
@@ -40,6 +41,7 @@ export function parseHash(hash: string): Route {
   if (path === 'precons') return { page: 'precons' }
   if (path === 'inventory') return { page: 'inventory' }
   if (path === 'limited') return { page: 'limited' }
+  if (path === 'table') return { page: 'table' }
   if (path === 'rules') return { page: 'rules' }
   if (path === 'changelog') return { page: 'changelog' }
   if (path === 'help') return { page: 'help' }
@@ -74,6 +76,8 @@ export function routeTo(route: Route): string {
       return '#/inventory'
     case 'limited':
       return '#/limited'
+    case 'table':
+      return '#/table'
     case 'rules':
       return '#/rules'
     case 'changelog':
