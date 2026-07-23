@@ -270,8 +270,21 @@ across deck editor / proxy / search / card pages:
 
 ## Phase 4 — Polish & v1.0
 - Full feature-parity audit vs vdb.im (side-by-side golden tests)
-- Performance budget: search < 16ms p95 local; first load < 200KB JS gzipped
-  (excl. wasm+db which stream/cache separately)
+- ◐ Performance budget: search < 16ms p95 local; first load < 200KB JS gzipped
+  (excl. wasm+db which stream/cache separately). **First real measurement**
+  (2026-07-24, against the live `/crypt` page, real gzip/br transfer sizes via
+  `curl -w`): `main.js` 137.5 KB + `dbWorker.js` 68.0 KB + `userDbWorker.js`
+  69.3 KB ≈ **275 KB gzipped JS on first load — over the 200 KB budget**.
+  `userDbWorker.js` loads eagerly because the crypt page's Active Deck panel
+  needs `user.sqlite` (local decks) immediately, not because of dead
+  eagerness — `lib/userDb.ts::ensureOpen()` is already lazy-per-call, this is
+  the page's real first-paint content, not something to casually defer without
+  a UX cost. `wasm`/`cards.sqlite` are correctly excluded per the budget's own
+  wording (stream/cache separately, verified immutable-cached since S6).
+  Search-latency (p95 < 16ms) still has no real measurement — semantic search
+  timing is golden-tested (`e2e/semantic-smoke.mjs`), exact/regex search
+  latency is not instrumented anywhere yet. Both remain open; noted here as
+  measured-but-unmet rather than left as an unverified aspirational bullet.
 - Accessibility pass (WCAG AA), keyboard map, docs
 
 ## Phase 5 — VTES v5 game-loop / rules reference (additive, beyond vdb parity)
