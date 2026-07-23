@@ -14,6 +14,7 @@ COPY core core
 COPY server server
 COPY data data
 COPY content content
+COPY frontend/public/gameloop.json frontend/public/gameloop.json
 COPY models models
 COPY migrations migrations
 RUN cargo build --release -p schrecknet-server -p schrecknet-data
