@@ -552,7 +552,7 @@ try {
       assert.ok(nativeHit, `${golden.query}: browser returned a card absent from native candidates: ${hit.id}`)
       assert.ok(
         Math.abs(hit.score - nativeHit.score) <= fixture.score_tolerance,
-        `${golden.query}: card ${hit.id} score exceeded tolerance`,
+        `${golden.query}: card ${hit.id} score exceeded tolerance (${hit.score} browser vs ${nativeHit.score} native; tolerance ${fixture.score_tolerance})`,
       )
       if (!nativeIds.includes(hit.id)) {
         assert.ok(

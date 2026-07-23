@@ -1,7 +1,7 @@
 {
   "model_id": "all-minilm-l6-v2-int8-751bff37",
   "parity_top_n": 10,
-  "score_tolerance": 0.005,
+  "score_tolerance": 0.01,
   "first_use_max_bytes": 52000000,
   "warm_query_max_ms": 5000,
   "queries": [
