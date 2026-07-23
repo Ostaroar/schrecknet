@@ -6,11 +6,19 @@
 //! a one-line change here rather than a hunt through the pipeline.
 //!
 //! Sourced from KRCG's `sets` field on https://static.krcg.org/data/vtes.json
-//! (2026-07-18 snapshot). Names like "Anarchs" or "Sabbat War" are *not*
-//! included even though they sound V5-adjacent — those are original-era set
-//! names KRCG reuses; the actual V5 line uses the names below.
+//! (2026-07-24 snapshot), cross-checked against Black Chantry's official V5
+//! format definition (https://www.blackchantry.com/2025/09/16/introducing-the-official-vampire-the-eternal-struggle-v5-format/).
+//! Names like "Anarchs" or "Sabbat War" are *not* included even though they
+//! sound V5-adjacent — those are original-era set names KRCG reuses; the
+//! actual V5 line uses the names below.
+//!
+//! "Sabbat Preconstructed" (2019) is deliberately excluded too, for a
+//! subtler reason: unlike every other set here, it's a *Standard
+//! Constructed* (classic-rules) product — four reprint precons of
+//! pre-V5 crypt cards — despite its "V5-era release date" making it look
+//! like it belongs. Including it leaked 59 classic-only vampires (e.g.
+//! America Johnson, Antón de Concepción) onto the site.
 pub const V5_SET_NAMES: &[&str] = &[
-    "Sabbat Preconstructed",
     "Twenty-Fifth Anniversary",
     "First Blood",
     "Fifth Edition",
@@ -22,6 +30,8 @@ pub const V5_SET_NAMES: &[&str] = &[
     "Thirtieth Anniversary",
     "Sabbat V5",
     "V5 Polish Edition promo",
+    "Fall of London",
+    "Shadows of Berlin",
 ];
 
 const TWENTY_FIFTH_EXTRAS: &[&str] = &[
@@ -116,6 +126,23 @@ mod tests {
         // filter must get right, or classic-era cards leak into the V5 site.
         let card = json!({"sets": {"Sabbat War": [{}], "Anarchs": [{}]}});
         assert!(!is_in_v5_pool(&card));
+    }
+
+    #[test]
+    fn card_only_in_sabbat_preconstructed_is_excluded() {
+        // Regression test: "Sabbat Preconstructed" (2019) looks V5-era but is
+        // a Standard Constructed reprint product of classic crypt cards — see
+        // the module doc for the incident this caused.
+        let card = json!({"sets": {"Sabbat Preconstructed": [{}]}});
+        assert!(!is_in_v5_pool(&card));
+    }
+
+    #[test]
+    fn card_in_fall_of_london_or_shadows_of_berlin_is_in_pool() {
+        let a = json!({"sets": {"Fall of London": [{}]}});
+        let b = json!({"sets": {"Shadows of Berlin": [{}]}});
+        assert!(is_in_v5_pool(&a));
+        assert!(is_in_v5_pool(&b));
     }
 
     #[test]
