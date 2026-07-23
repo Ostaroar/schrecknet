@@ -42,9 +42,30 @@ function versionOf(meta: { schema_version: number; data_version: number }): stri
   return `${meta.schema_version}.${meta.data_version}`
 }
 
+// A rapid reload can start this worker a few milliseconds before Chromium has
+// released the previous worker's synchronous OPFS access handle. Retrying only
+// that transient exclusivity error avoids a false "database unavailable" state;
+// configuration, quota, and compatibility failures still surface immediately.
+async function installPool(
+  sqlite3: Awaited<ReturnType<typeof initSqlite>>,
+): Promise<Awaited<ReturnType<typeof sqlite3.installOpfsSAHPoolVfs>>> {
+  const attempts = 8
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await sqlite3.installOpfsSAHPoolVfs({})
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const transient = message.includes('another open Access Handle')
+      if (!transient || attempt === attempts - 1) throw error
+      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)))
+    }
+  }
+  throw new Error('unreachable OPFS initialization state')
+}
+
 async function open(): Promise<Record<string, unknown>> {
   const sqlite3 = await initSqlite()
-  const pool = await sqlite3.installOpfsSAHPoolVfs({})
+  const pool = await installPool(sqlite3)
 
   let serverMeta: { schema_version: number; data_version: number } | null = null
   try {
