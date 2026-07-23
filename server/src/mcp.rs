@@ -16,11 +16,13 @@ use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
+use crate::game_groups::{self, CreateGroupParams, GameGroupError, GroupCodeParams, LogGameParams};
 use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
 
 #[derive(Clone)]
 pub struct SchreckNetMcp {
     data_dir: Arc<String>,
+    app_db: Arc<String>,
     semantic: Arc<SemanticSearchService>,
     // Read by the #[tool_handler]-generated ServerHandler::call_tool/list_tools
     // impl below, which rustc's dead_code pass doesn't trace through the macro.
@@ -30,9 +32,10 @@ pub struct SchreckNetMcp {
 
 #[tool_router]
 impl SchreckNetMcp {
-    pub fn new(data_dir: String, semantic: Arc<SemanticSearchService>) -> Self {
+    pub fn new(data_dir: String, app_db: String, semantic: Arc<SemanticSearchService>) -> Self {
         Self {
             data_dir: Arc::new(data_dir),
+            app_db: Arc::new(app_db),
             semantic,
             tool_router: Self::tool_router(),
         }
@@ -150,9 +153,91 @@ impl SchreckNetMcp {
         }
     }
 
+    #[tool(
+        description = "Create a private game group for tracking casual play with a group of \
+        friends — no accounts, just a random shareable code. Returns the group's code, name, \
+        and creation time; share the code with the group so anyone can log games or read the \
+        leaderboard."
+    )]
+    async fn create_game_group(
+        &self,
+        Parameters(params): Parameters<CreateGroupParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(&game_groups::create_group(&conn, &params).map_err(game_group_error)?)
+    }
+
+    #[tool(
+        description = "Look up a game group by its shareable code. Returns null if no group \
+        has that code."
+    )]
+    async fn get_game_group(
+        &self,
+        Parameters(params): Parameters<GroupCodeParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(&game_groups::get_group(&conn, &params).map_err(|e| game_group_error(e.into()))?)
+    }
+
+    #[tool(
+        description = "Log a finished VTES game for a private game group: the date played, \
+        optional notes, and one result per player (name, optional deck name, VP, and whether \
+        they won). Returns null if the group code doesn't exist."
+    )]
+    async fn log_group_game(
+        &self,
+        Parameters(params): Parameters<LogGameParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(&game_groups::log_game(&conn, &params).map_err(game_group_error)?)
+    }
+
+    #[tool(
+        description = "List every game logged for a private game group, newest first, with full \
+        per-player results. Returns null if the group code doesn't exist."
+    )]
+    async fn list_group_games(
+        &self,
+        Parameters(params): Parameters<GroupCodeParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(
+            &game_groups::list_games(&conn, &params).map_err(|e| game_group_error(e.into()))?,
+        )
+    }
+
+    #[tool(
+        description = "Get the standing leaderboard for a private game group: games played, \
+        total and average VP, wins, and win rate per player, ranked by wins then VP. Returns \
+        null if the group code doesn't exist."
+    )]
+    async fn get_group_leaderboard(
+        &self,
+        Parameters(params): Parameters<GroupCodeParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(
+            &game_groups::leaderboard(&conn, &params).map_err(|e| game_group_error(e.into()))?,
+        )
+    }
+
     fn open(&self) -> Result<rusqlite::Connection, rmcp::ErrorData> {
         cards_db::open(&self.data_dir)
             .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))
+    }
+
+    fn open_app(&self) -> Result<rusqlite::Connection, rmcp::ErrorData> {
+        game_groups::open(&self.app_db)
+            .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))
+    }
+}
+
+fn game_group_error(error: GameGroupError) -> rmcp::ErrorData {
+    match error {
+        GameGroupError::EmptyResults => rmcp::ErrorData::invalid_params(error.to_string(), None),
+        GameGroupError::CodeGenerationFailed | GameGroupError::Sqlite(_) => {
+            rmcp::ErrorData::internal_error(error.to_string(), None)
+        }
     }
 }
 

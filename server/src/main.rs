@@ -6,6 +6,7 @@ mod api;
 mod card_detail;
 mod cards_db;
 mod draw_hand;
+mod game_groups;
 mod mcp;
 mod semantic_search;
 mod user_db;
@@ -21,6 +22,7 @@ use tower_http::services::{ServeDir, ServeFile};
 #[derive(Clone)]
 pub struct AppState {
     pub data_dir: String,
+    pub app_db: String,
     pub semantic: Arc<semantic_search::SemanticSearchService>,
 }
 
@@ -44,8 +46,10 @@ async fn main() {
         model_dir.clone(),
     ));
 
+    user_db::migrate(&app_db).expect("migrate app database");
+
     if std::env::args().any(|arg| arg == "--mcp-stdio") {
-        mcp::SchreckNetMcp::new(data_dir, semantic)
+        mcp::SchreckNetMcp::new(data_dir, app_db, semantic)
             .serve(rmcp::transport::stdio())
             .await
             .expect("start MCP stdio transport")
@@ -55,19 +59,20 @@ async fn main() {
         return;
     }
 
-    user_db::migrate(&app_db).expect("migrate app database");
-
     let state = AppState {
         data_dir: data_dir.clone(),
+        app_db: app_db.clone(),
         semantic: Arc::clone(&semantic),
     };
 
     let mcp_data_dir = data_dir.clone();
+    let mcp_app_db = app_db.clone();
     let mcp_semantic = Arc::clone(&semantic);
     let mcp_service = StreamableHttpService::new(
         move || {
             Ok(mcp::SchreckNetMcp::new(
                 mcp_data_dir.clone(),
+                mcp_app_db.clone(),
                 Arc::clone(&mcp_semantic),
             ))
         },
@@ -85,6 +90,16 @@ async fn main() {
         .route("/api/v1/cards/{id}", get(api::get_card))
         .route("/api/v1/precons", get(api::list_precons))
         .route("/api/v1/decks/draw-hand", post(api::draw_hand))
+        .route("/api/v1/groups", post(api::create_game_group))
+        .route("/api/v1/groups/{code}", get(api::get_game_group))
+        .route(
+            "/api/v1/groups/{code}/games",
+            get(api::list_group_games).post(api::log_group_game),
+        )
+        .route(
+            "/api/v1/groups/{code}/leaderboard",
+            get(api::get_group_leaderboard),
+        )
         .with_state(state)
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.

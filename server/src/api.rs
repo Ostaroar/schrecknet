@@ -8,6 +8,9 @@ use axum::response::{IntoResponse, Json};
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
+use crate::game_groups::{
+    self, CreateGroupParams, GameGroupError, GroupCodeParams, LogGameParams, PlayerResultInput,
+};
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
 use crate::AppState;
 
@@ -118,5 +121,120 @@ where
         Ok(Ok(value)) => Json(value).into_response(),
         Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+/// Body for POST .../games — `code` comes from the path, not the body.
+#[derive(serde::Deserialize)]
+pub struct LogGameBody {
+    pub played_at: String,
+    #[serde(default)]
+    pub notes: Option<String>,
+    pub results: Vec<PlayerResultInput>,
+}
+
+pub async fn create_game_group(
+    State(state): State<AppState>,
+    Json(params): Json<CreateGroupParams>,
+) -> impl IntoResponse {
+    run_app(state, move |conn| game_groups::create_group(conn, &params)).await
+}
+
+pub async fn get_game_group(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+) -> impl IntoResponse {
+    run_app_optional(state, move |conn| {
+        Ok(game_groups::get_group(conn, &GroupCodeParams { code })?)
+    })
+    .await
+}
+
+pub async fn log_group_game(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+    Json(body): Json<LogGameBody>,
+) -> impl IntoResponse {
+    run_app_optional(state, move |conn| {
+        game_groups::log_game(
+            conn,
+            &LogGameParams {
+                code,
+                played_at: body.played_at,
+                notes: body.notes,
+                results: body.results,
+            },
+        )
+    })
+    .await
+}
+
+pub async fn list_group_games(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+) -> impl IntoResponse {
+    run_app_optional(state, move |conn| {
+        Ok(game_groups::list_games(conn, &GroupCodeParams { code })?)
+    })
+    .await
+}
+
+pub async fn get_group_leaderboard(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+) -> impl IntoResponse {
+    run_app_optional(state, move |conn| {
+        Ok(game_groups::leaderboard(conn, &GroupCodeParams { code })?)
+    })
+    .await
+}
+
+fn game_group_error_response(error: GameGroupError) -> axum::response::Response {
+    match error {
+        GameGroupError::EmptyResults => {
+            (StatusCode::BAD_REQUEST, error.to_string()).into_response()
+        }
+        GameGroupError::CodeGenerationFailed | GameGroupError::Sqlite(_) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
+        }
+    }
+}
+
+async fn run_app<T, F>(state: AppState, f: F) -> axum::response::Response
+where
+    T: serde::Serialize + Send + 'static,
+    F: FnOnce(&rusqlite::Connection) -> Result<T, GameGroupError> + Send + 'static,
+{
+    let app_db = state.app_db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<T, GameGroupError> {
+        let conn = game_groups::open(&app_db)?;
+        f(&conn)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(value)) => Json(value).into_response(),
+        Ok(Err(error)) => game_group_error_response(error),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
+}
+
+async fn run_app_optional<T, F>(state: AppState, f: F) -> axum::response::Response
+where
+    T: serde::Serialize + Send + 'static,
+    F: FnOnce(&rusqlite::Connection) -> Result<Option<T>, GameGroupError> + Send + 'static,
+{
+    let app_db = state.app_db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Option<T>, GameGroupError> {
+        let conn = game_groups::open(&app_db)?;
+        f(&conn)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(Some(value))) => Json(value).into_response(),
+        Ok(Ok(None)) => (StatusCode::NOT_FOUND, "group not found").into_response(),
+        Ok(Err(error)) => game_group_error_response(error),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     }
 }

@@ -4,6 +4,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0001_user_data.sql"),
     include_str!("../../migrations/0002_deck_author.sql"),
     include_str!("../../migrations/0003_inventory.sql"),
+    include_str!("../../migrations/0004_game_groups.sql"),
 ];
 
 pub fn migrate(path: &str) -> rusqlite::Result<()> {
@@ -11,7 +12,7 @@ pub fn migrate(path: &str) -> rusqlite::Result<()> {
     migrate_connection(&connection)
 }
 
-fn migrate_connection(connection: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn migrate_connection(connection: &Connection) -> rusqlite::Result<()> {
     connection.pragma_update(None, "foreign_keys", true)?;
     let current_version: usize =
         connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -55,10 +56,19 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
+        let game_group_tables: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'
+                 AND name IN ('game_groups', 'group_games', 'group_game_results')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(version, MIGRATIONS.len());
         assert_eq!(author_columns, 1);
         assert_eq!(inventory_mode_columns, 1);
         assert_eq!(inventory_tables, 2);
+        assert_eq!(game_group_tables, 3);
     }
 
     #[test]
