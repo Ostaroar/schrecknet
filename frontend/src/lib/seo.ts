@@ -56,6 +56,10 @@ const STATIC_HEAD: Partial<Record<Route['page'], DocumentHead>> = {
     title: withSite('About'),
     description: `About ${SITE_NAME}, a VTES V5 card search and deck-building tool.`,
   },
+  legal: {
+    title: withSite('Impressum & Datenschutz'),
+    description: `Impressum und Datenschutzerklärung für ${SITE_NAME} (Angaben gemäß § 5 DDG und DSGVO).`,
+  },
 }
 
 const DEFAULT_HEAD: DocumentHead = {

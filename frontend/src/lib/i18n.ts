@@ -33,6 +33,7 @@ export interface UiStrings {
     disclaimer: string
     help: string
     about: string
+    legal: string
     support: string
   }
   help: {
@@ -281,6 +282,7 @@ const en: UiStrings = {
     disclaimer: 'SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive. It is not official World of Darkness material.',
     help: 'Help',
     about: 'About',
+    legal: 'Legal notice',
     support: 'Support this project',
   },
   help: {
@@ -379,6 +381,7 @@ const es: UiStrings = {
       'SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive. No es material oficial de World of Darkness.',
     help: 'Ayuda',
     about: 'Acerca de',
+    legal: 'Aviso legal',
     support: 'Apoya este proyecto',
   },
   help: {
@@ -480,6 +483,7 @@ const fr: UiStrings = {
       "SchreckNet est un contenu de fans non officiel, non approuvé par et sans affiliation avec Paradox Interactive. Ce n'est pas du matériel officiel World of Darkness.",
     help: 'Aide',
     about: 'À propos',
+    legal: 'Mentions légales',
     support: 'Soutenir ce projet',
   },
   help: {
@@ -584,6 +588,7 @@ const de: UiStrings = {
     disclaimer: 'SchreckNet ist inoffizieller Fan-Inhalt und wird von Paradox Interactive weder unterstützt noch ist es damit verbunden. Es handelt sich nicht um offizielles World-of-Darkness-Material.',
     help: 'Hilfe',
     about: 'Über',
+    legal: 'Impressum & Datenschutz',
     support: 'Dieses Projekt unterstützen',
   },
   help: {

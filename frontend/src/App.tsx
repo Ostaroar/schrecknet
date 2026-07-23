@@ -15,6 +15,7 @@ import CommandPalette from './components/CommandPalette'
 import ChangelogPage from './components/ChangelogPage'
 import LimitedFormatPage from './components/LimitedFormatPage'
 import TablePage from './components/TablePage'
+import LegalPage from './components/LegalPage'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
@@ -159,6 +160,8 @@ export default function App() {
           <HelpPage ui={ui.help} />
         ) : route.page === 'about' ? (
           <AboutPage ui={ui.about} />
+        ) : route.page === 'legal' ? (
+          <LegalPage />
         ) : route.page === 'decks' ? (
           <DeckList />
         ) : route.page === 'library' ? (
@@ -177,6 +180,7 @@ export default function App() {
         <span className="flex justify-center gap-3">
           <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">{ui.footer.help}</button>
           <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">{ui.footer.about}</button>
+          <button onClick={() => navigate({ page: 'legal' })} className="hover:text-ink-muted">{ui.footer.legal}</button>
           <a href="https://ko-fi.com/jannikostertag" target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted">{ui.footer.support}</a>
         </span>
       </footer>

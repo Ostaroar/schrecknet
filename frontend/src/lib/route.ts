@@ -25,6 +25,7 @@ export type Route =
   | { page: 'changelog' }
   | { page: 'help' }
   | { page: 'about' }
+  | { page: 'legal' }
 
 export function parsePath(pathname: string): Route {
   const path = pathname.replace(/^\/+/, '').replace(/\/+$/, '')
@@ -48,6 +49,10 @@ export function parsePath(pathname: string): Route {
   if (path === 'changelog') return { page: 'changelog' }
   if (path === 'help') return { page: 'help' }
   if (path === 'about') return { page: 'about' }
+  // German legal-notice aliases: an Impressum must be easy to find, so the
+  // obvious German URLs all resolve to the same page.
+  if (path === 'legal' || path === 'imprint' || path === 'impressum' || path === 'datenschutz')
+    return { page: 'legal' }
   if (path === 'library') return { page: 'library' }
   return { page: 'crypt' }
 }
@@ -88,6 +93,8 @@ export function routeTo(route: Route): string {
       return '/help'
     case 'about':
       return '/about'
+    case 'legal':
+      return '/legal'
   }
 }
 
