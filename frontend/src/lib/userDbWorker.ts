@@ -9,6 +9,7 @@
 //   in:  { id, kind: 'run', sql, params }             → { id, ok, lastInsertRowid?, changes?, error? }
 
 import { initSqlite } from './sqlite'
+import { installExclusiveOpfsPool } from './opfsLease'
 import migration001 from '../../../migrations/0001_user_data.sql?raw'
 import migration002 from '../../../migrations/0002_deck_author.sql?raw'
 import migration003 from '../../../migrations/0003_inventory.sql?raw'
@@ -30,7 +31,9 @@ let db: any = null
 
 async function open(): Promise<void> {
   const sqlite3 = await initSqlite()
-  const pool = await sqlite3.installOpfsSAHPoolVfs({ name: 'schrecknet-user-pool' })
+  const pool = await installExclusiveOpfsPool('schrecknet-user-db-opfs', () =>
+    sqlite3.installOpfsSAHPoolVfs({ name: 'schrecknet-user-pool' }),
+  )
   db = new pool.OpfsSAHPoolDb(DB_NAME)
   const currentVersion = Number(db.selectValue('PRAGMA user_version'))
   for (const migration of MIGRATIONS.slice(currentVersion)) db.exec(migration)

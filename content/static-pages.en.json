@@ -37,6 +37,33 @@
     "lead": "Product milestones for the V5 card-research and deckbuilding workbench.",
     "entries": [
       {
+        "date": "2026-07-23",
+        "title": "Private playgroups & leaderboards",
+        "summary": "Track casual games with your regular playgroup and see a shared leaderboard — no account needed.",
+        "items": [
+          "Join a group with a shareable code, log games, and track wins, VP, and archetype performance.",
+          "Join more than one group, edit or delete a logged game, and lock editing behind an optional passphrase."
+        ]
+      },
+      {
+        "date": "2026-07-23",
+        "title": "Precon quantities, done right",
+        "summary": "Adding a precon to your inventory now uses each card's real per-precon copy count, not a flat guess.",
+        "items": [
+          "Enter how many copies of a precon you own; every card is adjusted by its own real quantity.",
+          "The precon browser also shows what you already own, sourced from your inventory."
+        ]
+      },
+      {
+        "date": "2026-07-23",
+        "title": "New look, and German",
+        "summary": "SchreckNet has a new bat-sigil identity, and the interface is now available in German.",
+        "items": [
+          "Refreshed logo, wordmark, and tagline across the app.",
+          "Added Impressum and Datenschutzerklärung pages for German visitors."
+        ]
+      },
+      {
         "date": "2026-07-22",
         "title": "Search in your language",
         "summary": "Crypt and Library research controls now follow the selected English, Spanish, or French interface language.",

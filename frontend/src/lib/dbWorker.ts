@@ -13,6 +13,7 @@
 // a local DB exists, serve it — that is the offline path.
 
 import { initSqlite } from './sqlite'
+import { installExclusiveOpfsPool } from './opfsLease'
 
 type OpenMsg = { id: number; kind: 'open' }
 type QueryMsg = { id: number; kind: 'query'; sql: string; params: (string | number | null)[] }
@@ -42,23 +43,6 @@ function versionOf(meta: { schema_version: number; data_version: number }): stri
   return `${meta.schema_version}.${meta.data_version}`
 }
 
-async function installPoolWithRetry(
-  sqlite3: Awaited<ReturnType<typeof initSqlite>>,
-): Promise<Awaited<ReturnType<typeof sqlite3.installOpfsSAHPoolVfs>>> {
-  const attempts = 8
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      return await sqlite3.installOpfsSAHPoolVfs({})
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      const transient = message.includes('another open Access Handle')
-      if (!transient || attempt === attempts - 1) throw error
-      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)))
-    }
-  }
-  throw new Error('unreachable OPFS initialization state')
-}
-
 // The SAH pool owns exclusive OPFS access handles for the worker's lifetime.
 // During a rapid reload Chromium may start the replacement worker before the
 // old worker has released those handles. A Web Lock serializes worker
@@ -67,22 +51,9 @@ async function installPoolWithRetry(
 function installPool(
   sqlite3: Awaited<ReturnType<typeof initSqlite>>,
 ): Promise<Awaited<ReturnType<typeof sqlite3.installOpfsSAHPoolVfs>>> {
-  if (!navigator.locks) return installPoolWithRetry(sqlite3)
-
-  return new Promise((resolve, reject) => {
-    void navigator.locks
-      .request('schrecknet-card-db-opfs', async () => {
-        try {
-          resolve(await installPoolWithRetry(sqlite3))
-          await new Promise<void>(() => {
-            // Hold the lease until this worker is terminated.
-          })
-        } catch (error) {
-          reject(error)
-        }
-      })
-      .catch(reject)
-  })
+  return installExclusiveOpfsPool('schrecknet-card-db-opfs', () =>
+    sqlite3.installOpfsSAHPoolVfs({}),
+  )
 }
 
 async function open(): Promise<Record<string, unknown>> {
