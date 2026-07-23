@@ -13,7 +13,7 @@ mod user_db;
 
 use std::sync::Arc;
 
-use axum::{routing::get, routing::post, Json, Router};
+use axum::{routing::delete, routing::get, routing::post, Json, Router};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::ServiceExt;
@@ -101,6 +101,10 @@ async fn main() {
         .route(
             "/api/v1/groups/{code}/leaderboard",
             get(api::get_group_leaderboard),
+        )
+        .route(
+            "/api/v1/groups/{code}/games/{game_id}",
+            delete(api::delete_group_game),
         )
         // Build-time-prerendered static card page (docs/seo-geo-aeo-plan.md
         // § 4.3, S3) — falls back to the SPA shell for an id with no

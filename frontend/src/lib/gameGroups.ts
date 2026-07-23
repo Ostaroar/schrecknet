@@ -32,18 +32,56 @@ export interface LeaderboardEntry {
   win_rate: number
 }
 
-const STORAGE_KEY = 'schrecknet.game-group-code'
+// A player can be in more than one playgroup (Thursday coterie, con pickup
+// games, ...), so the joined codes are a list, not a single value. The
+// pre-multi-group key is migrated in transparently on first read.
+const CODES_KEY = 'schrecknet.game-group-codes'
+const ACTIVE_KEY = 'schrecknet.game-group-active-code'
+const LEGACY_SINGLE_CODE_KEY = 'schrecknet.game-group-code'
 
-export function getStoredGroupCode(): string | null {
-  return localStorage.getItem(STORAGE_KEY)
+function readCodes(): string[] {
+  const raw = localStorage.getItem(CODES_KEY)
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.every((c) => typeof c === 'string')) return parsed
+    } catch {
+      // fall through to legacy/empty
+    }
+  }
+  const legacy = localStorage.getItem(LEGACY_SINGLE_CODE_KEY)
+  return legacy ? [legacy] : []
 }
 
-export function setStoredGroupCode(code: string): void {
-  localStorage.setItem(STORAGE_KEY, code)
+function writeCodes(codes: string[]): void {
+  localStorage.setItem(CODES_KEY, JSON.stringify(codes))
+  localStorage.removeItem(LEGACY_SINGLE_CODE_KEY)
 }
 
-export function clearStoredGroupCode(): void {
-  localStorage.removeItem(STORAGE_KEY)
+export function getStoredGroupCodes(): string[] {
+  return readCodes()
+}
+
+export function addStoredGroupCode(code: string): void {
+  const codes = readCodes()
+  if (!codes.includes(code)) writeCodes([...codes, code])
+  setActiveGroupCode(code)
+}
+
+export function removeStoredGroupCode(code: string): void {
+  writeCodes(readCodes().filter((c) => c !== code))
+  if (getActiveGroupCode() === code) setActiveGroupCode(null)
+}
+
+export function getActiveGroupCode(): string | null {
+  const active = localStorage.getItem(ACTIVE_KEY)
+  if (active && readCodes().includes(active)) return active
+  return readCodes()[0] ?? null
+}
+
+export function setActiveGroupCode(code: string | null): void {
+  if (code) localStorage.setItem(ACTIVE_KEY, code)
+  else localStorage.removeItem(ACTIVE_KEY)
 }
 
 async function asJson<T>(response: Response): Promise<T> {
@@ -92,4 +130,18 @@ export async function getGroupLeaderboard(code: string): Promise<LeaderboardEntr
   const response = await fetch(`/api/v1/groups/${encodeURIComponent(code)}/leaderboard`)
   if (response.status === 404) return null
   return asJson<LeaderboardEntry[]>(response)
+}
+
+/** Returns false if the code or game id didn't match anything. Irreversible. */
+export async function deleteGroupGame(code: string, gameId: number): Promise<boolean> {
+  const response = await fetch(
+    `/api/v1/groups/${encodeURIComponent(code)}/games/${gameId}`,
+    { method: 'DELETE' },
+  )
+  if (response.status === 404) return false
+  if (!response.ok) {
+    const message = await response.text().catch(() => '')
+    throw new Error(message || `request failed with status ${response.status}`)
+  }
+  return true
 }

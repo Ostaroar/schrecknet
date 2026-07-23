@@ -154,9 +154,28 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
   numbers match the same fixture used in the Rust tests exactly.
 
 ### G4 — (Optional follow-ups, not blocking)
+- ☑ Join multiple groups — owner-requested (2026-07-23). `lib/gameGroups.ts` now
+  stores a *list* of joined codes (`schrecknet.game-group-codes`, migrated
+  transparently from the old single-code key) plus a separate "active code"
+  pointer; `TablePage.tsx` shows a pill switcher above the active group's view and
+  a "+ Join another" toggle that reveals the create/join forms without leaving the
+  current group. Live-verified: joined two groups, switched between them, each
+  keeps its own leaderboard/games.
+- ☑ Delete a logged game, with a confirmation warning — owner-requested
+  (2026-07-23). `server/src/game_groups.rs::delete_game` scopes the delete to
+  `game_id AND group_id = (code)` so a game id can't be deleted via a different
+  group's code even if guessed; wired into REST (`DELETE
+  /api/v1/groups/{code}/games/{game_id}`) and MCP (`delete_group_game`), both
+  tested including the cross-group-refusal case. Frontend: a "Delete" button per
+  recent game calls the browser's native `confirm()` (same pattern as
+  `DeckList.tsx`'s deck deletion) naming the date and players before deleting —
+  live-verified both the cancel path (declined confirm leaves the game/leaderboard
+  untouched) and the accept path (game and its leaderboard contribution disappear
+  immediately).
 - Localize `TablePage.tsx` (en/es/fr/de), matching the rest of the interface.
 - Seating/predator-prey chain per game (if the group wants positional stats).
-- Edit/delete a logged game (currently append-only).
+- Edit a logged game's numbers after the fact (delete-and-relog covers the
+  common case now).
 - Per-deck-archetype tie-in: reuse `lib/archetypeTags.ts` to tag which archetypes
   perform best in the group's own game history — genuinely novel, no other VTES tool
   does this, but explicitly deferred past the first working slice.

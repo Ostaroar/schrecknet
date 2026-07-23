@@ -9,7 +9,8 @@ use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::game_groups::{
-    self, CreateGroupParams, GameGroupError, GroupCodeParams, LogGameParams, PlayerResultInput,
+    self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,
+    PlayerResultInput,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
 use crate::AppState;
@@ -206,6 +207,28 @@ pub async fn get_group_leaderboard(
         Ok(game_groups::leaderboard(conn, &GroupCodeParams { code })?)
     })
     .await
+}
+
+pub async fn delete_group_game(
+    State(state): State<AppState>,
+    Path((code, game_id)): Path<(String, i64)>,
+) -> impl IntoResponse {
+    let app_db = state.app_db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<bool, GameGroupError> {
+        let conn = game_groups::open(&app_db)?;
+        Ok(game_groups::delete_game(
+            &conn,
+            &DeleteGameParams { code, game_id },
+        )?)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Ok(false)) => (StatusCode::NOT_FOUND, "game not found").into_response(),
+        Ok(Err(error)) => game_group_error_response(error),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
 }
 
 fn game_group_error_response(error: GameGroupError) -> axum::response::Response {

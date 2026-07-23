@@ -47,6 +47,13 @@ pub struct PlayerResultInput {
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct DeleteGameParams {
+    pub code: String,
+    /// The game's id, as returned by log_group_game/list_group_games.
+    pub game_id: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct LogGameParams {
     pub code: String,
     /// ISO date the game was played, e.g. "2026-07-23".
@@ -229,6 +236,19 @@ pub fn log_game(
         notes: params.notes.clone(),
         results: results_for_game(conn, game_id)?,
     }))
+}
+
+/// Deletes one logged game, scoped to its group's code so a game id from a
+/// different group can never be deleted by guessing — the id alone isn't
+/// enough, it must also belong to the group the caller has the code for.
+/// Returns false if the code is unknown or the game doesn't belong to it.
+pub fn delete_game(conn: &Connection, params: &DeleteGameParams) -> rusqlite::Result<bool> {
+    let changed = conn.execute(
+        "DELETE FROM group_games
+         WHERE id = ?1 AND group_id = (SELECT id FROM game_groups WHERE code = ?2)",
+        rusqlite::params![params.game_id, params.code],
+    )?;
+    Ok(changed > 0)
 }
 
 pub fn list_games(
@@ -480,6 +500,110 @@ mod tests {
             .unwrap();
         assert_eq!(remaining_games, 0);
         assert_eq!(remaining_results, 0);
+    }
+
+    #[test]
+    fn deletes_a_game_and_its_results_and_updates_the_leaderboard() {
+        let conn = seed();
+        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let game = log_game(
+            &conn,
+            &LogGameParams {
+                code: group.code.clone(),
+                played_at: "2026-07-23".into(),
+                notes: None,
+                results: vec![player("Alex", 2.0, true), player("Sam", 1.0, false)],
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        let deleted = delete_game(
+            &conn,
+            &DeleteGameParams {
+                code: group.code.clone(),
+                game_id: game.id,
+            },
+        )
+        .unwrap();
+        assert!(deleted);
+
+        let games = list_games(
+            &conn,
+            &GroupCodeParams {
+                code: group.code.clone(),
+            },
+        )
+        .unwrap()
+        .unwrap();
+        assert!(games.is_empty());
+        let board = leaderboard(&conn, &GroupCodeParams { code: group.code })
+            .unwrap()
+            .unwrap();
+        assert!(board.is_empty());
+
+        let remaining_results: i64 = conn
+            .query_row("SELECT COUNT(*) FROM group_game_results", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(remaining_results, 0);
+    }
+
+    #[test]
+    fn delete_game_refuses_a_game_id_from_a_different_group() {
+        let conn = seed();
+        let group_a = create_group(&conn, &CreateGroupParams { name: "A".into() }).unwrap();
+        let group_b = create_group(&conn, &CreateGroupParams { name: "B".into() }).unwrap();
+        let game = log_game(
+            &conn,
+            &LogGameParams {
+                code: group_a.code.clone(),
+                played_at: "2026-07-23".into(),
+                notes: None,
+                results: vec![player("Alex", 1.0, true)],
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        // group_b's code is valid, but this game belongs to group_a.
+        let deleted = delete_game(
+            &conn,
+            &DeleteGameParams {
+                code: group_b.code,
+                game_id: game.id,
+            },
+        )
+        .unwrap();
+        assert!(!deleted);
+
+        let games = list_games(&conn, &GroupCodeParams { code: group_a.code })
+            .unwrap()
+            .unwrap();
+        assert_eq!(games.len(), 1);
+    }
+
+    #[test]
+    fn delete_game_on_unknown_code_or_game_id_is_a_no_op() {
+        let conn = seed();
+        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        assert!(!delete_game(
+            &conn,
+            &DeleteGameParams {
+                code: "NOPE0000".into(),
+                game_id: 1,
+            },
+        )
+        .unwrap());
+        assert!(!delete_game(
+            &conn,
+            &DeleteGameParams {
+                code: group.code,
+                game_id: 999,
+            },
+        )
+        .unwrap());
     }
 
     fn player(name: &str, vp: f64, game_win: bool) -> PlayerResultInput {

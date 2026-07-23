@@ -16,7 +16,9 @@ use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
-use crate::game_groups::{self, CreateGroupParams, GameGroupError, GroupCodeParams, LogGameParams};
+use crate::game_groups::{
+    self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,
+};
 use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
 
 #[derive(Clone)]
@@ -190,6 +192,22 @@ impl SchreckNetMcp {
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open_app()?;
         json_value(&game_groups::log_game(&conn, &params).map_err(game_group_error)?)
+    }
+
+    #[tool(
+        description = "Delete one logged game from a private game group by its id (as returned \
+        by log_group_game/list_group_games). The game must belong to the group identified by \
+        `code` — an id from a different group is refused. Returns true if deleted, false if the \
+        code or game id didn't match anything. This cannot be undone."
+    )]
+    async fn delete_group_game(
+        &self,
+        Parameters(params): Parameters<DeleteGameParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(
+            &game_groups::delete_game(&conn, &params).map_err(|e| game_group_error(e.into()))?,
+        )
     }
 
     #[tool(
