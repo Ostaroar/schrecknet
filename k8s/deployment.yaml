@@ -21,6 +21,10 @@ spec:
       containers:
         - name: server
           image: ghcr.io/ostaroar/schrecknet:main
+          # :main is a mutable tag; without this, kubelet's default
+          # IfNotPresent policy would keep reusing whatever digest is already
+          # cached on the node even after a newer image is pushed.
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           volumeMounts:
