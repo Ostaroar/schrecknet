@@ -1,6 +1,9 @@
 # SEO / GEO / AEO (Design & Dev Plan)
 
-Status: **S1-S5 implemented; S6 awaits a real deployment domain** (2026-07-23).
+Status: **S1-S5 implemented; live at schreck-net.com** (2026-07-23). `SITE_URL` is
+now wired into `docker.yml`'s build so the next image build generates a real
+`sitemap.xml` (previously deliberately skipped rather than publish one with a
+placeholder domain). S6 (Core Web Vitals/Lighthouse) is the only open item.
 Requested directly by the project owner: the site
 needs to be findable — through traditional search engines (SEO), through AI answer
 engines and LLM browsing/training crawlers (GEO — Generative Engine Optimization —

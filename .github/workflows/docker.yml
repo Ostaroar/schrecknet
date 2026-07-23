@@ -62,5 +62,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Real deployment origin (docs/seo-geo-aeo-plan.md § 5) -- without
+          # this the prerender-build stage deliberately skips sitemap.xml
+          # rather than publish one with a placeholder domain.
+          build-args: |
+            SITE_URL=https://schreck-net.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
