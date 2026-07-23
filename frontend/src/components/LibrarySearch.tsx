@@ -778,46 +778,37 @@ export default function LibrarySearch() {
                     data-semantic-score={
                       semanticMode && 'semanticScore' in c ? c.semanticScore : undefined
                     }
-                    className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-2 px-3 py-2 text-left text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_auto_auto]"
+                    className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-2 px-3 py-2 text-left text-sm sm:px-4"
                   >
-                    <span className="min-w-0 truncate" data-card-name>
-                      <span className="font-medium text-ink">{c.name}</span>
-                      {semanticMode && 'semanticScore' in c && (
-                        <span className="ml-2 font-mono text-[10px] text-gold">
-                          {ui.librarySearch.similarity} {c.semanticScore.toFixed(3)}
+                    <span className="grid min-w-0 gap-1" data-card-name>
+                      <span className="flex min-w-0 items-baseline gap-2">
+                        <span className="min-w-0 break-words font-medium leading-tight text-ink">
+                          {c.name}
                         </span>
-                      )}
-                      <span className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
-                        <CardTypeSummary types={c.types} />
-                        {c.clan ? ` · ${c.clan}` : ''}
-                        {c.path ? ` · ${c.path}` : ''}
-                        <OwnedBadge qty={owned.get(c.id) ?? 0} />
-                        {limitedFormatActive && (
-                          <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat)} />
+                        {semanticMode && 'semanticScore' in c && (
+                          <span className="shrink-0 font-mono text-[10px] text-gold">
+                            {ui.librarySearch.similarity} {c.semanticScore.toFixed(3)}
+                          </span>
                         )}
                       </span>
-                    </span>
-                    <span className="hidden items-center gap-1 sm:flex">
-                      {c.disciplines.map((d) => (
-                        <DisciplineSymbol key={d} code={d} className="size-4" />
-                      ))}
-                      <PathSymbol path={c.path} className="size-4" />
-                      <CostPill blood={c.blood_cost} pool={c.pool_cost} />
-                      <OwnedBadge qty={owned.get(c.id) ?? 0} />
-                      {limitedFormatActive && (
-                        <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat)} />
-                      )}
-                    </span>
-                    <span className="hidden items-center justify-end gap-1 text-right text-xs uppercase tracking-wide text-ink-muted lg:flex">
-                      <CardTypeSummary types={c.types} />
-                      {c.clan && <span>· {c.clan}</span>}
-                      {c.path && (
-                        <>
-                          <span>·</span>
+                      <span className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-[10px] uppercase tracking-wide text-ink-muted">
+                          <CardTypeSummary types={c.types} />
+                          {c.clan ? ` · ${c.clan}` : ''}
+                          {c.path ? ` · ${c.path}` : ''}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1">
+                          {c.disciplines.map((d) => (
+                            <DisciplineSymbol key={d} code={d} className="size-4" />
+                          ))}
                           <PathSymbol path={c.path} className="size-4" />
-                          <span>{c.path}</span>
-                        </>
-                      )}
+                          <CostPill blood={c.blood_cost} pool={c.pool_cost} />
+                          <OwnedBadge qty={owned.get(c.id) ?? 0} />
+                          {limitedFormatActive && (
+                            <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat)} />
+                          )}
+                        </span>
+                      </span>
                     </span>
                   </button>
                   <CardImagePreview imageUrl={c.image_url} name={c.name} />
