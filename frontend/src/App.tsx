@@ -16,6 +16,7 @@ import ChangelogPage from './components/ChangelogPage'
 import LimitedFormatPage from './components/LimitedFormatPage'
 import TablePage from './components/TablePage'
 import BrandMark from './components/BrandMark'
+import KofiButton from './components/KofiButton'
 import LegalPage from './components/LegalPage'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
@@ -183,6 +184,7 @@ export default function App() {
       </main>
 
       <CommandPalette />
+      <KofiButton label={ui.footer.support} />
 
       <footer className="grid justify-items-center gap-2 py-6 text-center text-xs text-ink-dim">
         <img src="/dark-pack-logo.png" alt="Dark Pack" className="h-10 w-10" />

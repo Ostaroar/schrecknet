@@ -22,6 +22,57 @@ body {
   color: var(--color-ink);
 }
 
+/* Floating Ko-fi button (components/KofiButton.tsx). Decorative motion only:
+   the cup bobs gently and steam rises in a staggered loop. Both stop entirely
+   under prefers-reduced-motion — the button stays fully usable either way. */
+@keyframes kofi-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes kofi-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(3px) scaleX(0.8);
+  }
+  35% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scaleX(1.2);
+  }
+}
+.kofi-float {
+  animation: kofi-bob 3.2s ease-in-out infinite;
+}
+.kofi-steam path {
+  transform-origin: center bottom;
+  animation: kofi-steam 2.4s ease-out infinite;
+}
+.kofi-steam .kofi-steam-2 {
+  animation-delay: 0.8s;
+}
+.kofi-steam .kofi-steam-3 {
+  animation-delay: 1.6s;
+}
+/* Hovering speeds the steam up — a small "it's alive" reward, nothing load-bearing. */
+.kofi-float:hover .kofi-steam path {
+  animation-duration: 1.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kofi-float,
+  .kofi-float:hover .kofi-steam path,
+  .kofi-steam path {
+    animation: none;
+  }
+}
+
 /* Preserve the compact desktop workbench while giving touch users reliable
    targets, including icon-only quantity and image controls. */
 @media (pointer: coarse) {
