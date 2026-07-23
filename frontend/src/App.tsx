@@ -15,6 +15,7 @@ import CommandPalette from './components/CommandPalette'
 import ChangelogPage from './components/ChangelogPage'
 import LimitedFormatPage from './components/LimitedFormatPage'
 import TablePage from './components/TablePage'
+import BrandMark from './components/BrandMark'
 import LegalPage from './components/LegalPage'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
@@ -56,13 +57,23 @@ export default function App() {
   return (
     <div className={'mx-auto flex min-h-screen flex-col px-3 sm:px-6 ' + (wide ? 'max-w-5xl' : 'max-w-3xl')}>
       <header className="flex flex-wrap items-center gap-3 py-4 sm:py-6">
-        <span className="grid size-8 place-items-center rounded-lg bg-blood font-display text-lg font-bold text-white">
-          S
-        </span>
-        <span className="font-display text-xl tracking-wide">SchreckNet</span>
-        <kbd className="hidden rounded-md border border-line px-2 py-0.5 font-mono text-[10px] text-ink-dim sm:block">
-          ⌘K
-        </kbd>
+        <button
+          onClick={() => navigate({ page: 'crypt' })}
+          className="group flex items-center gap-3 text-left"
+          aria-label="SchreckNet"
+        >
+          <span className="grid size-10 place-items-center rounded-xl border border-line bg-gradient-to-br from-raised to-ground shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <BrandMark className="h-6 w-7 drop-shadow-[0_0_5px_rgba(208,75,88,0.35)] transition group-hover:drop-shadow-[0_0_9px_rgba(208,75,88,0.6)]" />
+          </span>
+          <span className="grid gap-0.5 leading-none">
+            <span className="font-display text-xl uppercase tracking-[0.12em] text-ink">
+              Schreck<span className="text-blood-hi">Net</span>
+            </span>
+            <span className="hidden text-[9px] uppercase tracking-[0.24em] text-ink-dim sm:block">
+              {ui.header.tagline}
+            </span>
+          </span>
+        </button>
         <div className="ml-auto flex items-center gap-2">
           <div className="flex items-center gap-0.5" role="group" aria-label={ui.header.cardTextLabel}>
             {UI_LANGUAGES.map((option) => (

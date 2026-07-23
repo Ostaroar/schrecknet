@@ -1,34 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- SchreckNet brand sigil (bat) — kept in sync by hand with
+       frontend/src/components/BrandMark.tsx; change both together. -->
   <defs>
     <radialGradient id="bg" cx="50%" cy="38%" r="75%">
       <stop offset="0%" stop-color="#241820"/>
       <stop offset="100%" stop-color="#120c0f"/>
     </radialGradient>
-    <linearGradient id="drop" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#d84656"/>
+    <linearGradient id="blood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e05666"/>
       <stop offset="55%" stop-color="#b32e40"/>
       <stop offset="100%" stop-color="#7d1c2b"/>
     </linearGradient>
-    <radialGradient id="sheen" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ffd9c2" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#ffd9c2" stop-opacity="0"/>
-    </radialGradient>
   </defs>
 
   <!-- full-bleed background so the maskable safe zone is covered edge-to-edge -->
   <rect width="192" height="192" fill="url(#bg)"/>
 
   <!-- inner ring, kept inside the central 80% maskable safe zone -->
-  <circle cx="96" cy="96" r="60" fill="none" stroke="#3a2a34" stroke-width="3"/>
+  <circle cx="96" cy="96" r="62" fill="none" stroke="#3a2a34" stroke-width="3"/>
 
-  <!-- blood drop -->
-  <path d="M96 46
-           C112 68 126 88 126 108
-           C126 129 113 144 96 144
-           C79 144 66 129 66 108
-           C66 88 80 68 96 46 Z"
-        fill="url(#drop)" stroke="#e56575" stroke-width="2"/>
-
-  <!-- specular highlight -->
-  <ellipse cx="85" cy="96" rx="10" ry="18" fill="url(#sheen)"/>
+  <!-- bat sigil, centered inside the ring -->
+  <g transform="translate(24,27) scale(3)">
+    <path d="M24 34
+             C22 29 19 28 15.5 30
+             C15 25 11 23 5 24
+             C9.5 19 15 17 20 18.5
+             L21.5 12.5
+             L24 16
+             L26.5 12.5
+             L28 18.5
+             C33 17 38.5 19 43 24
+             C37 23 33 25 32.5 30
+             C29 28 26 29 24 34 Z"
+          fill="url(#blood)"
+          stroke="#e56575"
+          stroke-width="1"
+          stroke-linejoin="round"/>
+  </g>
 </svg>
