@@ -246,9 +246,11 @@ DOKS node pool:
   (`otool -L` on a local build shows no linked ONNX runtime dylib — `ort`
   dlopens it lazily on first *use*, which `prerender` never triggers), so this
   stage doesn't need the exact ONNX-capable runtime the final image does.
-  **Not yet verified with a real `docker build`** (no Docker daemon in this
-  session) — will be exercised by `docker.yml` on the next push to `main`;
-  check that run before relying on this in production.
+  **Verified green in CI** (`docker.yml` run 29990857841, triggered by the
+  commit that fixed the e2e smoke tests below — full multi-stage build
+  including `prerender-build` succeeded, confirming the ONNX-dlopen
+  reasoning held up in the real Debian-trixie-slim environment, not just
+  locally on macOS).
 - **DoD:** live-verified locally against the real (non-Docker) server binary:
   `curl http://127.0.0.1:8000/cards/201733` with no JS returns real card text,
   the correct title/description/OG tags, and valid JSON-LD (`cargo test -p

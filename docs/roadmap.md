@@ -330,8 +330,8 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   served by a small new `GET /cards/{id}` handler — corrected from this doc's
   earlier "no new server code" claim). Live-verified locally against the real
   server binary + a real browser; the new Dockerfile `prerender-build` stage
-  is **not yet verified with an actual `docker build`** (no Docker available
-  in-session) — check the next `docker.yml` CI run before relying on it.
+  is confirmed green in CI (`docker.yml` run 29990857841 — full multi-stage
+  build succeeded).
 - ☐ S4 prerender secondary routes (`/rules`, `/precons`, `/help`, `/about`,
   `/changelog`) + sitemap regenerated against real paths
 - ☐ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers,
