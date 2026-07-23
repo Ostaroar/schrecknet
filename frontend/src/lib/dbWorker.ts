@@ -42,11 +42,7 @@ function versionOf(meta: { schema_version: number; data_version: number }): stri
   return `${meta.schema_version}.${meta.data_version}`
 }
 
-// A rapid reload can start this worker a few milliseconds before Chromium has
-// released the previous worker's synchronous OPFS access handle. Retrying only
-// that transient exclusivity error avoids a false "database unavailable" state;
-// configuration, quota, and compatibility failures still surface immediately.
-async function installPool(
+async function installPoolWithRetry(
   sqlite3: Awaited<ReturnType<typeof initSqlite>>,
 ): Promise<Awaited<ReturnType<typeof sqlite3.installOpfsSAHPoolVfs>>> {
   const attempts = 8
@@ -61,6 +57,32 @@ async function installPool(
     }
   }
   throw new Error('unreachable OPFS initialization state')
+}
+
+// The SAH pool owns exclusive OPFS access handles for the worker's lifetime.
+// During a rapid reload Chromium may start the replacement worker before the
+// old worker has released those handles. A Web Lock serializes worker
+// generations without introducing an arbitrary startup delay. Terminating the
+// old worker automatically releases its lock and lets the replacement proceed.
+function installPool(
+  sqlite3: Awaited<ReturnType<typeof initSqlite>>,
+): Promise<Awaited<ReturnType<typeof sqlite3.installOpfsSAHPoolVfs>>> {
+  if (!navigator.locks) return installPoolWithRetry(sqlite3)
+
+  return new Promise((resolve, reject) => {
+    void navigator.locks
+      .request('schrecknet-card-db-opfs', async () => {
+        try {
+          resolve(await installPoolWithRetry(sqlite3))
+          await new Promise<void>(() => {
+            // Hold the lease until this worker is terminated.
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+      .catch(reject)
+  })
 }
 
 async function open(): Promise<Record<string, unknown>> {
