@@ -303,3 +303,34 @@ model as a shared document link. Full design, data model, and milestone breakdow
 - ☐ G4 (optional follow-ups): localize the page, seating/predator-prey chain per
   game, edit/delete a logged game, archetype-performance tie-in with
   `lib/archetypeTags.ts`, CSV/text export
+
+## Phase 7 — SEO / GEO / AEO (additive, owner-requested)
+_Requested directly by the project owner (2026-07-23): the site needs to be findable
+through traditional search (SEO) and AI answer engines/crawlers (GEO/AEO — GPTBot,
+ClaudeBot, PerplexityBot, Google-Extended, etc.), ahead of shipping on a
+**DigitalOcean Kubernetes Basic node pool**. Root problem: the SPA's hash routing
+(`#/cards/123`) means every route serves the same generic `index.html` to any
+crawler that doesn't execute JS — which is most of the GEO/AEO audience. No new
+runtime dependency and no framework migration (no Next.js/Astro/SSR rewrite); the
+existing `schrecknet-data` build step and the server's static-file serving already
+do the heavy lifting once card pages are prerendered. Full plan, content inventory,
+and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
+- ☐ S1 per-route `<title>`/description (hand-rolled head-tag hook, no dependency),
+  `robots.txt` + first `sitemap.xml`
+- ☐ S2 path-based routing migration (`#/x` → `/x`, History API) — **needs its own
+  ADR** (`docs/adr/0008-path-based-routing-for-seo.md`) before implementation;
+  old hash links must redirect, not 404
+- ☐ S3 build-time static prerendering for all 662 card pages (real HTML + title/
+  description/OG/Twitter/JSON-LD, `schrecknet-data` build step, served by the
+  existing `axum` static file handler — no new server code)
+- ☐ S4 prerender secondary routes (`/rules`, `/precons`, `/help`, `/about`,
+  `/changelog`) + sitemap regenerated against real paths
+- ☐ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers,
+  `llms.txt` (informal/unproven convention, kept low-effort)
+- ☐ S6 (optional, infra-adjacent): Core Web Vitals/Lighthouse check once a real
+  domain + CDN sit in front of the DOKS deployment; overlaps Phase 4's performance
+  budget item
+- **Guardrail carried over from [docs/game-groups-plan.md](game-groups-plan.md):**
+  `/table` and `/share/<token>` must stay `noindex` + `robots.txt`-disallowed and
+  never appear in the sitemap — indexing either would break their "unguessable
+  code = private" trust model

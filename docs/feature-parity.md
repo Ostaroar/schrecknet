@@ -283,6 +283,13 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       (create/join a group, log games, leaderboard) shipped 2026-07-23; localization,
       seating chain, edit/delete, and archetype tie-in remain optional follow-ups. See
       [docs/game-groups-plan.md](game-groups-plan.md); tracked in roadmap.md Phase 6
+- ☐ SEO / GEO / AEO — owner-requested (2026-07-23), ahead of shipping on a
+      DigitalOcean Kubernetes Basic node pool. Not a vdb-parity item (vdb.im has no
+      notable SEO surface either) — tracked here because it's a real SchreckNet
+      capability: real path-based URLs, build-time-prerendered card pages, structured
+      data, `robots.txt`/`sitemap.xml`, and a GEO/AEO crawler allow-list. No new
+      runtime dependency; one ADR needed for the routing migration. See
+      [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md); tracked in roadmap.md Phase 7
 
 ## Non-functional parity
 - ☑ Card data pipeline from VEKN official card list / KRCG static files, with
