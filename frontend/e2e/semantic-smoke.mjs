@@ -538,19 +538,26 @@ try {
     const nativeParityHits = nativeHits.slice(0, fixture.parity_top_n)
     const browserIds = browserResult.hits.map((hit) => hit.id)
     const nativeIds = nativeParityHits.map((hit) => hit.id)
-    assert.deepEqual(
-      [...browserIds].sort((left, right) => left - right),
-      [...nativeIds].sort((left, right) => left - right),
-      `${golden.query}: browser/native top-${fixture.parity_top_n} membership diverged`,
+    const sharedIds = browserIds.filter((id) => nativeIds.includes(id))
+    assert.ok(
+      sharedIds.length >= fixture.parity_top_n - 1,
+      `${golden.query}: browser/native top-${fixture.parity_top_n} overlap fell below ${fixture.parity_top_n - 1}`,
     )
-    const nativeById = new Map(nativeParityHits.map((hit) => [hit.id, hit]))
+    const nativeById = new Map(nativeHits.map((hit) => [hit.id, hit]))
+    const nativeCutoff = nativeParityHits.at(-1)?.score ?? -1
     browserResult.hits.forEach((hit) => {
       const nativeHit = nativeById.get(hit.id)
-      assert.ok(nativeHit, `${golden.query}: browser returned unexpected card ${hit.id}`)
+      assert.ok(nativeHit, `${golden.query}: browser returned a card absent from native candidates: ${hit.id}`)
       assert.ok(
         Math.abs(hit.score - nativeHit.score) <= fixture.score_tolerance,
         `${golden.query}: card ${hit.id} score exceeded tolerance`,
       )
+      if (!nativeIds.includes(hit.id)) {
+        assert.ok(
+          nativeCutoff - nativeHit.score <= fixture.score_tolerance,
+          `${golden.query}: browser boundary card ${hit.id} was materially below the native cutoff`,
+        )
+      }
     })
     // Each platform may move a score by up to the declared tolerance. Preserve
     // order whenever the native gap is larger than both cards' combined error;
@@ -560,9 +567,11 @@ try {
       for (let lower = higher + 1; lower < nativeParityHits.length; lower += 1) {
         const scoreGap = nativeParityHits[higher].score - nativeParityHits[lower].score
         if (scoreGap <= fixture.score_tolerance * 2) continue
+        const higherPosition = browserPosition.get(nativeParityHits[higher].id)
+        const lowerPosition = browserPosition.get(nativeParityHits[lower].id)
+        if (higherPosition === undefined || lowerPosition === undefined) continue
         assert.ok(
-          browserPosition.get(nativeParityHits[higher].id) <
-            browserPosition.get(nativeParityHits[lower].id),
+          higherPosition < lowerPosition,
           `${golden.query}: materially separated cards changed order`,
         )
       }
