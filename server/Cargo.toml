@@ -12,7 +12,11 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 # direct dependency for ServiceBuilder (per-route compression/cache-header
 # composition), not a new addition to the dependency tree.
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "compression-full", "set-header"] }
+tower-http = { version = "0.6", features = ["fs", "compression-full", "set-header", "trace"] }
+# tracing is already pulled in transitively (rmcp/tokio); tracing-subscriber
+# is the one new dependency here (docs/adr/0011-tracing-for-http-access-logs.md).
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde_json = { workspace = true }
 schrecknet-core = { path = "../core" }
 rmcp = { version = "2.2.0", features = ["server", "transport-streamable-http-server", "transport-io"] }

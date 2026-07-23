@@ -22,6 +22,21 @@ use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tracing::Level;
+
+/// One line per request (method, path, status, latency) to stderr — never
+/// stdout, which `--mcp-stdio` mode uses for the JSON-RPC transport (docs/adr/
+/// 0011-tracing-for-http-access-logs.md). `RUST_LOG` overrides the default
+/// `info` level without a rebuild.
+fn init_access_logging() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
+        .with_writer(std::io::stderr)
+        .init();
+}
 
 /// Vite's build output under `/assets` is content-hashed (a filename never
 /// changes meaning), so it's safe to tell browsers/CDNs to cache it forever —
@@ -49,6 +64,8 @@ fn env_or(key: &str, default: &str) -> String {
 
 #[tokio::main]
 async fn main() {
+    init_access_logging();
+
     let static_dir = env_or("SCHRECKNET_STATIC_DIR", "frontend/dist");
     let data_dir = env_or("SCHRECKNET_DATA_DIR", "dist");
     let model_dir = env_or(
@@ -169,6 +186,16 @@ async fn main() {
             ServiceBuilder::new()
                 .layer(immutable_cache_layer())
                 .service(ServeDir::new(&model_dir)),
+        )
+        // One line per request (method/path/status/latency) to stderr; see
+        // init_access_logging's doc comment for why stderr, not stdout.
+        // TraceLayer's own defaults log at DEBUG, below our "info" default
+        // filter, so the span/response levels are bumped to INFO explicitly
+        // — otherwise this silently logs nothing out of the box.
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO)),
         );
 
     let listener = tokio::net::TcpListener::bind(&bind)
