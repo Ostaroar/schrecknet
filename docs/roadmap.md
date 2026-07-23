@@ -27,8 +27,10 @@ docs/feature-parity.md's scope note).
 - ☑ Library search MVP, verified live in-browser + REST + MCP: text/name search,
   type filter (exact-token, pool-derived options), clan requirement filter,
   discipline + blood/pool cost display
-- ☑ Readable compact result rows with locally bundled official KRCG clan/path
-  symbols. KRCG `path` metadata is preserved in schema v8 and exposed by
+- ☑ Readable compact result rows with locally bundled official KRCG symbols:
+  all 18 pool disciplines at both levels, all 10 library card types, clans,
+  and paths use one contrast-safe renderer across search, card, deck,
+  inventory, and precon views. KRCG `path` metadata is preserved in schema v8 and exposed by
   browser search, REST, MCP, and card detail for both crypt and library cards;
   sects remain text because KRCG publishes no corresponding sect symbol set.
 - ☑ Crypt discipline filter (3-state toggle: any/superior, require-ALL via

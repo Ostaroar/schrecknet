@@ -472,13 +472,14 @@ export default function CryptSearch() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1 text-sm text-ink-dim">
+        <div className="flex items-center gap-1 text-sm text-ink-muted">
           {ui.cryptSearch.capacity}
           <input
             type="number"
             min={1}
             max={11}
-            className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+            aria-label={`${ui.cryptSearch.capacity} ${ui.cryptSearch.minimum}`}
+            className="w-[4.5rem] rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink placeholder:text-ink-muted"
             placeholder={ui.cryptSearch.minimum}
             value={capacityMin ?? ''}
             onChange={(e) => setCapacityMin(e.target.value ? Number(e.target.value) : null)}
@@ -488,7 +489,8 @@ export default function CryptSearch() {
             type="number"
             min={1}
             max={11}
-            className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
+            aria-label={`${ui.cryptSearch.capacity} ${ui.cryptSearch.maximum}`}
+            className="w-[4.5rem] rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink placeholder:text-ink-muted"
             placeholder={ui.cryptSearch.maximum}
             value={capacityMax ?? ''}
             onChange={(e) => setCapacityMax(e.target.value ? Number(e.target.value) : null)}
@@ -587,10 +589,10 @@ export default function CryptSearch() {
               className={
                 'inline-flex h-7 min-w-12 items-center justify-center gap-1 rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
                 (mode === 'superior'
-                  ? 'bg-gold text-[#241a06]'
+                  ? 'border border-gold bg-gold/15 text-gold'
                   : mode === 'any'
-                    ? 'bg-blood text-white'
-                    : 'border border-line text-ink-dim hover:text-ink-muted')
+                    ? 'border border-blood-hi bg-blood/20 text-ink'
+                    : 'border border-line bg-surface text-ink-muted hover:border-ink-dim hover:text-ink')
               }
             >
               <DisciplineSymbol

@@ -15,20 +15,29 @@ const disciplineSymbol = (code, superior = false) =>
 const cardTypeSymbol = (type) => JSON.parse(card_type_symbol(type))
 
 const disciplines = [
-  ['ani', 'Animalism', 'animalism'],
-  ['aus', 'Auspex', 'auspex'],
-  ['cel', 'Celerity', 'celerity'],
-  ['dom', 'Dominate', 'dominate'],
-  ['for', 'Fortitude', 'fortitude'],
-  ['obf', 'Obfuscate', 'obfuscate'],
-  ['obl', 'Oblivion', 'oblivion'],
-  ['pot', 'Potence', 'potence'],
-  ['pre', 'Presence', 'presence'],
-  ['pro', 'Protean', 'protean'],
-  ['tha', 'Blood Sorcery', 'bloodsorcery'],
+  ['abo', 'Abombwe', 'abo'],
+  ['ani', 'Animalism', 'ani'],
+  ['aus', 'Auspex', 'aus'],
+  ['cel', 'Celerity', 'cel'],
+  ['chi', 'Chimerstry', 'chi'],
+  ['dem', 'Dementation', 'dem'],
+  ['dom', 'Dominate', 'dom'],
+  ['for', 'Fortitude', 'for'],
+  ['nec', 'Necromancy', 'nec'],
+  ['obf', 'Obfuscate', 'obf'],
+  ['obl', 'Oblivion', 'obl'],
+  ['obt', 'Obtenebration', 'obt'],
+  ['pot', 'Potence', 'pot'],
+  ['pre', 'Presence', 'pre'],
+  ['pro', 'Protean', 'pro'],
+  ['ser', 'Serpentis', 'ser'],
+  ['tha', 'Blood Sorcery', 'tha'],
+  ['vic', 'Vicissitude', 'vic'],
 ]
 
 for (const [code, label, asset] of disciplines) {
+  await readFile(new URL(`../public/images/disciplines/${asset}.svg`, import.meta.url))
+  await readFile(new URL(`../public/images/disciplines/${asset}sup.svg`, import.meta.url))
   const basic = parseCardText(`[${code}]`)
   assert.deepEqual(basic, [
     { kind: 'discipline', token: code, code, label, asset, superior: false },
@@ -52,19 +61,25 @@ for (const [code, label, asset] of disciplines) {
 const cardTypes = {
   ACTION: ['action', 'Action'],
   'ACTION MODIFIER': ['actionmodifier', 'Action Modifier'],
+  ALLY: ['ally', 'Ally'],
   COMBAT: ['combat', 'Combat'],
+  EQUIPMENT: ['equipment', 'Equipment'],
+  EVENT: ['event', 'Event'],
+  MASTER: ['master', 'Master'],
   'POLITICAL ACTION': ['politicalaction', 'Political Action'],
   REACTION: ['reaction', 'Reaction'],
+  RETAINER: ['retainer', 'Retainer'],
 }
 
 for (const [token, [asset, label]] of Object.entries(cardTypes)) {
+  await readFile(new URL(`../public/images/types/${asset}.svg`, import.meta.url))
   const expected = { kind: 'card-type', token, asset, label }
   assert.deepEqual(parseCardText(`[${token}]`), [expected])
   assert.deepEqual(cardTypeSymbol(label), expected)
 }
 
 assert.equal(disciplineSymbol('future'), null)
-assert.equal(cardTypeSymbol('Master'), null)
+assert.equal(cardTypeSymbol('Future card type'), null)
 
 assert.deepEqual(parseCardText('before [FUTURE TOKEN]\nafter <b>safe</b>'), [
   { kind: 'text', value: 'before ' },

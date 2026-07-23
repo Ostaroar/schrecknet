@@ -42,7 +42,7 @@ import { useSearchDeck } from '../lib/useSearchDeck'
 import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
 import { useLimitedFormat, isFormatActive, isCardLegalInFormat, getCardSetsMap } from '../lib/limitedFormat'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
-import { CardTypeSummary, DisciplineSymbol, PathSymbol } from './VtesSymbol'
+import { CardTypeSummary, CardTypeSymbol, DisciplineSymbol, PathSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
 import OutOfFormatBadge from './OutOfFormatBadge'
 import { useUiStrings } from '../lib/i18n'
@@ -502,19 +502,32 @@ export default function LibrarySearch() {
           }}
           onRemove={removeModel}
         />
-        <select
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
-          value={cardType ?? ''}
-          onChange={(e) => setCardType(e.target.value || null)}
-          disabled={status === 'loading'}
-        >
-          <option value="">{ui.librarySearch.anyType}</option>
-          {types.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+        <label className="relative inline-flex items-center">
+          {cardType && (
+            <CardTypeSymbol
+              type={cardType}
+              className="pointer-events-none absolute left-3 z-10 size-4"
+              decorative
+            />
+          )}
+          <select
+            aria-label={ui.librarySearch.anyType}
+            className={
+              'rounded-lg border border-line bg-surface py-2 pr-3 text-sm text-ink ' +
+              (cardType ? 'pl-9' : 'pl-3')
+            }
+            value={cardType ?? ''}
+            onChange={(e) => setCardType(e.target.value || null)}
+            disabled={status === 'loading'}
+          >
+            <option value="">{ui.librarySearch.anyType}</option>
+            {types.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
         <select
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={clan ?? ''}
@@ -634,8 +647,8 @@ export default function LibrarySearch() {
               className={
                 'inline-flex h-7 min-w-12 items-center justify-center gap-1 rounded px-1.5 font-mono text-[10px] font-bold uppercase tracking-wide ' +
                 (mode === 'selected'
-                  ? 'bg-blood text-white'
-                  : 'border border-line text-ink-dim hover:text-ink-muted')
+                  ? 'border border-blood-hi bg-blood/20 text-ink'
+                  : 'border border-line bg-surface text-ink-muted hover:border-ink-dim hover:text-ink')
               }
             >
               <DisciplineSymbol code={code} className="size-4" decorative />

@@ -3,8 +3,22 @@ import {
   disciplineSymbol,
   type CardTextSegment,
 } from '../lib/cardText'
+import type { CSSProperties } from 'react'
 
 type SymbolSegment = Exclude<CardTextSegment, { kind: 'text' }>
+
+function maskStyle(source: string): CSSProperties {
+  return {
+    WebkitMaskImage: `url("${source}")`,
+    maskImage: `url("${source}")`,
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+  }
+}
 
 function symbolLabel(segment: SymbolSegment): string {
   if (segment.kind === 'card-type') return `${segment.label} symbol`
@@ -38,9 +52,21 @@ export function VtesSymbol({
       data-vtes-symbol={segment.token}
       data-symbol-kind={segment.kind}
       data-symbol-src={source}
-      className={`inline-flex shrink-0 ${className}`}
+      className={
+        `inline-flex shrink-0 ` +
+        (segment.kind === 'discipline'
+          ? segment.superior
+            ? 'text-gold'
+            : 'text-ink-muted'
+          : 'text-blood-hi') +
+        ` ${className}`
+      }
     >
-      <img aria-hidden="true" src={source} alt="" className="size-full object-contain" />
+      <span
+        aria-hidden="true"
+        className="size-full bg-current"
+        style={maskStyle(source)}
+      />
     </span>
   )
 }
@@ -97,28 +123,50 @@ function NamedSymbol({
   source,
   label,
   className = 'size-4',
+  tone,
 }: {
   source: string | undefined
   label: string
   className?: string
+  tone: string
 }) {
   if (!source) return null
   return (
-    <span role="img" aria-label={`${label} symbol`} title={label} className={`inline-flex shrink-0 ${className}`}>
-      <img aria-hidden="true" src={source} alt="" className="size-full object-contain" />
+    <span
+      role="img"
+      aria-label={`${label} symbol`}
+      title={label}
+      data-symbol-src={source}
+      className={`inline-flex shrink-0 ${tone} ${className}`}
+    >
+      <span aria-hidden="true" className="size-full bg-current" style={maskStyle(source)} />
     </span>
   )
 }
 
 export function ClanSymbol({ clan, className }: { clan: string; className?: string }) {
   const asset = CLAN_ASSETS[clan.trim().toLowerCase()]
-  return <NamedSymbol source={asset && `/images/clans/${asset}.svg`} label={clan} className={className} />
+  return (
+    <NamedSymbol
+      source={asset && `/images/clans/${asset}.svg`}
+      label={clan}
+      className={className}
+      tone="text-ink-muted"
+    />
+  )
 }
 
 export function PathSymbol({ path, className }: { path: string | null; className?: string }) {
   if (!path) return null
   const asset = PATH_ASSETS[path]
-  return <NamedSymbol source={asset && `/images/paths/${asset}.svg`} label={path} className={className} />
+  return (
+    <NamedSymbol
+      source={asset && `/images/paths/${asset}.svg`}
+      label={path}
+      className={className}
+      tone="text-gold"
+    />
+  )
 }
 
 export function CardTypeSymbol({

@@ -1,19 +1,17 @@
 # VTES symbol assets
 
-The discipline and card-type SVGs in this directory are the inline rules-text
-symbols used by SchreckNet. They were sourced from the MIT-licensed
-[`smeea/vdb`](https://github.com/smeea/vdb) project and are bundled locally so
-card research continues to work offline.
+The discipline, card-type, clan, and path SVGs in this directory are sourced
+from KRCG's official static asset collection and bundled locally so card
+research continues to work offline:
+[`static.krcg.org/svg`](https://static.krcg.org/svg/).
 
-The source geometry is unchanged. SchreckNet recolors the outer and inner paths
-with its dark-theme ink, gold, blood, and ground tokens so the glyphs remain
-legible inline without loading a second light/dark asset set.
+SchreckNet renders the monochrome source geometry as CSS masks. That lets one
+asset stay legible across the dark-theme ink, gold, and blood states instead of
+letting an external SVG's default black fill disappear into the background.
 
 The symbols depict Vampire: The Eternal Struggle game material. The Dark Pack
 notice in SchreckNet's README and application footer applies.
 
-Clan and path SVGs are sourced from KRCG's official static asset collection and
-are likewise bundled locally for offline use:
-[`static.krcg.org/svg`](https://static.krcg.org/). KRCG currently provides
-dedicated clan and path sets, but no equivalent sect icon set; sects therefore
-remain readable text in the interface.
+KRCG currently provides dedicated discipline, card-type, clan, and path sets,
+but no equivalent sect icon set; sects therefore remain readable text in the
+interface rather than using invented symbols.

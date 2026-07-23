@@ -21,6 +21,7 @@ import {
 import { navigate } from '../lib/route'
 import { useUiStrings, type UiStrings } from '../lib/i18n'
 import AddCardBox from './AddCardBox'
+import { CardTypeSummary, ClanSymbol } from './VtesSymbol'
 
 function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
   return (
@@ -61,9 +62,17 @@ function CardRow({
       >
         {card.name}
       </button>
-      <span className="text-xs text-ink-dim">
-        {card.kind === 'crypt' ? `${card.clan} · cap ${card.capacity}` : card.types.join(' / ')}
-      </span>
+      {card.kind === 'crypt' ? (
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs text-ink-muted">
+          {card.clan && <ClanSymbol clan={card.clan} className="size-4" />}
+          {card.clan} · cap {card.capacity}
+        </span>
+      ) : (
+        <CardTypeSummary
+          types={card.types}
+          className="max-w-48 shrink-0 text-xs text-ink-muted"
+        />
+      )}
       <QtyStepper qty={card.qty} onChange={onQty} />
       <button
         onClick={() => onQty(0)}

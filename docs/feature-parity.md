@@ -161,14 +161,17 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       scans still pending ✎
 - ☑ Icon inline rendering within card text — every bracket token present in
       the current V5 pool renders on both the full page and inline detail panel:
-      actual VTES basic / superior discipline glyphs plus card-type glyphs,
-      colorized through the SchreckNet design tokens and precached offline.
+      all 18 disciplines present in the V5 pool at basic/superior level plus
+      all 10 library card-type glyphs, colorized through the SchreckNet design
+      tokens and precached offline.
       English, Spanish, and French use the same safe parser; unknown future
       tokens remain verbatim rather than losing rules text. Clan/cost bracket
       tokens do not occur in the current V5 export. The same accessible local
       glyphs also accompany structured discipline filters/results, library types,
-      card headers, precon lists, and deck statistics; the pool-derived token
-      inventory is locked by a parser contract and representative browser fixtures ✎
+      card headers, inventory rows, precon lists, and deck statistics. Clan and
+      path assets use the same contrast-safe mask renderer; sects stay text because
+      no official KRCG sect icon set exists. The pool-derived token inventory is
+      locked by a parser contract and representative browser fixtures ✎
 - ☑ Sets & printings list (incl. precons) — live
 - ☑ Rulings (KRCG rulings database) — text and authoritative source links live
 - ☑ Artist credit(s) — live

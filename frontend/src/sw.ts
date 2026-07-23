@@ -25,7 +25,7 @@ export {}
 
 declare const self: ServiceWorkerGlobalScope
 
-const CACHE_NAME = 'schrecknet-shell-v2'
+const CACHE_NAME = 'schrecknet-shell-v3'
 // Owned by Transformers.js (see semanticSearch.ts). Keep it across shell SW
 // upgrades; otherwise installing a new app build would silently force users
 // to download the optional ~24 MB model again.
@@ -33,22 +33,40 @@ const SEMANTIC_MODEL_CACHE = 'transformers-cache'
 const CARD_TEXT_SYMBOL_ASSETS = [
   '/gameloop.json',
   ...[
-    'animalism',
-    'auspex',
-    'bloodsorcery',
-    'celerity',
-    'dominate',
-    'fortitude',
-    'obfuscate',
-    'oblivion',
-    'potence',
-    'presence',
-    'protean',
+    'abo',
+    'ani',
+    'aus',
+    'cel',
+    'chi',
+    'dem',
+    'dom',
+    'for',
+    'nec',
+    'obf',
+    'obl',
+    'obt',
+    'pot',
+    'pre',
+    'pro',
+    'ser',
+    'tha',
+    'vic',
   ].flatMap((name) => [
     `/images/disciplines/${name}.svg`,
     `/images/disciplines/${name}sup.svg`,
   ]),
-  ...['action', 'actionmodifier', 'combat', 'politicalaction', 'reaction'].map(
+  ...[
+    'action',
+    'actionmodifier',
+    'ally',
+    'combat',
+    'equipment',
+    'event',
+    'master',
+    'politicalaction',
+    'reaction',
+    'retainer',
+  ].map(
     (name) => `/images/types/${name}.svg`,
   ),
 ]

@@ -28,17 +28,24 @@ pub enum Segment {
 
 fn discipline_metadata(code: &str) -> Option<(&'static str, &'static str)> {
     match code {
-        "ani" => Some(("Animalism", "animalism")),
-        "aus" => Some(("Auspex", "auspex")),
-        "cel" => Some(("Celerity", "celerity")),
-        "dom" => Some(("Dominate", "dominate")),
-        "for" => Some(("Fortitude", "fortitude")),
-        "obf" => Some(("Obfuscate", "obfuscate")),
-        "obl" => Some(("Oblivion", "oblivion")),
-        "pot" => Some(("Potence", "potence")),
-        "pre" => Some(("Presence", "presence")),
-        "pro" => Some(("Protean", "protean")),
-        "tha" => Some(("Blood Sorcery", "bloodsorcery")),
+        "abo" => Some(("Abombwe", "abo")),
+        "ani" => Some(("Animalism", "ani")),
+        "aus" => Some(("Auspex", "aus")),
+        "cel" => Some(("Celerity", "cel")),
+        "chi" => Some(("Chimerstry", "chi")),
+        "dem" => Some(("Dementation", "dem")),
+        "dom" => Some(("Dominate", "dom")),
+        "for" => Some(("Fortitude", "for")),
+        "nec" => Some(("Necromancy", "nec")),
+        "obf" => Some(("Obfuscate", "obf")),
+        "obl" => Some(("Oblivion", "obl")),
+        "obt" => Some(("Obtenebration", "obt")),
+        "pot" => Some(("Potence", "pot")),
+        "pre" => Some(("Presence", "pre")),
+        "pro" => Some(("Protean", "pro")),
+        "ser" => Some(("Serpentis", "ser")),
+        "tha" => Some(("Blood Sorcery", "tha")),
+        "vic" => Some(("Vicissitude", "vic")),
         _ => None,
     }
 }
@@ -67,9 +74,14 @@ pub fn card_type_symbol(card_type: &str) -> Option<Segment> {
     let (asset, label) = match token.as_str() {
         "ACTION" => ("action", "Action"),
         "ACTION MODIFIER" => ("actionmodifier", "Action Modifier"),
+        "ALLY" => ("ally", "Ally"),
         "COMBAT" => ("combat", "Combat"),
+        "EQUIPMENT" => ("equipment", "Equipment"),
+        "EVENT" => ("event", "Event"),
+        "MASTER" => ("master", "Master"),
         "POLITICAL ACTION" => ("politicalaction", "Political Action"),
         "REACTION" => ("reaction", "Reaction"),
+        "RETAINER" => ("retainer", "Retainer"),
         _ => return None,
     };
     Some(Segment::CardType {
@@ -134,19 +146,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn recognizes_every_v5_discipline_at_both_levels() {
+    fn recognizes_every_discipline_present_in_the_v5_pool_at_both_levels() {
         for (code, label, asset) in [
-            ("ani", "Animalism", "animalism"),
-            ("aus", "Auspex", "auspex"),
-            ("cel", "Celerity", "celerity"),
-            ("dom", "Dominate", "dominate"),
-            ("for", "Fortitude", "fortitude"),
-            ("obf", "Obfuscate", "obfuscate"),
-            ("obl", "Oblivion", "oblivion"),
-            ("pot", "Potence", "potence"),
-            ("pre", "Presence", "presence"),
-            ("pro", "Protean", "protean"),
-            ("tha", "Blood Sorcery", "bloodsorcery"),
+            ("abo", "Abombwe", "abo"),
+            ("ani", "Animalism", "ani"),
+            ("aus", "Auspex", "aus"),
+            ("cel", "Celerity", "cel"),
+            ("chi", "Chimerstry", "chi"),
+            ("dem", "Dementation", "dem"),
+            ("dom", "Dominate", "dom"),
+            ("for", "Fortitude", "for"),
+            ("nec", "Necromancy", "nec"),
+            ("obf", "Obfuscate", "obf"),
+            ("obl", "Oblivion", "obl"),
+            ("obt", "Obtenebration", "obt"),
+            ("pot", "Potence", "pot"),
+            ("pre", "Presence", "pre"),
+            ("pro", "Protean", "pro"),
+            ("ser", "Serpentis", "ser"),
+            ("tha", "Blood Sorcery", "tha"),
+            ("vic", "Vicissitude", "vic"),
         ] {
             assert_eq!(
                 parse(&format!("[{code}]")),
@@ -176,9 +195,14 @@ mod tests {
         for (token, asset, label) in [
             ("ACTION", "action", "Action"),
             ("ACTION MODIFIER", "actionmodifier", "Action Modifier"),
+            ("ALLY", "ally", "Ally"),
             ("COMBAT", "combat", "Combat"),
+            ("EQUIPMENT", "equipment", "Equipment"),
+            ("EVENT", "event", "Event"),
+            ("MASTER", "master", "Master"),
             ("POLITICAL ACTION", "politicalaction", "Political Action"),
             ("REACTION", "reaction", "Reaction"),
+            ("RETAINER", "retainer", "Retainer"),
         ] {
             assert_eq!(
                 parse(&format!("[{token}]")),
