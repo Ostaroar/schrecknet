@@ -19,7 +19,7 @@ const OPERATOR_NAME = 'Jannik Ostertag'
 const OPERATOR_STREET = 'König-Heinrich-Str. 17'
 const OPERATOR_CITY = '69412 Eberbach'
 const OPERATOR_COUNTRY = 'Deutschland'
-const OPERATOR_EMAIL = 'ostertag118@gmail.com'
+const OPERATOR_EMAIL = 'ostertag188@gmail.com'
 
 export default function LegalPage() {
   return (
