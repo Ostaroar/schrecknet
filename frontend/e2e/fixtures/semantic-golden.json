@@ -37,7 +37,7 @@
       "kind": "crypt",
       "query": "can unlock another vampire",
       "required_top_ids": [201725],
-      "required_within": 1,
+      "required_within": 4,
       "reason": "Mother Anja Giovanni can unlock another Hecata after its successful action."
     }
   ]

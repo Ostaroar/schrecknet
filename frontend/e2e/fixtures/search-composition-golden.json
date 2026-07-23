@@ -11,13 +11,13 @@
       { "code": "cel", "superior": true },
       { "code": "obf", "superior": false }
     ],
-    "expected_ids": [201735, 201782, 201751]
+    "expected_ids": [201700, 201735, 201782, 201751]
   },
   "crypt_metadata": {
     "rest_query": "sects=sabbat&votes=3",
     "sect": "Sabbat",
     "votes": 3,
-    "expected_ids": [201733, 201741, 201735, 201760]
+    "expected_ids": [201733, 201741, 201735, 201516, 201513, 200787, 201517, 201760]
   },
   "crypt_traits": {
     "rest_query": "traits=1%20bleed%2Cunlock",
@@ -34,7 +34,7 @@
     "rest_query": "capacity_requirement=6&capacity_requirement_mode=at_least",
     "mode": "at_least",
     "value": 6,
-    "expected_ids": [101717]
+    "expected_ids": [100645, 101717]
   },
   "library_requirements": {
     "rest_query": "sect_requirements=anarch&title_requirements=baron",
@@ -45,7 +45,7 @@
   "library_traits": {
     "rest_query": "traits=stealth%2Ccombat%20ends",
     "controls": ["+Stealth / -Intercept", "Combat Ends"],
-    "expected_ids": [100771, 102279, 101542]
+    "expected_ids": [100771, 102279, 101542, 101774]
   },
   "precon_filter": {
     "selections": [
@@ -69,12 +69,12 @@
       "trait_control": "Wake / Unlock",
       "control": "name",
       "orders": {
-        "capacity_desc": [201733, 201725, 201750, 201659, 201576, 201771, 201570, 201596],
-        "capacity_asc": [201596, 201576, 201771, 201570, 201725, 201750, 201659, 201733],
-        "clan": [201596, 201576, 201659, 201725, 201771, 201750, 201733, 201570],
-        "group": [201733, 201725, 201750, 201659, 201576, 201771, 201570, 201596],
-        "name": [201725, 201733, 201576, 201750, 201596, 201659, 201771, 201570],
-        "sect": [201659, 201576, 201570, 201596, 201725, 201733, 201750, 201771]
+        "capacity_desc": [201733, 201478, 201697, 201725, 201695, 201750, 201659, 201576, 201771, 201570, 201596, 200421],
+        "capacity_asc": [200421, 201596, 201576, 201771, 201570, 201725, 201695, 201750, 201659, 201697, 201733, 201478],
+        "clan": [201596, 201695, 201576, 201478, 201659, 201725, 201771, 201697, 201750, 201733, 201570, 200421],
+        "group": [201478, 200421, 201733, 201725, 201695, 201750, 201659, 201576, 201771, 201570, 201596, 201697],
+        "name": [201725, 201733, 201576, 201695, 200421, 201750, 201697, 201596, 201659, 201771, 201570, 201478],
+        "sect": [201659, 201576, 201478, 201697, 201695, 201570, 201596, 200421, 201725, 201733, 201750, 201771]
       }
     },
     "library": {
@@ -82,52 +82,52 @@
       "trait_control": "Combat Ends",
       "control": "type",
       "orders": {
-        "requirement": [100568, 102254, 102228, 101292, 102330, 102279, 102332, 100307, 101144, 101542, 100601, 100771],
-        "cost_desc": [101542, 101292, 102330, 102279, 100307, 101144, 102254, 100568, 102228, 102332, 100601, 100771],
-        "cost_asc": [101542, 101292, 102330, 102279, 100307, 101144, 102254, 100568, 102228, 102332, 100601, 100771],
-        "name": [100307, 100568, 100601, 100771, 102228, 102330, 101144, 102332, 102254, 101292, 102279, 101542],
-        "type": [102228, 101542, 101292, 102330, 102279, 102332, 100307, 101144, 100601, 100771, 102254, 100568]
+        "requirement": [100568, 102254, 100333, 102228, 101774, 101292, 102330, 102279, 102332, 101334, 101735, 100307, 101144, 101542, 100601, 100771],
+        "cost_desc": [101542, 101292, 102330, 102279, 101334, 101735, 100307, 101144, 102254, 100568, 102228, 101774, 100333, 102332, 100601, 100771],
+        "cost_asc": [101542, 101292, 102330, 102279, 101334, 101735, 100307, 101144, 102254, 100568, 102228, 101774, 100333, 102332, 100601, 100771],
+        "name": [100307, 100333, 100568, 100601, 100771, 102228, 102330, 101144, 102332, 102254, 101292, 101334, 102279, 101542, 101735, 101774],
+        "type": [102228, 101774, 101542, 100333, 101292, 102330, 102279, 102332, 101334, 101735, 100307, 101144, 100601, 100771, 102254, 100568]
       }
     }
   },
   "trait_counts": {
     "crypt": {
-      "1 bleed": 13,
-      "1 intercept": 7,
+      "1 bleed": 18,
+      "1 intercept": 8,
       "1 stealth": 1,
-      "1 strength": 8,
-      "aggravated": 1,
-      "enter combat": 4,
-      "hand size": 3,
-      "maneuver": 3,
-      "press": 2,
-      "prevent": 2,
-      "unlock": 8
+      "1 strength": 11,
+      "aggravated": 3,
+      "enter combat": 5,
+      "hand size": 5,
+      "maneuver": 5,
+      "press": 5,
+      "prevent": 3,
+      "unlock": 12
     },
     "library": {
-      "additional strike": 11,
-      "aggravated": 15,
-      "bleed": 53,
-      "block denial": 20,
-      "bounce bleed": 5,
+      "additional strike": 12,
+      "aggravated": 18,
+      "bleed": 65,
+      "block denial": 24,
+      "bounce bleed": 6,
       "burn": 1,
-      "combat ends": 12,
-      "dodge": 9,
-      "embrace": 2,
-      "enter combat": 28,
-      "intercept": 49,
-      "maneuver": 30,
-      "multi-discipline": 46,
-      "multi-type": 13,
-      "no-requirements": 112,
-      "press": 21,
-      "prevent": 22,
-      "put blood": 16,
+      "combat ends": 16,
+      "dodge": 11,
+      "embrace": 4,
+      "enter combat": 32,
+      "intercept": 52,
+      "maneuver": 35,
+      "multi-discipline": 51,
+      "multi-type": 14,
+      "no-requirements": 145,
+      "press": 27,
+      "prevent": 25,
+      "put blood": 17,
       "reduce bleed": 8,
-      "stealth": 50,
-      "strength": 16,
-      "unlock": 50,
-      "votes-title": 21
+      "stealth": 63,
+      "strength": 17,
+      "unlock": 55,
+      "votes-title": 27
     }
   }
 }
