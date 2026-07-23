@@ -145,6 +145,59 @@ mod tests {
         assert!(is_in_v5_pool(&b));
     }
 
+    /// Runs against the real, live KRCG feed (network required, 24h cached —
+    /// see `krcg::fetch_cards`) rather than synthetic JSON, so it catches the
+    /// actual incident this module's doc comment describes: a set that gets
+    /// added to `V5_SET_NAMES` on the strength of its release date alone,
+    /// without checking whether it's really a V5 product. If someone adds a
+    /// wrong set name, this test fails against real data — it doesn't rely
+    /// on the same person remembering to also write a synthetic case for it.
+    #[test]
+    fn live_krcg_data_excludes_known_classic_only_vampires() {
+        let cache_dir = std::path::Path::new(".cache");
+        let cards = match crate::krcg::fetch_cards(cache_dir) {
+            Ok(cards) => cards,
+            Err(err) => {
+                eprintln!("skipping live-data v5pool check: {err}");
+                return;
+            }
+        };
+
+        // Every one of these historically appeared ONLY in "Sabbat
+        // Preconstructed" — a Standard Constructed reprint product, not a
+        // V5-line set — and leaked into the V5 pool before that set was
+        // removed from V5_SET_NAMES.
+        const KNOWN_CLASSIC_ONLY: &[&str] = &[
+            "America Johnson (G5)",
+            "Antón de Concepción (G4)",
+            "Antonio d'Erlette (G4)",
+        ];
+
+        for card in &cards {
+            let Some(name) = card.get("name").and_then(|n| n.as_str()) else {
+                continue;
+            };
+            if KNOWN_CLASSIC_ONLY.contains(&name) {
+                assert!(
+                    !is_in_v5_pool(card),
+                    "{name} is classic-only and must not be in the V5 pool \
+                     (did a non-V5 set get added to V5_SET_NAMES?)"
+                );
+            }
+        }
+
+        // And the sets this incident revealed were *missing* stay included.
+        let sample_included = cards.iter().any(|c| {
+            c.get("sets")
+                .and_then(|s| s.as_object())
+                .is_some_and(|m| m.contains_key("Fall of London"))
+        });
+        assert!(
+            sample_included,
+            "expected at least one Fall of London card in the live KRCG feed"
+        );
+    }
+
     #[test]
     fn card_with_no_sets_is_excluded() {
         assert!(!is_in_v5_pool(&json!({})));
