@@ -151,18 +151,25 @@ async fn main() {
                 .layer(immutable_cache_layer())
                 .service(ServeDir::new(&data_dir)),
         )
+        .nest_service("/mcp", mcp_service)
+        .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))
+        // gzip/br/deflate negotiated per Accept-Encoding, applied to every
+        // response added above (API JSON, HTML, JS/CSS/wasm alike) — the live
+        // site was serving everything uncompressed until this landed.
+        .layer(CompressionLayer::new())
+        // /models/semantic is added AFTER the compression layer specifically
+        // to exclude it: transformers.js reads the *uncompressed*
+        // Content-Length response header to report "downloading N%" for the
+        // ~46 MB semantic model, and a compressed response switches to
+        // chunked transfer-encoding with no Content-Length at all, silently
+        // breaking that progress readout. ONNX binaries barely compress
+        // anyway, so nothing is actually lost by excluding them.
         .nest_service(
             "/models/semantic",
             ServiceBuilder::new()
                 .layer(immutable_cache_layer())
                 .service(ServeDir::new(&model_dir)),
-        )
-        .nest_service("/mcp", mcp_service)
-        .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))
-        // gzip/br/deflate negotiated per Accept-Encoding, applied to every
-        // response (API JSON, HTML, JS/CSS/wasm alike) — the live site was
-        // serving everything uncompressed until this landed.
-        .layer(CompressionLayer::new());
+        );
 
     let listener = tokio::net::TcpListener::bind(&bind)
         .await
