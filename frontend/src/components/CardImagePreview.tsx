@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 interface CardImagePreviewProps {
   imageUrl: string | null
@@ -8,20 +8,28 @@ interface CardImagePreviewProps {
 export default function CardImagePreview({ imageUrl, name }: CardImagePreviewProps) {
   const [open, setOpen] = useState(false)
   const previewId = useId()
+  const rootRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     if (!open) return
+    const closeOutside = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
     }
+    document.addEventListener('pointerdown', closeOutside, true)
     window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside, true)
+      window.removeEventListener('keydown', closeOnEscape)
+    }
   }, [open])
 
   if (!imageUrl) return null
 
   return (
-    <span className="group/image relative flex shrink-0 items-center" onBlur={() => setOpen(false)}>
+    <span ref={rootRef} className="group/image relative flex shrink-0 items-center">
       <button
         type="button"
         aria-label={`Preview image for ${name}`}
@@ -37,7 +45,7 @@ export default function CardImagePreview({ imageUrl, name }: CardImagePreviewPro
         id={previewId}
         role="tooltip"
         className={
-          'fixed left-1/2 top-1/2 z-50 w-[min(78vw,280px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-ground p-1.5 shadow-2xl md:absolute md:left-auto md:right-0 md:top-full md:w-64 md:translate-x-0 md:translate-y-1 ' +
+          'fixed left-1/2 top-1/2 z-50 w-[min(78vw,280px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-ground p-1.5 shadow-2xl md:absolute md:bottom-0 md:left-auto md:right-full md:top-auto md:mr-2 md:w-64 md:translate-x-0 md:translate-y-0 md:before:absolute md:before:left-full md:before:top-0 md:before:h-full md:before:w-2 ' +
           (open ? 'block' : 'hidden md:group-hover/image:block')
         }
       >

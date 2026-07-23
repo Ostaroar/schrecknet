@@ -131,6 +131,17 @@ try {
 
   for (const route of routes) await checkRoute(route)
 
+  // Tap previews behave like dismissible popovers on touch screens: opening
+  // one must never trap the user in the card image.
+  await page.goto(`${baseUrl}/crypt`, { waitUntil: 'domcontentloaded' })
+  const mobilePreviewButton = page.getByRole('button', { name: /^Preview image for / }).first()
+  await mobilePreviewButton.waitFor()
+  await mobilePreviewButton.click()
+  const mobilePreview = page.locator('[role="tooltip"]:visible')
+  await mobilePreview.waitFor()
+  await page.locator('main').click({ position: { x: 4, y: 4 } })
+  await mobilePreview.waitFor({ state: 'hidden' })
+
   // The flag buttons in the header also control the UI locale. Exercise both
   // search surfaces in every shipped UI language so typed translations cannot
   // drift into dead, unrendered entries.

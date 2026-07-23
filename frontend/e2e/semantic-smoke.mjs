@@ -401,8 +401,23 @@ try {
 
     const previewButton = page.getByRole('button', { name: /^Preview image for / }).first()
     await previewButton.click()
-    await page.locator('[role="tooltip"]:visible img').waitFor()
-    await previewButton.click()
+    const preview = page.locator('[role="tooltip"]:visible')
+    await preview.locator('img').waitFor()
+    const [buttonBox, previewBox] = await Promise.all([
+      previewButton.boundingBox(),
+      preview.boundingBox(),
+    ])
+    assert.ok(buttonBox && previewBox, `${kind} preview lacked layout boxes`)
+    assert.ok(
+      previewBox.x + previewBox.width <= buttonBox.x + 1,
+      `${kind} preview was not positioned left of its button`,
+    )
+    assert.ok(
+      previewBox.y < buttonBox.y,
+      `${kind} preview did not open upward`,
+    )
+    await page.locator('main').click({ position: { x: 4, y: 4 } })
+    await preview.waitFor({ state: 'hidden' })
 
     const firstResult = page.locator('main button[data-card-id]').first()
     const addButton = firstResult.locator('..').locator('button[aria-label^="Add "]')
