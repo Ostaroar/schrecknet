@@ -62,6 +62,65 @@ export function DisciplineSymbol({
   ) : null
 }
 
+const CLAN_ASSETS: Record<string, string> = {
+  'banu haqim': 'banuhaqim',
+  brujah: 'brujah',
+  gangrel: 'gangrel',
+  'gangrel antitribu': 'gangrelantitribu',
+  hecata: 'hecata',
+  lasombra: 'lasombra',
+  malkavian: 'malkavian',
+  ministry: 'ministry',
+  nosferatu: 'nosferatu',
+  ravnos: 'ravnos',
+  salubri: 'salubri',
+  toreador: 'toreador',
+  'toreador antitribu': 'toreadorantitribu',
+  tremere: 'tremere',
+  'tremere antitribu': 'tremereantitribu',
+  tzimisce: 'tzimisce',
+  ventrue: 'ventrue',
+}
+
+const PATH_ASSETS: Record<string, string> = {
+  'Path of Caine': 'caine',
+  'Path of Cathari': 'cathari',
+  'Path of Death and the Soul': 'death',
+  'Path of Power and the Inner Voice': 'power',
+  Caine: 'caine',
+  Cathari: 'cathari',
+  'Death and the Soul': 'death',
+  'Power and the Inner Voice': 'power',
+}
+
+function NamedSymbol({
+  source,
+  label,
+  className = 'size-4',
+}: {
+  source: string | undefined
+  label: string
+  className?: string
+}) {
+  if (!source) return null
+  return (
+    <span role="img" aria-label={`${label} symbol`} title={label} className={`inline-flex shrink-0 ${className}`}>
+      <img aria-hidden="true" src={source} alt="" className="size-full object-contain" />
+    </span>
+  )
+}
+
+export function ClanSymbol({ clan, className }: { clan: string; className?: string }) {
+  const asset = CLAN_ASSETS[clan.trim().toLowerCase()]
+  return <NamedSymbol source={asset && `/images/clans/${asset}.svg`} label={clan} className={className} />
+}
+
+export function PathSymbol({ path, className }: { path: string | null; className?: string }) {
+  if (!path) return null
+  const asset = PATH_ASSETS[path]
+  return <NamedSymbol source={asset && `/images/paths/${asset}.svg`} label={path} className={className} />
+}
+
 export function CardTypeSymbol({
   type,
   className,

@@ -24,7 +24,7 @@ CREATE TABLE cards(
   kind TEXT CHECK(kind IN ('crypt','library')),
   name TEXT, name_ascii TEXT, aka TEXT,
   card_text TEXT,
-  clan TEXT, sect TEXT, capacity INT, grp INT, title TEXT, votes INT,
+  clan TEXT, sect TEXT, path TEXT, capacity INT, grp INT, title TEXT, votes INT,
   adv INT, banned TEXT,
   types TEXT,
   blood_cost TEXT, pool_cost TEXT, burn_option INT,
@@ -204,7 +204,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '7'), ('data_version', '10'), ('scope', 'v5'),
+         ('schema_version', '8'), ('data_version', '11'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -224,15 +224,16 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // tables; v4: added card_embeddings for local semantic search; v5:
         // normalized derived library capacity requirements into their own table;
         // v6: added normalized official VEKN requirement tokens; v7: added
-        // printings.precon_copies).
-        // data_version changes whenever emitted content changes (v10 adds
+        // printings.precon_copies; v8: added the KRCG crypt path).
+        // data_version changes whenever emitted content changes (v11 preserves
+        // KRCG's new Sabbat path field; v10 adds
         // omitted modern BCP precons and separates anniversary bonus cards
         // from their real 100-card decks; v9 fills printings.precon_copies
         // from KRCG's per-printing "copies" field; v8 fills card_traits plus
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
-        "schema_version": 7,
-        "data_version": 10,
+        "schema_version": 8,
+        "data_version": 11,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

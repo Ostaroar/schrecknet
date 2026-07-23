@@ -446,6 +446,7 @@ pub struct CryptCard {
     pub group: i64,
     pub title: Option<String>,
     pub sect: Option<String>,
+    pub path: Option<String>,
     pub votes: i64,
     pub image_url: Option<String>,
     pub disciplines: Vec<Discipline>,
@@ -599,6 +600,7 @@ pub struct LibraryCard {
     pub name: String,
     pub types: Vec<String>,
     pub clan: Option<String>,
+    pub path: Option<String>,
     pub blood_cost: Option<String>,
     pub pool_cost: Option<String>,
     pub image_url: Option<String>,
@@ -782,6 +784,7 @@ fn search_crypt_inner(
                 votes: row.get(7)?,
                 image_url: row.get(8)?,
                 disciplines: parse_disciplines(disc),
+                path: row.get(11)?,
             },
             schrecknet_core::search_sort::CryptSortRecord {
                 id: sort_id,
@@ -936,6 +939,7 @@ fn search_library_inner(
                 name,
                 types: types.clone(),
                 clan: clan.clone(),
+                path: row.get(9)?,
                 blood_cost: blood_cost.clone(),
                 pool_cost: pool_cost.clone(),
                 image_url: row.get(6)?,
@@ -1068,7 +1072,7 @@ mod tests {
             "CREATE TABLE cards(id INT, kind TEXT, name TEXT, name_ascii TEXT, card_text TEXT,
                clan TEXT, capacity INT, grp INT, title TEXT,
                types TEXT, blood_cost TEXT, pool_cost TEXT, sect TEXT, votes INT,
-               image_url TEXT);
+               image_url TEXT, path TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              CREATE TABLE card_capacity_requirements(
                card_id INT PRIMARY KEY, min_capacity INT, max_capacity INT);
@@ -1081,11 +1085,11 @@ mod tests {
              CREATE TABLE artists(id INT, name TEXT);
              CREATE TABLE card_artists(card_id INT, artist_id INT);
              INSERT INTO cards VALUES
-               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL,'Sabbat',3,'https://static.krcg.org/card/1.jpg'),
-               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL,'Independent',0,NULL),
-               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL,'https://static.krcg.org/card/3.jpg'),
-               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL,NULL,NULL,NULL),
-               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL,NULL);
+               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal',NULL,NULL,NULL,'Sabbat',3,'https://static.krcg.org/card/1.jpg','Power and the Inner Voice'),
+               (2,'crypt','Abaddon','abaddon','',  'Salubri',8,7,NULL,NULL,NULL,NULL,'Independent',0,NULL,NULL),
+               (3,'library','Villein','villein','blood bound text','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL,'https://static.krcg.org/card/3.jpg',NULL),
+               (4,'library','Absolute Tyranny','absolute tyranny','vote text','',NULL,NULL,NULL,'[\"Action Modifier\",\"Reaction\"]','1',NULL,NULL,NULL,NULL,'Power and the Inner Voice'),
+               (5,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL,NULL,NULL);
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0),(2,'aus',1),(4,'pot',0),(4,'pre',0);
              INSERT INTO card_traits VALUES
                (1,'1 bleed'),(1,'unlock'),(2,'maneuver'),
@@ -1241,6 +1245,7 @@ mod tests {
         assert!(aaradhya.disciplines[0].superior);
         assert_eq!(aaradhya.disciplines[1].code, "for");
         assert!(!aaradhya.disciplines[1].superior);
+        assert_eq!(aaradhya.path.as_deref(), Some("Power and the Inner Voice"));
     }
 
     #[test]
@@ -1784,7 +1789,7 @@ mod tests {
         // match here).
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL,'Anarch',0,NULL);
+               (6,'crypt','Mixed Printings','mixed printings','','Ventrue',5,6,NULL,NULL,NULL,NULL,'Anarch',0,NULL,NULL);
              INSERT INTO printings VALUES (6,1,NULL,'C',1), (6,2,'Anarch Precon','U',0);",
         )
         .unwrap();
@@ -1971,11 +1976,11 @@ mod tests {
     fn seed_library_sort_cards(conn: &Connection) {
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (20,'library','Alpha Numeric Low','alpha numeric low','sort fixture','',NULL,NULL,NULL,'[\"Action\"]','1','3',NULL,NULL,NULL),
-               (21,'library','Beta Numeric High','beta numeric high','sort fixture','',NULL,NULL,NULL,'[\"Action\"]','3','1',NULL,NULL,NULL),
-               (22,'library','Clan Required','clan required','sort fixture','Ventrue',NULL,NULL,NULL,'[\"Master\"]',NULL,'1',NULL,NULL,NULL),
-               (23,'library','Discipline Required','discipline required','sort fixture','',NULL,NULL,NULL,'[\"Combat\"]','X','2',NULL,NULL,NULL),
-               (24,'library','No Requirement','no requirement','sort fixture','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL,NULL);
+               (20,'library','Alpha Numeric Low','alpha numeric low','sort fixture','',NULL,NULL,NULL,'[\"Action\"]','1','3',NULL,NULL,NULL,NULL),
+               (21,'library','Beta Numeric High','beta numeric high','sort fixture','',NULL,NULL,NULL,'[\"Action\"]','3','1',NULL,NULL,NULL,NULL),
+               (22,'library','Clan Required','clan required','sort fixture','Ventrue',NULL,NULL,NULL,'[\"Master\"]',NULL,'1',NULL,NULL,NULL,NULL),
+               (23,'library','Discipline Required','discipline required','sort fixture','',NULL,NULL,NULL,'[\"Combat\"]','X','2',NULL,NULL,NULL,NULL),
+               (24,'library','No Requirement','no requirement','sort fixture','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL,NULL,NULL);
              INSERT INTO card_disciplines VALUES (23,'aus',0);",
         )
         .unwrap();
@@ -2184,6 +2189,21 @@ mod tests {
         let results = search_library(&conn, &params).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].name, "Arcane Library");
+
+        let path_results = search_library(
+            &conn,
+            &LibrarySearchParams {
+                clan: Some("Power and the Inner Voice".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(path_results.len(), 1);
+        assert_eq!(path_results[0].name, "Absolute Tyranny");
+        assert_eq!(
+            path_results[0].path.as_deref(),
+            Some("Power and the Inner Voice")
+        );
     }
 
     #[test]
@@ -2202,10 +2222,10 @@ mod tests {
     fn seed_library_filter_extras(conn: &Connection) {
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL,NULL),
-               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL,NULL,NULL,NULL),
-               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL,NULL,NULL,NULL),
-               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL,NULL,NULL,NULL);
+               (6,'library','Deflection','deflection','bounce text','',NULL,NULL,NULL,'[\"Reaction\"]',NULL,NULL,NULL,NULL,NULL,NULL),
+               (7,'library','Theft of Vitae','theft of vitae','steal blood','',NULL,NULL,NULL,'[\"Combat\"]','1',NULL,NULL,NULL,NULL,NULL),
+               (8,'library','Hidden Strength','hidden strength','variable cost','',NULL,NULL,NULL,'[\"Combat\"]','X',NULL,NULL,NULL,NULL,NULL),
+               (9,'library','Expensive Action','expensive action','cost fixture','',NULL,NULL,NULL,'[\"Action\"]','3',NULL,NULL,NULL,NULL,NULL);
              INSERT INTO card_disciplines VALUES (6,'dom',1),(7,'tha',0),(8,'for',0);",
         )
         .unwrap();
@@ -2770,7 +2790,7 @@ mod tests {
         // Add a second card to the same precon, and one in a different set.
         conn.execute_batch(
             "INSERT INTO cards VALUES
-               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL,'Anarch',0,NULL);
+               (6,'crypt','Baron','baron','','Brujah',6,6,NULL,NULL,NULL,NULL,'Anarch',0,NULL,NULL);
              INSERT INTO sets VALUES (3,'Camarilla Edition','2003-08-18');
              INSERT INTO printings VALUES
                (6,2,'Anarch Precon','U',1),
@@ -2879,13 +2899,13 @@ mod tests {
         for index in 0..205 {
             conn.execute(
                 "INSERT INTO cards VALUES
-                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL, 'Camarilla', 0, NULL)",
+                 (?1, 'crypt', ?2, ?2, '', 'Ventrue', 5, 6, NULL, NULL, NULL, NULL, 'Camarilla', 0, NULL, NULL)",
                 rusqlite::params![10_000 + index, format!("Crypt {index:03}")],
             )
             .unwrap();
             conn.execute(
                 "INSERT INTO cards VALUES
-                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL, NULL, NULL, NULL)",
+                 (?1, 'library', ?2, ?2, '', '', NULL, NULL, NULL, '[\"Action\"]', NULL, NULL, NULL, NULL, NULL, NULL)",
                 rusqlite::params![20_000 + index, format!("Library {index:03}")],
             )
             .unwrap();

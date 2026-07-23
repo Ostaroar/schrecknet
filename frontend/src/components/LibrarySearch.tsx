@@ -42,7 +42,7 @@ import { useSearchDeck } from '../lib/useSearchDeck'
 import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
 import { useLimitedFormat, isFormatActive, isCardLegalInFormat, getCardSetsMap } from '../lib/limitedFormat'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
-import { CardTypeSummary, DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
+import { CardTypeSummary, DisciplineSymbol, PathSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
 import OutOfFormatBadge from './OutOfFormatBadge'
 import { useUiStrings } from '../lib/i18n'
@@ -767,8 +767,8 @@ export default function LibrarySearch() {
                     }
                     className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-2 px-3 py-2 text-left text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_auto_auto]"
                   >
-                    <span className="min-w-0 truncate">
-                      {c.name}
+                    <span className="min-w-0 truncate" data-card-name>
+                      <span className="font-medium text-ink">{c.name}</span>
                       {semanticMode && 'semanticScore' in c && (
                         <span className="ml-2 font-mono text-[10px] text-gold">
                           {ui.librarySearch.similarity} {c.semanticScore.toFixed(3)}
@@ -777,6 +777,7 @@ export default function LibrarySearch() {
                       <span className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] uppercase tracking-wide text-ink-dim sm:hidden">
                         <CardTypeSummary types={c.types} />
                         {c.clan ? ` · ${c.clan}` : ''}
+                        {c.path ? ` · ${c.path}` : ''}
                         <OwnedBadge qty={owned.get(c.id) ?? 0} />
                         {limitedFormatActive && (
                           <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'library', limitedFormat)} />
@@ -785,8 +786,9 @@ export default function LibrarySearch() {
                     </span>
                     <span className="hidden items-center gap-1 sm:flex">
                       {c.disciplines.map((d) => (
-                        <DisciplineBadge key={d} code={d} compact />
+                        <DisciplineSymbol key={d} code={d} className="size-4" />
                       ))}
+                      <PathSymbol path={c.path} className="size-4" />
                       <CostPill blood={c.blood_cost} pool={c.pool_cost} />
                       <OwnedBadge qty={owned.get(c.id) ?? 0} />
                       {limitedFormatActive && (
@@ -796,6 +798,13 @@ export default function LibrarySearch() {
                     <span className="hidden items-center justify-end gap-1 text-right text-xs uppercase tracking-wide text-ink-muted lg:flex">
                       <CardTypeSummary types={c.types} />
                       {c.clan && <span>· {c.clan}</span>}
+                      {c.path && (
+                        <>
+                          <span>·</span>
+                          <PathSymbol path={c.path} className="size-4" />
+                          <span>{c.path}</span>
+                        </>
+                      )}
                     </span>
                   </button>
                   <CardImagePreview imageUrl={c.image_url} name={c.name} />

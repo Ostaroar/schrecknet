@@ -87,6 +87,7 @@ export interface LibraryCard {
   name: string
   types: string[]
   clan: string | null
+  path: string | null
   blood_cost: string | null
   pool_cost: string | null
   image_url: string | null
@@ -103,6 +104,7 @@ interface LibraryRow {
   image_url: string | null
   name_ascii: string
   disc: string | null
+  path: string | null
 }
 
 export async function searchLibrary(filters: LibraryFilters): Promise<LibraryCard[]> {
@@ -168,10 +170,16 @@ export async function listLibraryTypes(): Promise<string[]> {
 }
 
 export async function listLibraryClans(): Promise<string[]> {
-  const rows = await query<{ clan: string }>(
-    `SELECT DISTINCT clan FROM cards WHERE kind = 'library' AND clan != '' ORDER BY clan`,
+  const rows = await query<{ requirement: string }>(
+    `SELECT requirement FROM (
+       SELECT DISTINCT clan AS requirement
+       FROM cards WHERE kind = 'library' AND clan != ''
+       UNION
+       SELECT DISTINCT path AS requirement
+       FROM cards WHERE kind = 'library' AND path IS NOT NULL AND path != ''
+     ) ORDER BY requirement`,
   )
-  return rows.map((r) => r.clan)
+  return rows.map((r) => r.requirement)
 }
 
 export async function listLibraryDisciplines(): Promise<string[]> {

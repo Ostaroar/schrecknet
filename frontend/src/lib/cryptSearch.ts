@@ -92,6 +92,7 @@ export interface CryptCard {
   grp: number
   title: string | null
   sect: string | null
+  path: string | null
   votes: number
   image_url: string | null
   disciplines: Discipline[]
@@ -105,6 +106,7 @@ interface CryptRow {
   grp: number
   title: string | null
   sect: string | null
+  path: string | null
   votes: number
   image_url: string | null
   name_ascii: string

@@ -105,11 +105,11 @@ fn insert_card(
 
     conn.execute(
         "INSERT OR REPLACE INTO cards
-         (id, kind, name, name_ascii, aka, card_text, clan, sect, capacity, grp, title,
+         (id, kind, name, name_ascii, aka, card_text, clan, sect, path, capacity, grp, title,
           votes, adv, banned, types, blood_cost, pool_cost, burn_option,
           requirement_clan, requirement_title, requirement_sect,
           image_url)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11,
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?20, ?9, ?10, ?11,
                  ?12, ?13, ?14, ?15, ?16, ?17, ?18,
                  NULL, NULL, NULL, ?19)",
         params![
@@ -138,6 +138,7 @@ fn insert_card(
             str_field(card, "pool_cost"),
             library_metadata.map(|metadata| i64::from(metadata.burn_option)),
             str_field(card, "url"),
+            str_field(card, "path"),
         ],
     )?;
     Ok(())
@@ -442,7 +443,7 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE cards(
                id INT, kind TEXT, name TEXT, name_ascii TEXT, aka TEXT, card_text TEXT,
-               clan TEXT, sect TEXT, capacity INT, grp INT, title TEXT, votes INT,
+               clan TEXT, sect TEXT, path TEXT, capacity INT, grp INT, title TEXT, votes INT,
                adv INT, banned TEXT, types TEXT, blood_cost TEXT, pool_cost TEXT,
                burn_option INT, requirement_clan TEXT, requirement_title TEXT,
                requirement_sect TEXT, image_url TEXT);",
@@ -455,6 +456,7 @@ mod tests {
             "clans": ["Ventrue"],
             "capacity": 10,
             "group": "6",
+            "path": "Power and the Inner Voice",
             "types": ["Vampire"]
         });
         let metadata = CryptMetadata {
@@ -466,9 +468,9 @@ mod tests {
         };
         insert_card(&conn, &card, "crypt", Some(&metadata), None).unwrap();
 
-        let stored: (String, String, i64, i64, String) = conn
+        let stored: (String, String, String, i64, i64, String) = conn
             .query_row(
-                "SELECT sect, title, votes, adv, banned FROM cards WHERE id=201733",
+                "SELECT sect, path, title, votes, adv, banned FROM cards WHERE id=201733",
                 [],
                 |row| {
                     Ok((
@@ -477,13 +479,21 @@ mod tests {
                         row.get(2)?,
                         row.get(3)?,
                         row.get(4)?,
+                        row.get(5)?,
                     ))
                 },
             )
             .unwrap();
         assert_eq!(
             stored,
-            ("Sabbat".into(), "Cardinal".into(), 3, 1, "Banned".into())
+            (
+                "Sabbat".into(),
+                "Power and the Inner Voice".into(),
+                "Cardinal".into(),
+                3,
+                1,
+                "Banned".into()
+            )
         );
     }
 
@@ -493,7 +503,7 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE cards(
                id INT, kind TEXT, name TEXT, name_ascii TEXT, aka TEXT, card_text TEXT,
-               clan TEXT, sect TEXT, capacity INT, grp INT, title TEXT, votes INT,
+               clan TEXT, sect TEXT, path TEXT, capacity INT, grp INT, title TEXT, votes INT,
                adv INT, banned TEXT, types TEXT, blood_cost TEXT, pool_cost TEXT,
                burn_option INT, requirement_clan TEXT, requirement_title TEXT,
                requirement_sect TEXT, image_url TEXT);

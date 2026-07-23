@@ -6,7 +6,7 @@ import CardTimingWindows from './CardTimingWindows'
 import InventoryOwnedControl from './InventoryOwnedControl'
 import { navigate } from '../lib/route'
 import CardText from './CardText'
-import { CardTypeSummary, DisciplineBadge } from './VtesSymbol'
+import { CardTypeSummary, ClanSymbol, DisciplineBadge, PathSymbol } from './VtesSymbol'
 import { useDocumentHead } from '../lib/documentHead'
 import { DEFAULT_HEAD } from '../lib/seo'
 
@@ -88,14 +88,29 @@ export default function CardPage({ id }: { id: number }) {
         <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-ink-muted">
           {card.kind === 'crypt' ? (
             <>
+              <ClanSymbol clan={card.clan ?? ''} className="size-5" />
               <span>{card.clan}</span>
               {card.group !== null && <span>· Group {card.group}</span>}
               {card.title && <span>· {card.title}</span>}
+              {card.path && (
+                <>
+                  <span>·</span>
+                  <PathSymbol path={card.path} className="size-5" />
+                  <span>{card.path}</span>
+                </>
+              )}
             </>
           ) : (
             <>
               <CardTypeSummary types={card.types ?? []} />
               {card.clan && <span>· requires {card.clan}</span>}
+              {card.path && (
+                <>
+                  <span>· requires</span>
+                  <PathSymbol path={card.path} className="size-5" />
+                  <span>{card.path}</span>
+                </>
+              )}
               {card.blood_cost && <span>· {card.blood_cost} blood</span>}
               {card.pool_cost && <span>· {card.pool_cost} pool</span>}
             </>

@@ -431,7 +431,8 @@ pub fn crypt_plan(input: &CryptPlanInput) -> QueryPlan {
     let mut sql = String::from(
         "SELECT c.id, c.name, c.clan, c.capacity, c.grp, c.title, c.sect, c.votes,
                 c.image_url, c.name_ascii,
-                GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc
+                GROUP_CONCAT(cd.discipline || ':' || cd.superior) AS disc,
+                c.path
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'crypt'
@@ -683,7 +684,8 @@ pub fn library_plan(input: &LibraryPlanInput) -> QueryPlan {
     ];
     let mut sql = String::from(
         "SELECT c.id, c.name, c.types, c.clan, c.blood_cost, c.pool_cost,
-                c.image_url, c.name_ascii, GROUP_CONCAT(cd.discipline) AS disc
+                c.image_url, c.name_ascii, GROUP_CONCAT(cd.discipline) AS disc,
+                c.path
          FROM cards c
          LEFT JOIN card_disciplines cd ON cd.card_id = c.id
          WHERE c.kind = 'library'
@@ -693,7 +695,9 @@ pub fn library_plan(input: &LibraryPlanInput) -> QueryPlan {
                 OR (?3 AND (CASE WHEN ?13 THEN regexp_match(?1, c.card_text)
                                  ELSE c.card_text LIKE '%' || ?1 || '%' END)))
            AND (?4 IS NULL OR c.types LIKE ?4)
-           AND (?5 IS NULL OR c.clan LIKE '%' || ?5 || '%')
+           AND (?5 IS NULL
+                OR c.clan LIKE '%' || ?5 || '%'
+                OR c.path LIKE '%' || ?5 || '%')
            AND (?6 IS NULL OR (c.blood_cost IS NOT NULL AND c.blood_cost != 'X' AND
                 ((?7 = 'at_most' AND CAST(c.blood_cost AS INTEGER) <= ?6) OR
                  (?7 = 'exact' AND CAST(c.blood_cost AS INTEGER) = ?6) OR

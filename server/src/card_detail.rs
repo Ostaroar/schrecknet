@@ -58,6 +58,7 @@ pub struct CardDetail {
     pub capacity: Option<i64>,
     pub group: Option<i64>,
     pub title: Option<String>,
+    pub path: Option<String>,
     // Library-only fields (None on crypt cards).
     pub types: Option<Vec<String>>,
     pub blood_cost: Option<String>,
@@ -72,7 +73,7 @@ pub struct CardDetail {
 pub fn get_card(conn: &Connection, params: &GetCardParams) -> rusqlite::Result<Option<CardDetail>> {
     let base = conn
         .query_row(
-            "SELECT kind, name, card_text, clan, capacity, grp, title, types, blood_cost, pool_cost, image_url
+            "SELECT kind, name, card_text, clan, capacity, grp, title, types, blood_cost, pool_cost, image_url, path
              FROM cards WHERE id = ?1",
             [params.id],
             |row| {
@@ -90,6 +91,7 @@ pub fn get_card(conn: &Connection, params: &GetCardParams) -> rusqlite::Result<O
                     row.get::<_, Option<String>>(8)?,
                     row.get::<_, Option<String>>(9)?,
                     row.get::<_, Option<String>>(10)?,
+                    row.get::<_, Option<String>>(11)?,
                 ))
             },
         )
@@ -107,6 +109,7 @@ pub fn get_card(conn: &Connection, params: &GetCardParams) -> rusqlite::Result<O
         blood_cost,
         pool_cost,
         image_url,
+        path,
     )) = base
     else {
         return Ok(None);
@@ -126,6 +129,7 @@ pub fn get_card(conn: &Connection, params: &GetCardParams) -> rusqlite::Result<O
         capacity: if is_crypt { capacity } else { None },
         group: if is_crypt { group } else { None },
         title: if is_crypt { title } else { None },
+        path,
         types: if is_crypt {
             None
         } else {
@@ -236,7 +240,7 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE cards(id INT PRIMARY KEY, kind TEXT, name TEXT, name_ascii TEXT,
                card_text TEXT, clan TEXT, capacity INT, grp INT, title TEXT,
-               types TEXT, blood_cost TEXT, pool_cost TEXT, image_url TEXT);
+               types TEXT, blood_cost TEXT, pool_cost TEXT, image_url TEXT, path TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
              CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
@@ -246,9 +250,9 @@ mod tests {
              CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
 
              INSERT INTO cards VALUES
-               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal','[\"Vampire\"]',NULL,NULL,'https://static.krcg.org/card/aaradhyag6.jpg'),
-               (2,'library','Villein','villein','blood bound','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL),
-               (3,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL);
+               (1,'crypt','Aaradhya','aaradhya','tyrant text','Ventrue',10,6,'Cardinal','[\"Vampire\"]',NULL,NULL,'https://static.krcg.org/card/aaradhyag6.jpg','Power and the Inner Voice'),
+               (2,'library','Villein','villein','blood bound','',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,NULL),
+               (3,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,'Caine');
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0);
              INSERT INTO sets VALUES (1,'SV5','Sabbat V5','2025-10-26');
              INSERT INTO printings VALUES (1,1,'Path of Power',NULL,1);
@@ -302,6 +306,7 @@ mod tests {
         assert_eq!(card.name, "Aaradhya");
         assert_eq!(card.clan.as_deref(), Some("Ventrue"));
         assert_eq!(card.capacity, Some(10));
+        assert_eq!(card.path.as_deref(), Some("Power and the Inner Voice"));
         assert_eq!(card.types, None);
         assert_eq!(card.blood_cost, None);
         assert_eq!(
@@ -328,6 +333,7 @@ mod tests {
         seed(&conn);
         let card = get_card(&conn, &GetCardParams { id: 3 }).unwrap().unwrap();
         assert_eq!(card.clan.as_deref(), Some("Tremere"));
+        assert_eq!(card.path.as_deref(), Some("Caine"));
         assert_eq!(card.capacity, None); // still not a crypt-only field leak
     }
 

@@ -51,7 +51,8 @@ CREATE TABLE cards(
   name TEXT, name_ascii TEXT, aka TEXT,
   card_text TEXT,
   -- crypt
-  clan TEXT, sect TEXT, capacity INT, grp INT, title TEXT, votes INT,
+  clan TEXT, sect TEXT, path TEXT,  -- KRCG morality path, when present [schema v8]
+  capacity INT, grp INT, title TEXT, votes INT,
   adv BOOLEAN, banned TEXT,
   -- library
   types TEXT,                      -- JSON array (multi-type)

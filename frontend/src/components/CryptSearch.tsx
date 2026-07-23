@@ -40,7 +40,7 @@ import { useSearchDeck } from '../lib/useSearchDeck'
 import { useInventoryOwnedMap } from '../lib/useInventoryOwnedMap'
 import { useLimitedFormat, isFormatActive, isCardLegalInFormat, getCardSetsMap } from '../lib/limitedFormat'
 import type { PreconOption, PreconSelection } from '../lib/preconFilter'
-import { DisciplineBadge, DisciplineSymbol } from './VtesSymbol'
+import { ClanSymbol, DisciplineSymbol, PathSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
 import OutOfFormatBadge from './OutOfFormatBadge'
 import { useUiStrings } from '../lib/i18n'
@@ -717,8 +717,8 @@ export default function CryptSearch() {
                     <span className="grid size-[22px] place-items-center rounded-full bg-blood/20 font-mono text-[11.5px] font-semibold text-blood-hi">
                       {c.capacity}
                     </span>
-                    <span className="min-w-0 truncate">
-                      {c.name}
+                    <span className="min-w-0 truncate" data-card-name>
+                      <span className="font-medium text-ink">{c.name}</span>
                       {semanticMode && 'semanticScore' in c && (
                         <span className="ml-2 font-mono text-[10px] text-gold">
                           {ui.cryptSearch.similarity} {c.semanticScore.toFixed(3)}
@@ -734,15 +734,18 @@ export default function CryptSearch() {
                     </span>
                     <span className="hidden items-center gap-1 sm:flex">
                       {c.disciplines.map((d) => (
-                        <DisciplineBadge key={d.code} {...d} compact />
+                        <DisciplineSymbol key={d.code} {...d} className="size-4" />
                       ))}
+                      <ClanSymbol clan={c.clan} className="ml-1 size-4" />
+                      <PathSymbol path={c.path} className="size-4" />
                       <OwnedBadge qty={owned.get(c.id) ?? 0} />
                       {limitedFormatActive && (
                         <OutOfFormatBadge legal={isCardLegalInFormat(c.id, cardSets.get(c.id) ?? [], 'crypt', limitedFormat)} />
                       )}
                     </span>
-                    <span className="hidden text-right text-xs uppercase tracking-wide text-ink-muted lg:block">
+                    <span className="hidden items-center justify-end gap-1 text-right text-xs uppercase tracking-wide text-ink-muted lg:flex">
                       {c.sect ? `${c.sect} · ` : ''}
+                      <ClanSymbol clan={c.clan} className="size-4" />
                       {c.clan} · G{c.grp}
                     </span>
                   </button>
