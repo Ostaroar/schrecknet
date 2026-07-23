@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react'
 import { listDecks, getDeckCardDetails, createDeck, deleteDeck, cloneDeck, type DeckSummary } from '../lib/deckStore'
 import { computeDeckMissing } from '../lib/inventoryStore'
 import { navigate } from '../lib/route'
-
-const INVENTORY_MODE_LABEL = { excluded: null, fixed: 'Owns copies', flexible: 'Shares copies' } as const
+import { useUiStrings } from '../lib/i18n'
 
 export default function DeckList() {
+  const ui = useUiStrings().decks
   const [decks, setDecks] = useState<DeckSummary[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   const [newName, setNewName] = useState('')
   const [missingByDeck, setMissingByDeck] = useState<Map<number, number>>(new Map())
+
+  const INVENTORY_MODE_LABEL = { excluded: null, fixed: ui.ownsCopies, flexible: ui.sharesCopies } as const
 
   const refresh = () => {
     listDecks()
@@ -55,7 +57,7 @@ export default function DeckList() {
   if (status === 'error') {
     return (
       <div className="rounded-lg border border-line bg-surface p-4 text-sm text-blood-hi">
-        Couldn't load your decks: {error}
+        {ui.loadError(error)}
       </div>
     )
   }
@@ -65,28 +67,26 @@ export default function DeckList() {
       <div className="flex gap-3">
         <input
           className="min-w-48 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder="New deck name"
+          placeholder={ui.newDeckPlaceholder}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && create()}
         />
         <button onClick={create} className="rounded-lg bg-blood px-4 py-2 text-sm font-semibold text-white hover:bg-blood-hi">
-          Create deck
+          {ui.createDeck}
         </button>
       </div>
 
       {decks.length >= 2 && (
         <button onClick={() => navigate({ page: 'diff' })} className="justify-self-start text-sm text-blood-hi hover:underline">
-          Compare two decks →
+          {ui.compareTwoDecks}
         </button>
       )}
 
       {status === 'loading' ? (
-        <p className="text-sm text-ink-dim">Loading decks…</p>
+        <p className="text-sm text-ink-dim">{ui.loading}</p>
       ) : decks.length === 0 ? (
-        <p className="px-1 text-sm text-ink-dim">
-          No decks yet — decks are stored locally in this browser (no account needed).
-        </p>
+        <p className="px-1 text-sm text-ink-dim">{ui.noDecks}</p>
       ) : (
         <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
           {decks.map((d) => (
@@ -112,7 +112,7 @@ export default function DeckList() {
                 </span>
                 {(d.author || d.description) && (
                   <span className="truncate text-xs text-ink-dim">
-                    {d.author && <>by {d.author}</>}
+                    {d.author && <>{ui.byAuthor(d.author)}</>}
                     {d.author && d.description && ' · '}
                     {d.description}
                   </span>
@@ -125,7 +125,7 @@ export default function DeckList() {
               )}
               {(missingByDeck.get(d.id) ?? 0) > 0 && (
                 <span className="shrink-0 rounded-full bg-blood/20 px-1.5 py-0.5 text-[10px] font-semibold text-blood-hi">
-                  {missingByDeck.get(d.id)} missing
+                  {ui.missingSuffix(missingByDeck.get(d.id) ?? 0)}
                 </span>
               )}
               <span className="text-xs text-ink-dim">
@@ -138,18 +138,18 @@ export default function DeckList() {
                 }}
                 className="text-xs text-ink-dim hover:text-ink-muted"
               >
-                Clone
+                {ui.clone}
               </button>
               <button
                 onClick={async () => {
-                  if (confirm(`Delete "${d.name}"? This can't be undone.`)) {
+                  if (confirm(ui.confirmDelete(d.name))) {
                     await deleteDeck(d.id)
                     refresh()
                   }
                 }}
                 className="text-xs text-ink-dim hover:text-blood-hi"
               >
-                Delete
+                {ui.delete}
               </button>
             </div>
           ))}

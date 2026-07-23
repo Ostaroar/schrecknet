@@ -205,6 +205,33 @@ export interface UiStrings {
     placeholderCrypt: string
     placeholderLibrary: string
   }
+  precons: {
+    title: string
+    intro: string
+    cardCountNote: string
+    loading: string
+    loadError: (error: string) => string
+    backToPrecons: string
+    cardsSuffix: (count: number) => string
+    cryptCount: (count: number) => string
+    libraryCount: (count: number) => string
+    none: string
+  }
+  decks: {
+    newDeckPlaceholder: string
+    createDeck: string
+    compareTwoDecks: string
+    loading: string
+    loadError: (error: string) => string
+    noDecks: string
+    ownsCopies: string
+    sharesCopies: string
+    missingSuffix: (count: number) => string
+    byAuthor: (author: string) => string
+    clone: string
+    delete: string
+    confirmDelete: (name: string) => string
+  }
 }
 
 const en: UiStrings = {
@@ -291,6 +318,12 @@ const en: UiStrings = {
   },
   addCardBox: {
     placeholderCrypt: 'Add crypt card by name…', placeholderLibrary: 'Add library card by name…',
+  },
+  precons: {
+    title: 'Precon decks', intro: "Official preconstructed decks from the V5 pool, grouped by set. Card quantities per deck aren't tracked by the data source — each entry shows the deck's known card pool.", cardCountNote: "Card pool for this precon — quantities aren't tracked by the data source, so this shows which cards belong to it, not a ready-to-play decklist.", loading: 'Loading precons…', loadError: (error) => `Couldn't load precons: ${error}`, backToPrecons: '← Precons', cardsSuffix: (count) => `${count} cards`, cryptCount: (count) => `Crypt · ${count}`, libraryCount: (count) => `Library · ${count}`, none: 'None',
+  },
+  decks: {
+    newDeckPlaceholder: 'New deck name', createDeck: 'Create deck', compareTwoDecks: 'Compare two decks →', loading: 'Loading decks…', loadError: (error) => `Couldn't load your decks: ${error}`, noDecks: 'No decks yet — decks are stored locally in this browser (no account needed).', ownsCopies: 'Owns copies', sharesCopies: 'Shares copies', missingSuffix: (count) => `${count} missing`, byAuthor: (author) => `by ${author}`, clone: 'Clone', delete: 'Delete', confirmDelete: (name) => `Delete "${name}"? This can't be undone.`,
   },
 }
 
@@ -383,6 +416,12 @@ const es: UiStrings = {
   addCardBox: {
     placeholderCrypt: 'Añadir carta de cripta por nombre…', placeholderLibrary: 'Añadir carta de biblioteca por nombre…',
   },
+  precons: {
+    title: 'Mazos premontados', intro: 'Mazos preconstruidos oficiales del conjunto V5, agrupados por edición. Las cantidades por mazo no están registradas en la fuente de datos — cada entrada muestra el conjunto de cartas conocido del mazo.', cardCountNote: 'Conjunto de cartas de este premontado — las cantidades no están registradas en la fuente de datos, así que esto muestra qué cartas pertenecen a él, no una lista lista para jugar.', loading: 'Cargando premontados…', loadError: (error) => `No se pudieron cargar los premontados: ${error}`, backToPrecons: '← Premontados', cardsSuffix: (count) => `${count} cartas`, cryptCount: (count) => `Cripta · ${count}`, libraryCount: (count) => `Biblioteca · ${count}`, none: 'Ninguna',
+  },
+  decks: {
+    newDeckPlaceholder: 'Nombre del mazo nuevo', createDeck: 'Crear mazo', compareTwoDecks: 'Comparar dos mazos →', loading: 'Cargando mazos…', loadError: (error) => `No se pudieron cargar tus mazos: ${error}`, noDecks: 'Aún no hay mazos — los mazos se guardan localmente en este navegador (sin necesidad de cuenta).', ownsCopies: 'Posee copias', sharesCopies: 'Comparte copias', missingSuffix: (count) => `${count} faltantes`, byAuthor: (author) => `por ${author}`, clone: 'Clonar', delete: 'Eliminar', confirmDelete: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`,
+  },
 }
 
 const fr: UiStrings = {
@@ -473,6 +512,12 @@ const fr: UiStrings = {
   },
   addCardBox: {
     placeholderCrypt: 'Ajouter une carte de crypte par son nom…', placeholderLibrary: 'Ajouter une carte de bibliothèque par son nom…',
+  },
+  precons: {
+    title: 'Decks préconstruits', intro: "Decks préconstruits officiels du pool V5, groupés par extension. Les quantités par deck ne sont pas suivies par la source de données — chaque entrée montre le pool de cartes connu du deck.", cardCountNote: "Pool de cartes de ce préconstruit — les quantités ne sont pas suivies par la source de données, ceci montre donc quelles cartes en font partie, pas une liste prête à jouer.", loading: 'Chargement des préconstruits…', loadError: (error) => `Impossible de charger les préconstruits : ${error}`, backToPrecons: '← Préconstruits', cardsSuffix: (count) => `${count} cartes`, cryptCount: (count) => `Crypte · ${count}`, libraryCount: (count) => `Bibliothèque · ${count}`, none: 'Aucune',
+  },
+  decks: {
+    newDeckPlaceholder: 'Nom du nouveau deck', createDeck: 'Créer un deck', compareTwoDecks: 'Comparer deux decks →', loading: 'Chargement des decks…', loadError: (error) => `Impossible de charger vos decks : ${error}`, noDecks: "Pas encore de decks — les decks sont stockés localement dans ce navigateur (aucun compte requis).", ownsCopies: 'Possède des copies', sharesCopies: 'Partage des copies', missingSuffix: (count) => `${count} manquante${count === 1 ? '' : 's'}`, byAuthor: (author) => `par ${author}`, clone: 'Cloner', delete: 'Supprimer', confirmDelete: (name) => `Supprimer « ${name} » ? Cette action est irréversible.`,
   },
 }
 

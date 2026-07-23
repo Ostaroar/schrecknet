@@ -3,9 +3,20 @@ import { listPrecons, type PreconSummary } from '../lib/precons'
 import { searchCrypt, emptyCryptFilters, type CryptCard } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters, type LibraryCard } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
+import { useUiStrings, type UiStrings } from '../lib/i18n'
 import { CardTypeSummary, DisciplineSymbol } from './VtesSymbol'
 
-function PreconDetail({ set, precon, onClose }: { set: string; precon: string; onClose: () => void }) {
+function PreconDetail({
+  set,
+  precon,
+  onClose,
+  ui,
+}: {
+  set: string
+  precon: string
+  onClose: () => void
+  ui: UiStrings['precons']
+}) {
   const [crypt, setCrypt] = useState<CryptCard[] | null>(null)
   const [library, setLibrary] = useState<LibraryCard[] | null>(null)
 
@@ -25,21 +36,18 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
     <div className="grid gap-4">
       <div className="flex items-center gap-3">
         <button onClick={onClose} className="text-xs text-ink-dim hover:text-ink-muted">
-          ← Precons
+          {ui.backToPrecons}
         </button>
         <h1 className="font-display text-xl">{precon}</h1>
         <span className="text-xs text-ink-dim">{set}</span>
       </div>
-      <p className="text-xs text-ink-dim">
-        Card pool for this precon — quantities aren't tracked by the data source, so this shows
-        which cards belong to it, not a ready-to-play decklist.
-      </p>
+      <p className="text-xs text-ink-dim">{ui.cardCountNote}</p>
       {crypt === null || library === null ? (
-        <p className="text-sm text-ink-dim">Loading…</p>
+        <p className="text-sm text-ink-dim">{ui.loading}</p>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">
           <section className="grid gap-2">
-            <h2 className="text-xs uppercase tracking-wide text-ink-dim">Crypt · {crypt.length}</h2>
+            <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.cryptCount(crypt.length)}</h2>
             <ul className="divide-y divide-line-soft rounded-lg border border-line bg-surface text-sm">
               {crypt.map((c) => (
                 <li key={c.id}>
@@ -62,11 +70,11 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
                   </button>
                 </li>
               ))}
-              {crypt.length === 0 && <li className="px-3 py-4 text-center text-xs text-ink-dim">None</li>}
+              {crypt.length === 0 && <li className="px-3 py-4 text-center text-xs text-ink-dim">{ui.none}</li>}
             </ul>
           </section>
           <section className="grid gap-2">
-            <h2 className="text-xs uppercase tracking-wide text-ink-dim">Library · {library.length}</h2>
+            <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.libraryCount(library.length)}</h2>
             <ul className="divide-y divide-line-soft rounded-lg border border-line bg-surface text-sm">
               {library.map((c) => (
                 <li key={c.id}>
@@ -79,7 +87,7 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
                   </button>
                 </li>
               ))}
-              {library.length === 0 && <li className="px-3 py-4 text-center text-xs text-ink-dim">None</li>}
+              {library.length === 0 && <li className="px-3 py-4 text-center text-xs text-ink-dim">{ui.none}</li>}
             </ul>
           </section>
         </div>
@@ -89,6 +97,7 @@ function PreconDetail({ set, precon, onClose }: { set: string; precon: string; o
 }
 
 export default function PreconBrowser() {
+  const ui = useUiStrings().precons
   const [precons, setPrecons] = useState<PreconSummary[] | null>(null)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<PreconSummary | null>(null)
@@ -100,11 +109,11 @@ export default function PreconBrowser() {
   }, [])
 
   if (selected) {
-    return <PreconDetail set={selected.set} precon={selected.precon} onClose={() => setSelected(null)} />
+    return <PreconDetail set={selected.set} precon={selected.precon} onClose={() => setSelected(null)} ui={ui} />
   }
 
-  if (error) return <p className="text-sm text-blood-hi">Couldn't load precons: {error}</p>
-  if (!precons) return <p className="text-sm text-ink-dim">Loading precons…</p>
+  if (error) return <p className="text-sm text-blood-hi">{ui.loadError(error)}</p>
+  if (!precons) return <p className="text-sm text-ink-dim">{ui.loading}</p>
 
   const bySet = new Map<string, PreconSummary[]>()
   for (const p of precons) {
@@ -115,11 +124,8 @@ export default function PreconBrowser() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="font-display text-xl">Precon decks</h1>
-      <p className="text-xs text-ink-dim">
-        Official preconstructed decks from the V5 pool, grouped by set. Card quantities per deck
-        aren't tracked by the data source — each entry shows the deck's known card pool.
-      </p>
+      <h1 className="font-display text-xl">{ui.title}</h1>
+      <p className="text-xs text-ink-dim">{ui.intro}</p>
       {[...bySet.entries()].map(([set, items]) => (
         <section key={set} className="grid gap-2">
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">{set}</h2>
@@ -131,7 +137,7 @@ export default function PreconBrowser() {
                 className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
               >
                 <span className="flex-1 truncate">{p.precon}</span>
-                <span className="text-xs text-ink-dim">{p.card_count} cards</span>
+                <span className="text-xs text-ink-dim">{ui.cardsSuffix(p.card_count)}</span>
               </button>
             ))}
           </div>
