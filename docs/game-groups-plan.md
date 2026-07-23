@@ -1,6 +1,6 @@
 # Game Groups — Private Playgroup Tracker + Leaderboard (Design & Dev Plan)
 
-Status: **planned, G1 in progress** (2026-07-23). Requested directly by the project
+Status: **G1 shipped, G2 next** (2026-07-23). Requested directly by the project
 owner: a way for a regular friend group to log the games they play together and see
 a simple leaderboard. This document is the working spec — milestone-by-milestone,
 same style as [docs/inventory-plan.md](inventory-plan.md) and
@@ -121,7 +121,7 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
 
 ## 7. Milestones
 
-### G1 — Schema + server capability (MCP + REST) + tests
+### G1 — Schema + server capability (MCP + REST) + tests ☑
 - Migration 0004 (both arrays). `server/src/game_groups.rs`: create/get group, log
   game, list games, leaderboard — all backed by `app.sqlite`. Wired into `api.rs` +
   `mcp.rs` per the both-or-neither rule. `AppState`/`SchreckNetMcp` gain `app_db`.
@@ -130,7 +130,9 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
   logging against an unknown code returns "not found", not a crash; a group's games
   are deleted when the group is (cascade).
 - **DoD:** `cargo test --workspace` green; a manual `curl` round-trip (create → log →
-  leaderboard) produces the expected numbers.
+  leaderboard) produces the expected numbers. — **Done** (2026-07-23): 5 new Rust
+  unit tests plus a live 2-game/4-player curl fixture matching hand-computed VP/win
+  aggregates exactly; `cargo clippy --workspace --all-targets -- -D warnings` clean.
 
 ### G2 — Frontend: create/join + leaderboard view
 - `lib/gameGroups.ts` REST client. `#/table` route + nav tab. Create-group and

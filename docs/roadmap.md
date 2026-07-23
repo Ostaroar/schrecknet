@@ -289,11 +289,12 @@ stays clear of the tournament/community-data exclusion; same tier as the seating
 randomizer. No accounts needed: a random shareable code identifies a group, same trust
 model as a shared document link. Full design, data model, and milestone breakdown in
 [docs/game-groups-plan.md](game-groups-plan.md)._
-- ☐ G1 schema (`migrations/0004_game_groups.sql`) + `server/src/game_groups.rs`
+- ☑ G1 schema (`migrations/0004_game_groups.sql`) + `server/src/game_groups.rs`
   (create/get group, log game, list games, leaderboard) + MCP `create_game_group`/
   `get_game_group`/`log_group_game`/`list_group_games`/`get_group_leaderboard` +
   matching REST under `/api/v1/groups` — this is the **first server capability that
-  reads/writes `app.sqlite`** (previously migrated at startup only, never queried)
+  reads/writes `app.sqlite`** (previously migrated at startup only, never queried).
+  `cargo test --workspace` green + manual curl round-trip verified.
 - ☐ G2 frontend: `lib/gameGroups.ts` REST client, `#/table` route + nav tab,
   create-group/join-by-code forms, leaderboard table
 - ☐ G3 log-game form (date, notes, per-player name/deck/VP/game-win) + recent-games
