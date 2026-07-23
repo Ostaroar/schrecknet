@@ -1,6 +1,7 @@
 # SEO / GEO / AEO (Design & Dev Plan)
 
-Status: **planned** (2026-07-23). Requested directly by the project owner: the site
+Status: **S1-S5 implemented; S6 awaits a real deployment domain** (2026-07-23).
+Requested directly by the project owner: the site
 needs to be findable — through traditional search engines (SEO), through AI answer
 engines and LLM browsing/training crawlers (GEO — Generative Engine Optimization —
 and AEO — Answer Engine Optimization), and through link previews in chat apps. Target
@@ -260,30 +261,21 @@ DOKS node pool:
   `cargo test --workspace` and `cargo clippy --workspace --all-targets -- -D
   warnings` both clean.
 
-### S4 — Prerender secondary routes + sitemap regeneration tied to real paths (◐ partial)
-- ☑ `/precons` (§ 4.4): `data/src/prerender.rs::write_precons_page` — every official V5
-  precon grouped by set, sourced from the exact same `printings`/`sets` join
-  `cards_db.rs::list_precons` already uses server-side, so it's zero-maintenance
-  (data-driven, no hand-authored copy to fall out of sync). `render_page`'s head-
-  injection logic was factored out into a shared `render_shell` helper, reused by
-  both card pages and this one. Server gains `GET /precons`
-  (`api::get_prerendered_precons`), same fallback-to-SPA-shell pattern as card pages.
-  Wired into the same `schrecknet-data prerender` subcommand and Dockerfile stage as
-  S3 — no new build step. **DoD met:** live-verified — `curl`ing `/precons` with no
-  JS returns all 32 real precons across 7 sets with correct title/description/OG/
-  canonical; the SPA (the actual `PreconBrowser` component) still boots fully
-  interactive on top with no console errors; 3 new Rust unit tests.
-- ☐ `/rules`, `/help`, `/about`, `/changelog` — **deliberately deferred**, not
-  forgotten: unlike precons, their content is hand-authored English copy that
-  already lives in `frontend/src/lib/i18n.ts`. Duplicating it into Rust for
-  prerendering would create a second copy that silently drifts out of sync every
-  time the TS copy changes — a real maintenance trap, not a one-time cost. Needs a
-  shared-source solution first (e.g. a single JSON/data file both the frontend and
-  `schrecknet-data` read) rather than ad hoc duplication; worth its own small design
-  note before picking this back up, not a mechanical extension of S3/the precons work.
-- ☐ `sitemap.xml` regenerated against the real paths from S2/S3 — still pending,
-  independent of the above; can land once a real domain exists (§ 5) to build
-  absolute `<loc>` URLs against.
+### S4 — Secondary pages + sitemap ☑
+- `/precons`, `/rules`, `/help`, `/about`, and `/changelog` are build-time
+  prerendered and served by explicit extensionless routes, with real title,
+  description, social metadata, canonical URL (when configured), and semantic
+  no-JS body content.
+- `content/static-pages.en.json` is the single English source for
+  help/about/changelog; both React's typed i18n catalog and Rust's prerenderer
+  consume it. The rules page consumes the same generated `gameloop.json` as the
+  interactive browser reference.
+- Sitemap generation is data-driven: root + five static pages + every card
+  (668 URLs for the current V5 pool). It runs only when `--base-url` (Docker
+  `SITE_URL`) is set because sitemap locations must be absolute; an unknown
+  production domain is never replaced with a misleading placeholder.
+- Tests assert shared-copy rendering, game-loop rendering, canonical links,
+  complete sitemap membership, and exclusion of `/table` and `/share/`.
 
 ### S5 — GEO/AEO-specific extras ☑
 - ☑ `robots.txt` GEO/AEO crawler allow-list (§ 4.5) — shipped in S1

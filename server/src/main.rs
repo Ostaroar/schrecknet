@@ -114,6 +114,10 @@ async fn main() {
         .route("/cards/{id}", get(api::get_prerendered_card))
         // Build-time-prerendered precons index (§ 4.4/S4) — same fallback story.
         .route("/precons", get(api::get_prerendered_precons))
+        .route("/rules", get(api::get_prerendered_rules))
+        .route("/help", get(api::get_prerendered_help))
+        .route("/about", get(api::get_prerendered_about))
+        .route("/changelog", get(api::get_prerendered_changelog))
         .with_state(state)
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.

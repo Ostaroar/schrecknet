@@ -16,6 +16,9 @@ use rusqlite::Connection;
 use std::error::Error;
 use std::path::Path;
 
+const STATIC_PAGES_EN: &str = include_str!("../../content/static-pages.en.json");
+const GAME_LOOP_JSON: &str = include_str!("../../frontend/public/gameloop.json");
+
 struct CardRow {
     id: i64,
     kind: String,
@@ -411,6 +414,197 @@ pub fn write_precons_page(
     Ok(())
 }
 
+fn paragraph(value: &serde_json::Value, key: &str) -> String {
+    value
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .map(|text| format!("<p>{}</p>", escape_html(text)))
+        .unwrap_or_default()
+}
+
+fn section(value: &serde_json::Value, title_key: &str, paragraph_keys: &[&str]) -> String {
+    let mut html = String::new();
+    if let Some(title) = value.get(title_key).and_then(serde_json::Value::as_str) {
+        html.push_str(&format!("<h2>{}</h2>", escape_html(title)));
+    }
+    for key in paragraph_keys {
+        html.push_str(&paragraph(value, key));
+    }
+    html
+}
+
+fn help_body(value: &serde_json::Value) -> String {
+    let mut html = format!(
+        "<article><h1>{}</h1>",
+        escape_html(value["title"].as_str().unwrap_or("SchreckNet Help"))
+    );
+    html.push_str(&section(
+        value,
+        "findCardsTitle",
+        &["findCards1", "findCards2"],
+    ));
+    html.push_str(&section(
+        value,
+        "buildDecksTitle",
+        &["buildDecks1", "buildDecks2"],
+    ));
+    html.push_str(&section(value, "offlineTitle", &["offline1", "offline2"]));
+    html.push_str(&section(value, "apiTitle", &["api1", "api2"]));
+    html.push_str("</article>");
+    html
+}
+
+fn about_body(value: &serde_json::Value) -> String {
+    let mut html = format!(
+        "<article><h1>{}</h1>{}",
+        escape_html(value["title"].as_str().unwrap_or("About SchreckNet")),
+        paragraph(value, "lead")
+    );
+    html.push_str(&section(value, "travelTitle", &["travel1", "travel2"]));
+    html.push_str(&section(value, "engineTitle", &["engine1", "engine2"]));
+    html.push_str(&section(value, "creditsTitle", &["creditsRights"]));
+    html.push_str("</article>");
+    html
+}
+
+fn changelog_body(value: &serde_json::Value) -> String {
+    let mut html = format!(
+        "<article><h1>{}</h1>{}",
+        escape_html(value["title"].as_str().unwrap_or("SchreckNet Changelog")),
+        paragraph(value, "lead")
+    );
+    if let Some(entries) = value.get("entries").and_then(serde_json::Value::as_array) {
+        for entry in entries {
+            html.push_str(&format!(
+                "<section><h2>{} \u{2014} {}</h2><p>{}</p><ul>",
+                escape_html(entry["date"].as_str().unwrap_or("")),
+                escape_html(entry["title"].as_str().unwrap_or("")),
+                escape_html(entry["summary"].as_str().unwrap_or(""))
+            ));
+            if let Some(items) = entry.get("items").and_then(serde_json::Value::as_array) {
+                for item in items {
+                    html.push_str(&format!(
+                        "<li>{}</li>",
+                        escape_html(item.as_str().unwrap_or(""))
+                    ));
+                }
+            }
+            html.push_str("</ul></section>");
+        }
+    }
+    html.push_str("</article>");
+    html
+}
+
+fn rules_body() -> Result<String, Box<dyn Error>> {
+    let model: serde_json::Value = serde_json::from_str(GAME_LOOP_JSON)?;
+    let mut html = String::from(
+        "<article><h1>VTES V5 rules reference</h1>\
+         <p>One Methuselah's turn, from unlock to discard, with timing windows and deeper rules loops.</p>",
+    );
+    if let Some(states) = model.get("states").and_then(serde_json::Value::as_array) {
+        for state in states {
+            let label = state["label"].as_str().unwrap_or("");
+            let detail = state["detail"].as_str().unwrap_or("");
+            if label.is_empty() || detail.is_empty() {
+                continue;
+            }
+            html.push_str(&format!(
+                "<section><h2>{}</h2><p>{}</p></section>",
+                escape_html(label),
+                escape_html(detail)
+            ));
+        }
+    }
+    html.push_str("</article>");
+    Ok(html)
+}
+
+/// Writes the hand-authored secondary pages from the exact same English JSON
+/// imported by React, plus the rules page from the exact same generated game
+/// loop JSON loaded by the browser.
+pub fn write_static_pages(
+    template: &str,
+    out_dir: &Path,
+    base_url: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
+    let content: serde_json::Value = serde_json::from_str(STATIC_PAGES_EN)?;
+    let pages = [
+        (
+            "help",
+            "Help \u{2014} SchreckNet",
+            "How to search VTES V5 cards, build local decks, work offline, and use SchreckNet's machine API.",
+            help_body(&content["help"]),
+        ),
+        (
+            "about",
+            "About \u{2014} SchreckNet",
+            content["about"]["lead"].as_str().unwrap_or("About SchreckNet."),
+            about_body(&content["about"]),
+        ),
+        (
+            "changelog",
+            "Changelog \u{2014} SchreckNet",
+            content["changelog"]["lead"]
+                .as_str()
+                .unwrap_or("SchreckNet product milestones."),
+            changelog_body(&content["changelog"]),
+        ),
+        (
+            "rules",
+            "VTES V5 rules reference \u{2014} SchreckNet",
+            "A crawlable VTES V5 turn reference covering phases, timing windows, and impulse order.",
+            rules_body()?,
+        ),
+    ];
+    for (slug, title, description, body) in pages {
+        let canonical = base_url.map(|base| format!("{}/{}", base.trim_end_matches('/'), slug));
+        let page = render_shell(
+            template,
+            title,
+            description,
+            "website",
+            canonical.as_deref(),
+            None,
+            &body,
+        );
+        std::fs::write(out_dir.join(format!("{slug}.html")), page)?;
+    }
+    Ok(())
+}
+
+pub fn write_sitemap(
+    conn: &Connection,
+    out_dir: &Path,
+    base_url: Option<&str>,
+) -> Result<bool, Box<dyn Error>> {
+    let Some(base_url) = base_url else {
+        return Ok(false);
+    };
+    let base = base_url.trim_end_matches('/');
+    let mut urls = vec![
+        format!("{base}/"),
+        format!("{base}/rules"),
+        format!("{base}/precons"),
+        format!("{base}/help"),
+        format!("{base}/about"),
+        format!("{base}/changelog"),
+    ];
+    let mut statement = conn.prepare("SELECT id FROM cards ORDER BY id")?;
+    let card_ids = statement
+        .query_map([], |row| row.get::<_, i64>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    urls.extend(card_ids.into_iter().map(|id| format!("{base}/cards/{id}")));
+    let mut xml =
+        String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+    for url in urls {
+        xml.push_str(&format!("  <url><loc>{}</loc></url>\n", escape_html(&url)));
+    }
+    xml.push_str("</urlset>\n");
+    std::fs::write(out_dir.join("sitemap.xml"), xml)?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -524,6 +718,57 @@ mod tests {
         assert!(page.contains("Tremere \u{2014} 1 distinct cards"));
         assert!(page.contains("/assets/main-XYZ.js"));
 
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn writes_secondary_pages_from_shared_sources_and_an_absolute_sitemap() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let dir = std::env::temp_dir().join(format!(
+            "schrecknet-prerender-test-secondary-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        write_static_pages(TEMPLATE, &dir, Some("https://example.test/")).unwrap();
+        assert!(write_sitemap(&conn, &dir, Some("https://example.test/")).unwrap());
+
+        let about = std::fs::read_to_string(dir.join("about.html")).unwrap();
+        assert!(about.contains("independent, ground-up"));
+        assert!(about.contains("feature and behavior reference"));
+        assert!(about.contains("<link rel=\"canonical\" href=\"https://example.test/about\">"));
+
+        let help = std::fs::read_to_string(dir.join("help.html")).unwrap();
+        assert!(help.contains("Search fast. Build locally. Keep control."));
+        let rules = std::fs::read_to_string(dir.join("rules.html")).unwrap();
+        assert!(rules.contains("VTES V5 rules reference"));
+        assert!(rules.contains("1) Unlock Phase"));
+        let changelog = std::fs::read_to_string(dir.join("changelog.html")).unwrap();
+        assert!(changelog.contains("Offline semantic research"));
+
+        let sitemap = std::fs::read_to_string(dir.join("sitemap.xml")).unwrap();
+        assert!(sitemap.contains("<loc>https://example.test/cards/1</loc>"));
+        assert!(sitemap.contains("<loc>https://example.test/rules</loc>"));
+        assert!(!sitemap.contains("/table"));
+        assert!(!sitemap.contains("/share/"));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn sitemap_is_not_written_without_a_real_base_url() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        let dir = std::env::temp_dir().join(format!(
+            "schrecknet-prerender-test-no-sitemap-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!write_sitemap(&conn, &dir, None).unwrap());
+        assert!(!dir.join("sitemap.xml").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

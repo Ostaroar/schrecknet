@@ -3,9 +3,9 @@
 # Default: allow everything. /table (game-groups) and /share/ (deck-in-URL)
 # are excluded because both rely on an unguessable code/token being private,
 # like a shared-document link - indexing either would break that trust model
-# (see docs/game-groups-plan.md section 1-2). Real per-card paths and a
-# generated sitemap.xml land in S2/S3; until then this only affects the
-# hash-routed SPA shell itself, which crawlers already can't see past.
+# (see docs/game-groups-plan.md section 1-2). Public card and secondary paths
+# are prerendered. sitemap.xml is generated at build time when the deployment
+# supplies its real SITE_URL; no placeholder production domain is published.
 User-agent: *
 Disallow: /table
 Disallow: /share/

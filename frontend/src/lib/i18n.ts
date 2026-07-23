@@ -1,4 +1,5 @@
 import { useCardLanguage } from './cardLanguage'
+import staticPagesEn from '../../../content/static-pages.en.json'
 
 export type UiLanguage = 'en' | 'es' | 'fr' | 'de'
 
@@ -305,50 +306,9 @@ const en: UiStrings = {
     legal: 'Legal notice',
     support: 'Support this project',
   },
-  help: {
-    eyebrow: 'Help',
-    title: 'Search fast. Build locally. Keep control.',
-    findCardsTitle: 'Find cards',
-    findCards1: 'Use Crypt or Library search for detailed V5-only filters. Select a result to open its full card page.',
-    findCards2: 'Press ⌘K on macOS or Ctrl+K elsewhere to search every card by name.',
-    buildDecksTitle: 'Build decks',
-    buildDecks1: 'Create a local deck, add cards by name, and adjust quantities with the compact steppers.',
-    buildDecks2: 'Import or export text lists, share a deck URL, draw test hands, compare decks, and review V5 legality.',
-    offlineTitle: 'Offline data',
-    offline1: 'The first visit downloads the V5 card database. Later searches and deck edits use browser-local SQLite.',
-    offline2: "Clearing this site's browser storage also removes anonymous local decks, so export important lists.",
-    apiTitle: 'Machine API',
-    api1: 'MCP Streamable HTTP is served at /mcp; local clients can use schrecknet-server --mcp-stdio.',
-    api2: 'Mirrored card REST endpoints live under /api/v1.',
-  },
-  about: {
-    eyebrow: 'About SchreckNet',
-    title: 'The V5 card library and deck workbench.',
-    lead: 'SchreckNet is an independent, ground-up, offline-first application focused exclusively on VTES Fifth Edition card research and deck building. VDB is a feature and behavior reference; SchreckNet does not reuse or depend on its source code. Tournament archives, community rankings, and playtest-program features are intentionally outside its scope.',
-    travelTitle: 'Built to travel',
-    travel1: 'Card search and local decks keep working after the app and V5 database have been cached.',
-    travel2: 'Your anonymous decks live in a separate writable SQLite database in this browser.',
-    engineTitle: 'One rules engine',
-    engine1: 'Rust domain logic runs natively on the server and as WebAssembly in the browser.',
-    engine2: 'SQLite is the storage layer on both sides; MCP and REST share the same card services.',
-    creditsTitle: 'Credits',
-    creditsBuildsOn: 'SchreckNet uses',
-    creditsAnd: 'as a feature and behavior reference; card data and rulings come from',
-    creditsCardData: '. The source code is available under the MIT license.',
-    creditsRights:
-      'Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com. SchreckNet is unofficial fan content and is not endorsed by or affiliated with Paradox Interactive; it is not official World of Darkness material.',
-  },
-  changelog: {
-    eyebrow: 'Changelog',
-    title: 'What changed in SchreckNet.',
-    lead: 'Product milestones for the V5 card-research and deckbuilding workbench.',
-    entries: [
-      { date: '2026-07-22', title: 'Search in your language', summary: 'Crypt and Library research controls now follow the selected English, Spanish, or French interface language.', items: ['Localized exact, regex, semantic, set, precon, trait, and sorting controls.', 'Added browser coverage for both search routes in Spanish and French.'] },
-      { date: '2026-07-22', title: 'Responsive deckbuilding', summary: 'The complete workbench now fits compact phones without hiding core actions.', items: ['Validated ten primary routes at 320 px and 360 px.', 'Improved touch targets, Inventory layout, and the populated deck editor.'] },
-      { date: '2026-07-22', title: 'Local inventory complete', summary: 'Anonymous inventory works offline alongside local decks.', items: ['Added owned-card search filters, missing-card lists, want-list export, and proxy integration.', 'Kept inventory and deck data in the browser-local user database.'] },
-      { date: '2026-07-21', title: 'Offline semantic research', summary: 'Concept search is available without sending card text or queries to a remote model.', items: ['Added a checksum-pinned local model and embedded V5 vectors.', 'Kept browser, REST, and MCP result ranking aligned through shared Rust.'] },
-    ],
-  },
+  help: staticPagesEn.help,
+  about: staticPagesEn.about,
+  changelog: staticPagesEn.changelog,
   search: {
     nameText: 'Name / text', semanticPrompt: 'Describe a card concept (English)', all: 'All', any: 'Any', not: 'Not', only: 'Only', name: 'Name', text: 'Text', artist: 'Artist', clear: 'clear', loading: 'Loading card database…', loadError: "Couldn't load the card database", noMatches: 'No cards match those filters.', sort: 'Sort', relevance: 'Relevance', onlyOwned: 'Only owned', onlyInFormat: 'Only in format', traits: 'Traits', allTraitsRequired: 'all selected traits required', set: 'Set', anySet: 'Any set', setAge: 'Set age relation', inSet: 'In set', orNewer: 'Or newer', orOlder: 'Or older', notNewer: 'Not newer', notOlder: 'Not older', printing: 'Printing relation', anyPrinting: 'Any printing', onlyIn: 'Only in', firstPrint: 'First print', reprint: 'Reprint', preconFilters: 'Precon filters', addPrecon: 'Add precon', anyPrecon: 'Any precon / add another…', selectedPrecons: 'Selected precons', removePrecon: (precon, set) => `Remove ${precon} from ${set}`, semantic: 'Semantic', semanticTitle: 'Find cards by English concept using the local offline model', semanticIdle: 'Describe an English card concept. First use downloads about 46 MB (model + runtime); queries stay on this device.', semanticLoading: 'Preparing the local semantic model…', semanticDownloading: 'Downloading local model', semanticReady: 'Local semantic model ready. Results are cosine-ranked; the score is similarity, not a probability.', semanticUnavailable: (error) => `Semantic model unavailable: ${error}`, retry: 'Retry', removeModel: 'Remove local model',
   },

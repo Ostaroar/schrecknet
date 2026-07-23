@@ -345,11 +345,13 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   server binary + a real browser; the new Dockerfile `prerender-build` stage
   is confirmed green in CI (`docker.yml` run 29990857841 — full multi-stage
   build succeeded).
-- ◐ S4 prerender secondary routes: ☑ `/precons` (data-driven, zero content-drift
-  risk, live-verified); `/rules`/`/help`/`/about`/`/changelog` deliberately deferred
-  until there's a shared EN-copy source both TS and Rust can read, rather than a
-  second hand-copied version that silently drifts — see plan doc S4. Sitemap
-  regeneration still pending.
+- ☑ S4 prerender secondary routes: `/precons`, `/rules`, `/help`, `/about`, and
+  `/changelog` return real no-JS HTML. English help/about/changelog copy lives in
+  one shared JSON source consumed by React and Rust; rules HTML uses the same
+  generated game-loop JSON as the browser. The data build generates a 668-URL
+  sitemap (root + five static routes + 662 cards) when `SITE_URL`/`--base-url`
+  supplies the real deployment origin; without one it deliberately emits no
+  invalid placeholder sitemap.
 - ☑ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers
   (shipped in S1) + `llms.txt` (informal/unproven convention, kept low-effort;
   plain ASCII, verified served correctly).

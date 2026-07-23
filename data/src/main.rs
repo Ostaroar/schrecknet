@@ -99,6 +99,13 @@ fn prerender_cards(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     );
     prerender::write_precons_page(&conn, &template, &out_dir, base_url.as_deref())?;
     println!("prerendered {}/precons.html", out_dir.display());
+    prerender::write_static_pages(&template, &out_dir, base_url.as_deref())?;
+    println!("prerendered rules/help/about/changelog pages");
+    if prerender::write_sitemap(&conn, &out_dir, base_url.as_deref())? {
+        println!("generated {}/sitemap.xml", out_dir.display());
+    } else {
+        println!("skipped sitemap.xml (set --base-url to generate absolute URLs)");
+    }
     Ok(())
 }
 

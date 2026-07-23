@@ -13,6 +13,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY core core
 COPY server server
 COPY data data
+COPY content content
 COPY models models
 COPY migrations migrations
 RUN cargo build --release -p schrecknet-server -p schrecknet-data
@@ -26,11 +27,13 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend .
 COPY migrations /src/migrations
+COPY content /src/content
 COPY --from=rust-build /out/wasm src/wasm
 COPY --from=rust-build /out/models public/models
 RUN npm run build
 
-# --- stage 3: prerender card pages + precons index (docs/seo-geo-aeo-plan.md
+# --- stage 3: prerender public card + secondary pages and sitemap
+# (docs/seo-geo-aeo-plan.md
 # S3/S4) ---
 # Needs cards.sqlite from rust-build (real card data) and the frontend's
 # already-built index.html from web-build (its hashed script/CSS tags get

@@ -126,6 +126,22 @@ pub async fn get_prerendered_precons(State(state): State<AppState>) -> impl Into
     serve_prerendered(&state, "precons.html").await
 }
 
+pub async fn get_prerendered_rules(State(state): State<AppState>) -> impl IntoResponse {
+    serve_prerendered(&state, "rules.html").await
+}
+
+pub async fn get_prerendered_help(State(state): State<AppState>) -> impl IntoResponse {
+    serve_prerendered(&state, "help.html").await
+}
+
+pub async fn get_prerendered_about(State(state): State<AppState>) -> impl IntoResponse {
+    serve_prerendered(&state, "about.html").await
+}
+
+pub async fn get_prerendered_changelog(State(state): State<AppState>) -> impl IntoResponse {
+    serve_prerendered(&state, "changelog.html").await
+}
+
 pub async fn get_card_by_name(
     State(state): State<AppState>,
     Query(params): Query<GetCardByNameParams>,
