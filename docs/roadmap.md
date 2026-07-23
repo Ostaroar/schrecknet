@@ -350,8 +350,9 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   until there's a shared EN-copy source both TS and Rust can read, rather than a
   second hand-copied version that silently drifts — see plan doc S4. Sitemap
   regeneration still pending.
-- ☐ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers,
-  `llms.txt` (informal/unproven convention, kept low-effort)
+- ☑ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers
+  (shipped in S1) + `llms.txt` (informal/unproven convention, kept low-effort;
+  plain ASCII, verified served correctly).
 - ☐ S6 (optional, infra-adjacent): Core Web Vitals/Lighthouse check once a real
   domain + CDN sit in front of the DOKS deployment; overlaps Phase 4's performance
   budget item

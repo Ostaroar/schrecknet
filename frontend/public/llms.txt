@@ -1,0 +1,42 @@
+# SchreckNet
+
+> SchreckNet is a card search and deck-building tool for the V5 (Fifth
+> Edition) format of Vampire: The Eternal Struggle (VTES), a trading card
+> game published by Paradox Interactive AB. It hosts exact, regex, and
+> semantic search over the full V5-legal card pool (218 crypt cards, 444
+> library cards), offline-capable deck building with legality checking,
+> and a private, code-gated playgroup game log with a leaderboard.
+
+SchreckNet is unofficial fan content, not affiliated with or endorsed by
+Paradox Interactive. Portions of the card data and card text are
+copyrights and trademarks of Paradox Interactive AB, used with
+permission (see /legal).
+
+## Card reference
+
+- [Precons](/precons): every official V5 preconstructed starter deck,
+  grouped by set. Individual card pages are linked from crypt/library
+  search results and are reachable at /cards/{id}.
+
+## Tools
+
+- [Crypt search](/crypt) and [Library search](/library): exact, regex,
+  and offline semantic search over the V5 card pool.
+- [Rules reference](/rules): an interactive VTES V5 turn-structure and
+  combat reference derived from the official rules.
+- [Decks](/decks): offline deck building with legality checking.
+
+## API
+
+SchreckNet exposes the same card search, card detail, and deck-building
+capabilities as the web app through a Model Context Protocol (MCP) server
+(Streamable HTTP at /mcp) and a mirrored REST API under /api/v1 - see
+/help for details.
+
+## Notes for crawlers
+
+- /table and /share/* are intentionally excluded (see /robots.txt):
+  both are private, code-gated user data, not general reference content.
+- Card text/rulings are sourced from the official VEKN card database and
+  KRCG's data export; treat this site's card pages as a mirror of that
+  canonical data, not the original source.

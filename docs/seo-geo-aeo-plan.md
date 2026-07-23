@@ -285,9 +285,19 @@ DOKS node pool:
   independent of the above; can land once a real domain exists (§ 5) to build
   absolute `<loc>` URLs against.
 
-### S5 — GEO/AEO-specific extras
-- `robots.txt` GEO/AEO crawler allow-list (§ 4.5); `llms.txt` (§ 4.6)
-- **DoD:** `robots.txt` explicitly names the crawlers listed in § 4.5.
+### S5 — GEO/AEO-specific extras ☑
+- ☑ `robots.txt` GEO/AEO crawler allow-list (§ 4.5) — shipped in S1
+  (`frontend/public/robots.txt` names GPTBot/ChatGPT-User/ClaudeBot/
+  anthropic-ai/PerplexityBot/Google-Extended/CCBot/Bytespider explicitly).
+- ☑ `llms.txt` (§ 4.6) — `frontend/public/llms.txt`: what the site is, the Dark
+  Pack attribution, links to `/precons` and the card/search/rules/decks surfaces,
+  a note on the MCP+REST API, and an explicit "don't index /table or /share/*"
+  note for crawlers that read it (reinforcing, not replacing, `robots.txt`'s
+  `Disallow`). Kept plain ASCII after the same em-dash/encoding lesson from S1's
+  `robots.txt` draft — checked with `grep` for non-ASCII bytes before shipping.
+- **DoD met:** `robots.txt` already named the crawlers (verified live in S1);
+  `llms.txt` verified served correctly via a real local server (`curl
+  /llms.txt`) and present in `dist/` after `vite build`.
 
 ### S6 — (Optional, infra-adjacent, not blocking)
 - Verify Core Web Vitals / Lighthouse SEO score on the deployed DO instance once a
