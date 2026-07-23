@@ -320,9 +320,11 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   `robots.txt` (allow-by-default + named GEO/AEO crawler allow-list + disallow
   `/table`/`/share/`). Live-verified in-browser. `sitemap.xml` deliberately deferred
   to S3/S4 — hash-fragment URLs have no crawl value, see plan doc § S1.
-- ☐ S2 path-based routing migration (`#/x` → `/x`, History API) — **needs its own
-  ADR** (`docs/adr/0008-path-based-routing-for-seo.md`) before implementation;
-  old hash links must redirect, not 404
+- ☑ S2 path-based routing migration (`#/x` → `/x`, History API) — ADR
+  `docs/adr/0008-path-based-routing-for-seo.md`. Old `#/x` links redirect via
+  `replaceState` instead of 404ing. Live-verified against the real server: deep
+  link reload, no-reload in-app navigation, browser back/forward, legacy-hash
+  redirect all confirmed working.
 - ☐ S3 build-time static prerendering for all 662 card pages (real HTML + title/
   description/OG/Twitter/JSON-LD, `schrecknet-data` build step, served by the
   existing `axum` static file handler — no new server code)

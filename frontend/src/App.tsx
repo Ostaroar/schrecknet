@@ -19,7 +19,7 @@ import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
-import { useHashRoute, navigate } from './lib/route'
+import { useRoute, navigate } from './lib/route'
 import { useDocumentHead } from './lib/documentHead'
 import { routeDocumentHead } from './lib/seo'
 
@@ -28,7 +28,7 @@ const LANGUAGE_FLAGS: Record<string, string> = { en: '🇬🇧', es: '🇪🇸',
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
-  const route = useHashRoute()
+  const route = useRoute()
   const { language, setLanguage } = useCardLanguage()
   const ui = getUiStrings(language)
   useDocumentHead(routeDocumentHead(route))

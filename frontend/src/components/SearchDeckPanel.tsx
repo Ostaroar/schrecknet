@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type MouseEvent } from 'react'
 import type { DeckCardDetail } from '../lib/deckStore'
+import { linkProps } from '../lib/route'
 import type { SearchDeckController } from '../lib/useSearchDeck'
 
 export interface AddToDeckButtonProps {
@@ -84,7 +85,7 @@ function DeckGroup({ label, cards, deck }: { label: string; cards: DeckCardDetai
           {cards.map((card) => (
             <li key={card.id} className="flex min-w-0 items-center gap-3 px-3 py-2 text-sm">
               <a
-                href={`#/cards/${card.id}`}
+                {...linkProps({ page: 'card', id: card.id })}
                 className="min-w-0 flex-1 truncate font-display text-ink hover:text-blood-hi"
               >
                 {card.name}
@@ -162,7 +163,7 @@ export function SearchDeckPanel({ deck, defaultOpen = false, className = '' }: S
         <div className="mt-3 rounded-lg border border-dashed border-line bg-ground px-4 py-5 text-center">
           <p className="text-sm text-ink-muted">Create a local deck to add cards while searching.</p>
           <a
-            href="#/decks"
+            {...linkProps({ page: 'decks' })}
             className="mt-2 inline-flex rounded-lg bg-blood px-3 py-2 text-xs font-semibold text-white hover:bg-blood-hi"
           >
             Go to decks
@@ -173,7 +174,7 @@ export function SearchDeckPanel({ deck, defaultOpen = false, className = '' }: S
       {deck.activeDeck && open && (
         <div id={panelId} className="mt-4 grid gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-            <a href={`#/decks/${deck.activeDeck.id}`} className="font-display text-base text-ink hover:text-blood-hi">
+            <a {...linkProps({ page: 'deck', id: deck.activeDeck.id })} className="font-display text-base text-ink hover:text-blood-hi">
               {deck.activeDeck.name}
             </a>
             <span className="font-mono">

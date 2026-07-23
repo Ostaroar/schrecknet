@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { getCard, localizeCardText, type CardDetail } from '../lib/cardDetail'
 import { languageLabel, useCardLanguage } from '../lib/cardLanguage'
 import RulingRefs from './RulingRefs'
-import { routeTo } from '../lib/route'
+import { linkProps } from '../lib/route'
 import CardText from './CardText'
 
 export default function CardDetailPanel({ id }: { id: number }) {
@@ -72,7 +72,7 @@ export default function CardDetailPanel({ id }: { id: number }) {
         </span>
       )}
 
-      <a href={routeTo({ page: 'card', id: card.id })} className="justify-self-start text-xs text-blood-hi hover:underline">
+      <a {...linkProps({ page: 'card', id: card.id })} className="justify-self-start text-xs text-blood-hi hover:underline">
         Full page & share link →
       </a>
     </div>

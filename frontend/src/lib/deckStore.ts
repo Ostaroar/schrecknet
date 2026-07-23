@@ -206,7 +206,7 @@ export async function buildShareUrl(deckId: number): Promise<string> {
   const crypt: [number, number][] = cards.filter((c) => c.kind === 'crypt').map((c) => [c.id, c.qty])
   const library: [number, number][] = cards.filter((c) => c.kind === 'library').map((c) => [c.id, c.qty])
   const token = await encodeDeckShare(crypt, library)
-  return `${window.location.origin}${window.location.pathname}${routeTo({ page: 'share', token })}`
+  return `${window.location.origin}${routeTo({ page: 'share', token })}`
 }
 
 /** Decodes a share token into (card_id, qty, kind) rows joined against cards.sqlite, for a preview. */

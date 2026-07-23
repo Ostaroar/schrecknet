@@ -198,13 +198,23 @@ DOKS node pool:
   anyway) with the disallow/allow-list rules present; `tsc --noEmit` + `vite build`
   both clean.
 
-### S2 — Path-based routing (own ADR: `docs/adr/0008-path-based-routing-for-seo.md`)
-- Migrate `route.ts`/`navigate()`/every internal link from `#/x` to `/x`;
-  `history.pushState` + `popstate` replacing `location.hash` + `hashchange`
-- **DoD:** every existing route reachable at its new real path with working
-  back/forward, deep-link reload, and no regression in the responsive/offline
-  contract already covered by Phase 1; old `#/x` links redirect (so existing
-  shared links/bookmarks don't 404).
+### S2 — Path-based routing (own ADR: `docs/adr/0008-path-based-routing-for-seo.md`) ☑
+- Migrated `route.ts`/`navigate()`/every internal link from `#/x` to `/x`;
+  `history.pushState` + `popstate` replacing `location.hash` + `hashchange`. New
+  `linkProps(route)` helper spreads `{href, onClick}` onto the few raw `<a>` tags
+  (`SearchDeckPanel.tsx`, `CardDetailPanel.tsx`) — plain left-click does a fast
+  `pushState` nav, modifier/middle-clicks fall through to native "open in new tab."
+  `lib/deckStore.ts`'s share-link builder updated to not prepend the current page's
+  `pathname` (real `routeTo()` output is already a complete path).
+- **DoD:** live-verified against the real server (not just the Vite dev server, to
+  exercise the actual SPA-fallback path): `curl`ing `/cards/{id}` and `/table`
+  directly both return 200 or via the fallback; deep-link browser load of
+  `/cards/201733` resolves to the correct card title; an old `#/table` bookmark
+  silently upgrades to `/table` via `replaceState`; clicking an in-app link does a
+  no-reload `pushState` navigation (confirmed with a `window` marker surviving the
+  click); browser back navigation correctly restores the previous route/title.
+  `server/src/main.rs` needed zero changes — its existing `ServeDir` fallback
+  already served `index.html` for any unmatched path. `tsc --noEmit` clean.
 
 ### S3 — Prerendered card pages
 - `schrecknet-data` prerender step (§ 4.3); server serves them at `/cards/{id}`

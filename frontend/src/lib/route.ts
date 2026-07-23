@@ -1,9 +1,11 @@
-// Minimal hash routing (#/crypt, #/library, #/cards/123, #/decks, #/decks/5,
-// #/decks/5/proxy, #/share/<token>, #/diff, #/precons, #/inventory, #/table, #/help,
-// #/rules, #/changelog, #/about). Deliberately not a router library — AGENTS.md requires an ADR
-// for new runtime deps, and this many routes still doesn't justify one.
+// Path-based routing (/crypt, /library, /cards/123, /decks, /decks/5,
+// /decks/5/proxy, /share/<token>, /diff, /precons, /inventory, /table, /help,
+// /rules, /changelog, /about). Deliberately not a router library — AGENTS.md
+// requires an ADR for new runtime deps, and this many routes still doesn't
+// justify one; see docs/adr/0008-path-based-routing-for-seo.md for why this
+// uses the History API instead of the hash routing it replaces.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 
 export type Route =
   | { page: 'crypt' }
@@ -24,8 +26,8 @@ export type Route =
   | { page: 'help' }
   | { page: 'about' }
 
-export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#\/?/, '')
+export function parsePath(pathname: string): Route {
+  const path = pathname.replace(/^\/+/, '').replace(/\/+$/, '')
   const cardMatch = /^cards\/(\d+)$/.exec(path)
   if (cardMatch) return { page: 'card', id: Number(cardMatch[1]) }
   const proxyMatch = /^decks\/(\d+)\/proxy$/.exec(path)
@@ -53,52 +55,92 @@ export function parseHash(hash: string): Route {
 export function routeTo(route: Route): string {
   switch (route.page) {
     case 'crypt':
-      return '#/crypt'
+      return '/crypt'
     case 'library':
-      return '#/library'
+      return '/library'
     case 'card':
-      return `#/cards/${route.id}`
+      return `/cards/${route.id}`
     case 'decks':
-      return '#/decks'
+      return '/decks'
     case 'deck':
-      return `#/decks/${route.id}`
+      return `/decks/${route.id}`
     case 'proxy':
-      return `#/decks/${route.deckId}/proxy`
+      return `/decks/${route.deckId}/proxy`
     case 'review':
-      return `#/decks/${route.deckId}/review`
+      return `/decks/${route.deckId}/review`
     case 'share':
-      return `#/share/${route.token}`
+      return `/share/${route.token}`
     case 'diff':
-      return '#/diff'
+      return '/diff'
     case 'precons':
-      return '#/precons'
+      return '/precons'
     case 'inventory':
-      return '#/inventory'
+      return '/inventory'
     case 'limited':
-      return '#/limited'
+      return '/limited'
     case 'table':
-      return '#/table'
+      return '/table'
     case 'rules':
-      return '#/rules'
+      return '/rules'
     case 'changelog':
-      return '#/changelog'
+      return '/changelog'
     case 'help':
-      return '#/help'
+      return '/help'
     case 'about':
-      return '#/about'
+      return '/about'
   }
 }
 
 export function navigate(route: Route) {
-  window.location.hash = routeTo(route)
+  const path = routeTo(route)
+  if (path === window.location.pathname) return
+  window.history.pushState(null, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
-export function useHashRoute(): Route {
-  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash))
+/** Spread onto an <a>: keeps a real href (right-click/open-in-new-tab/a11y all
+ * work), but a plain left-click does a fast pushState navigation instead of a
+ * full page reload. Modifier-clicks (ctrl/cmd/shift/alt) and middle-click are
+ * left alone so "open in new tab" keeps working natively. */
+export function linkProps(route: Route) {
+  return {
+    href: routeTo(route),
+    onClick: (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+      event.preventDefault()
+      navigate(route)
+    },
+  }
+}
+
+/** Old `#/...` bookmarks/shared links still work: silently upgraded to the
+ * equivalent real path via replaceState (no extra back-button entry) before
+ * the first route is resolved. */
+function resolveInitialPath(): string {
+  const hash = window.location.hash
+  if (hash.startsWith('#/')) {
+    const legacyPath = '/' + hash.slice(2)
+    window.history.replaceState(null, '', legacyPath || '/')
+    return legacyPath
+  }
+  return window.location.pathname
+}
+
+export function useRoute(): Route {
+  const [route, setRoute] = useState<Route>(() => parsePath(resolveInitialPath()))
   useEffect(() => {
-    const onChange = () => setRoute(parseHash(window.location.hash))
-    window.addEventListener('hashchange', onChange)
-    return () => window.removeEventListener('hashchange', onChange)
+    const onChange = () => setRoute(parsePath(window.location.pathname))
+    window.addEventListener('popstate', onChange)
+    return () => window.removeEventListener('popstate', onChange)
   }, [])
   return route
 }
