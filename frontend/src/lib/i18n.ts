@@ -1,8 +1,8 @@
 import { useCardLanguage } from './cardLanguage'
 
-export type UiLanguage = 'en' | 'es' | 'fr'
+export type UiLanguage = 'en' | 'es' | 'fr' | 'de'
 
-export const UI_LANGUAGES: UiLanguage[] = ['en', 'es', 'fr']
+export const UI_LANGUAGES: UiLanguage[] = ['en', 'es', 'fr', 'de']
 
 export function resolveUiLanguage(language: string): UiLanguage {
   const lower = language.toLowerCase()
@@ -521,7 +521,104 @@ const fr: UiStrings = {
   },
 }
 
-const STRINGS: Record<UiLanguage, UiStrings> = { en, es, fr }
+// German UI strings ship with no card-text data (KRCG/VEKN don't provide German
+// card translations), so card text always falls back to English per-card
+// (cardDetail.ts's localizeCardText already handles that gracefully) — but the
+// interface itself is fully translated.
+const de: UiStrings = {
+  nav: {
+    cryptSearch: 'Kryptasuche',
+    librarySearch: 'Bibliothekssuche',
+    decks: 'Decks',
+    inventory: 'Inventar',
+    limited: 'Limitiert',
+    precons: 'Vorkonstruiert',
+    rules: 'Regeln',
+    changelog: 'Änderungen',
+    help: 'Hilfe',
+    about: 'Über',
+  },
+  header: {
+    cardTextLabel: 'Kartentext',
+    cardCounts: (crypt, library) => `${crypt} Krypta · ${library} Bibliothek`,
+    v5Only: 'Nur V5',
+  },
+  footer: {
+    copyright:
+      'Teile des Materials sind Copyright und Marken von Paradox Interactive AB und werden mit Genehmigung verwendet. Alle Rechte vorbehalten. Weitere Informationen unter worldofdarkness.com.',
+    disclaimer: 'SchreckNet ist inoffizieller Fan-Inhalt und wird von Paradox Interactive weder unterstützt noch ist es damit verbunden. Es handelt sich nicht um offizielles World-of-Darkness-Material.',
+    help: 'Hilfe',
+    about: 'Über',
+    support: 'Dieses Projekt unterstützen',
+  },
+  help: {
+    eyebrow: 'Hilfe',
+    title: 'Schnell suchen. Lokal bauen. Die Kontrolle behalten.',
+    findCardsTitle: 'Karten finden',
+    findCards1: 'Nutze die Krypta- oder Bibliothekssuche für detaillierte, V5-exklusive Filter. Wähle ein Ergebnis, um die vollständige Kartenseite zu öffnen.',
+    findCards2: 'Drücke ⌘K auf macOS oder Strg+K anderswo, um jede Karte per Namen zu suchen.',
+    buildDecksTitle: 'Decks bauen',
+    buildDecks1: 'Erstelle ein lokales Deck, füge Karten per Namen hinzu und passe Mengen mit den kompakten Reglern an.',
+    buildDecks2: 'Textlisten importieren oder exportieren, eine Deck-URL teilen, Testhände ziehen, Decks vergleichen und die V5-Legalität prüfen.',
+    offlineTitle: 'Offline-Daten',
+    offline1: 'Beim ersten Besuch wird die V5-Kartendatenbank heruntergeladen. Spätere Suchen und Deck-Bearbeitungen nutzen browserlokales SQLite.',
+    offline2: 'Das Löschen des Browser-Speichers dieser Seite entfernt auch anonyme lokale Decks — exportiere daher wichtige Listen.',
+    apiTitle: 'Maschinen-API',
+    api1: 'MCP Streamable HTTP wird unter /mcp bereitgestellt; lokale Clients können schrecknet-server --mcp-stdio verwenden.',
+    api2: 'Gespiegelte Karten-REST-Endpunkte liegen unter /api/v1.',
+  },
+  about: {
+    eyebrow: 'Über SchreckNet',
+    title: 'Die V5-Kartenbibliothek und Deck-Werkstatt.',
+    lead: 'SchreckNet ist ein von Grund auf neu gebauter, offline-first Nachbau von VDB, der sich ausschließlich auf die Kartenrecherche und den Deckbau von VTES Fifth Edition konzentriert. Turnierarchive, Community-Ranglisten und Playtest-Programm-Funktionen liegen bewusst außerhalb des Umfangs.',
+    travelTitle: 'Für unterwegs gebaut',
+    travel1: 'Kartensuche und lokale Decks funktionieren weiter, nachdem die App und die V5-Datenbank zwischengespeichert wurden.',
+    travel2: 'Deine anonymen Decks liegen in einer separaten, beschreibbaren SQLite-Datenbank in diesem Browser.',
+    engineTitle: 'Eine Regel-Engine',
+    engine1: 'Die Rust-Domänenlogik läuft nativ auf dem Server und als WebAssembly im Browser.',
+    engine2: 'SQLite ist die Speicherschicht auf beiden Seiten; MCP und REST teilen sich dieselben Kartendienste.',
+    creditsTitle: 'Danksagungen',
+    creditsBuildsOn: 'SchreckNet baut auf',
+    creditsAnd: 'sowie auf Kartendaten und Urteilen von',
+    creditsCardData: '. Der Quellcode ist unter der MIT-Lizenz verfügbar.',
+    creditsRights:
+      'Teile des Materials sind Copyright und Marken von Paradox Interactive AB und werden mit Genehmigung verwendet. Alle Rechte vorbehalten. Weitere Informationen unter worldofdarkness.com. SchreckNet ist inoffizieller Fan-Inhalt und wird von Paradox Interactive weder unterstützt noch ist es damit verbunden; es handelt sich nicht um offizielles World-of-Darkness-Material.',
+  },
+  changelog: {
+    eyebrow: 'Änderungen',
+    title: 'Was sich bei SchreckNet geändert hat.',
+    lead: 'Meilensteine für die V5-Kartenrecherche- und Deckbau-Werkstatt.',
+    entries: [
+      { date: '2026-07-22', title: 'Suche in deiner Sprache', summary: 'Krypta- und Bibliotheksrecherche folgt jetzt der gewählten Oberflächensprache Englisch, Spanisch oder Französisch.', items: ['Exakte, Regex-, semantische, Set-, Vorkonstruktions-, Merkmals- und Sortiersteuerungen lokalisiert.', 'Browser-Testabdeckung für beide Suchrouten auf Spanisch und Französisch hinzugefügt.'] },
+      { date: '2026-07-22', title: 'Responsives Deckbauen', summary: 'Die komplette Werkstatt passt jetzt auch auf kompakte Handys, ohne zentrale Aktionen zu verstecken.', items: ['Zehn Hauptrouten bei 320 px und 360 px geprüft.', 'Touch-Ziele, Inventar-Layout und den gefüllten Deck-Editor verbessert.'] },
+      { date: '2026-07-22', title: 'Lokales Inventar fertig', summary: 'Anonymes Inventar funktioniert offline neben lokalen Decks.', items: ['Filter für besessene Karten, Listen fehlender Karten, Wunschlisten-Export und Proxy-Integration hinzugefügt.', 'Inventar- und Deckdaten in der browserlokalen Benutzerdatenbank behalten.'] },
+      { date: '2026-07-21', title: 'Offline-semantische Recherche', summary: 'Konzeptsuche ist möglich, ohne Kartentext oder Anfragen an ein entferntes Modell zu senden.', items: ['Ein prüfsummenfixiertes lokales Modell und eingebettete V5-Vektoren hinzugefügt.', 'Browser-, REST- und MCP-Ergebnisreihenfolge über gemeinsamen Rust-Code synchron gehalten.'] },
+    ],
+  },
+  search: {
+    nameText: 'Name / Text', semanticPrompt: 'Beschreibe ein Kartenkonzept (Englisch)', all: 'Alle', any: 'Beliebig', not: 'Nicht', only: 'Nur', name: 'Name', text: 'Text', artist: 'Künstler', clear: 'leeren', loading: 'Lade Kartendatenbank…', loadError: 'Kartendatenbank konnte nicht geladen werden', noMatches: 'Keine Karten entsprechen diesen Filtern.', sort: 'Sortieren', relevance: 'Relevanz', onlyOwned: 'Nur besessene', onlyInFormat: 'Nur im Format', traits: 'Merkmale', allTraitsRequired: 'alle ausgewählten Merkmale erforderlich', set: 'Set', anySet: 'Beliebiges Set', setAge: 'Set-Alter-Beziehung', inSet: 'Im Set', orNewer: 'Oder neuer', orOlder: 'Oder älter', notNewer: 'Nicht neuer', notOlder: 'Nicht älter', printing: 'Druck-Beziehung', anyPrinting: 'Beliebiger Druck', onlyIn: 'Nur in', firstPrint: 'Erstdruck', reprint: 'Nachdruck', preconFilters: 'Vorkonstruktions-Filter', addPrecon: 'Vorkonstruktion hinzufügen', anyPrecon: 'Beliebige Vorkonstruktion / weitere hinzufügen…', selectedPrecons: 'Ausgewählte Vorkonstruktionen', removePrecon: (precon, set) => `${precon} aus ${set} entfernen`, semantic: 'Semantisch', semanticTitle: 'Karten per englischem Konzept mit dem lokalen Offline-Modell finden', semanticIdle: 'Beschreibe ein englisches Kartenkonzept. Die erste Nutzung lädt etwa 46 MB (Modell + Laufzeit) herunter; Anfragen bleiben auf diesem Gerät.', semanticLoading: 'Bereite das lokale semantische Modell vor…', semanticDownloading: 'Lokales Modell wird heruntergeladen', semanticReady: 'Lokales semantisches Modell bereit. Ergebnisse sind kosinussortiert; der Wert ist eine Ähnlichkeit, keine Wahrscheinlichkeit.', semanticUnavailable: (error) => `Semantisches Modell nicht verfügbar: ${error}`, retry: 'Erneut versuchen', removeModel: 'Lokales Modell entfernen',
+  },
+  cryptSearch: {
+    anyClan: 'Beliebiger Klan', anyTitle: 'Beliebiger Titel', nonTitled: 'Ohne Titel', votes: 'Stimmen', anyVotes: 'Beliebige Stimmen', noVotes: 'Keine Stimmen', votesAtLeast: (count) => `${count}+ Stimmen`, group: 'Gruppe', capacity: 'Kap', minimum: 'min', maximum: 'max', sect: 'Sekte', orDiscipline: '+ ODER-Disziplin', choose: 'Wählen…', results: (count, semantic) => `${count} Kryptakarten${semantic ? ' semantisch' : ''}`, semanticEmpty: 'Beschreibe ein Konzept, um die V5-Krypta zu durchsuchen.', sortCapacityDesc: 'Kapazität hoch–niedrig', sortCapacityAsc: 'Kapazität niedrig–hoch', sortClan: 'Klan', sortGroup: 'Gruppe', sortName: 'Name', sortSect: 'Sekte', similarity: 'Ähnlichkeit',
+  },
+  librarySearch: {
+    anyType: 'Beliebiger Typ', anyClanRequirement: 'Beliebige Klan-Anforderung', requiresCapacity: 'erfordert Kap', blood: 'Blut', pool: 'Pool', disciplineLogic: 'Disziplin-Logik', noRequirement: 'Keine Anforderung', sect: 'Sekte', title: 'Titel', results: (count, semantic) => `${count} Bibliothekskarten${semantic ? ' semantisch' : ''}`, semanticEmpty: 'Beschreibe ein Konzept, um die V5-Bibliothek zu durchsuchen.', sortRequirement: 'Klan / Disziplin', sortCostDesc: 'Kosten hoch–niedrig', sortCostAsc: 'Kosten niedrig–hoch', sortName: 'Name', sortType: 'Typ', similarity: 'Ähnlichkeit', requirement: 'Anforderung', notRequired: 'Nicht erforderlich', titledSpecific: 'Betitelt (bestimmt)', titledAny: 'Betitelt (beliebig)', nonTitled: 'Ohne Titel',
+  },
+  inventory: {
+    title: 'Inventar', counts: (crypt, library) => `${crypt} Krypta · ${library} Bibliothek`, loading: 'Lade Inventar…', loadError: 'Inventar konnte nicht geladen werden', importExportTitle: 'Text importieren / exportieren', exportTxt: 'Exportieren .txt', loadTxt: 'Laden .txt', importText: 'Text importieren…', hideImport: 'Import ausblenden', importPlaceholder: 'Füge eine Kartenliste ein, z. B.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', addToInventory: 'Zum Inventar hinzufügen', importing: 'Importiere…', addedCards: (count) => `${count} Karte${count === 1 ? '' : 'n'} hinzugefügt.`, couldNotMatch: (names) => `Konnte nicht gefunden werden: ${names}.`, addRemovePreconTitle: 'Vorkonstruktion hinzufügen / entfernen', preconNote: 'Kartenmengen pro Vorkonstruktion werden von der Datenquelle nicht erfasst, daher fügt dies eine Kopie jeder einzelnen Karte im bekannten Pool des Decks hinzu oder entfernt sie — kein vollständiges, spielfertiges Deck.', choosePrecon: 'Vorkonstruktion wählen…', adding: 'Füge hinzu…', removeFromInventory: 'Aus Inventar entfernen', removing: 'Entferne…', addedCopies: (count) => `Je 1 Kopie von ${count} Karten hinzugefügt.`, removedCopies: (count) => `Je 1 Kopie von ${count} Karten entfernt.`, missingCardsTitle: (total, count) => `Fehlende Karten — ${total} Exemplare auf ${count} Karte${count === 1 ? '' : 'n'}`, exportWantList: 'Wunschliste exportieren .txt', missingNote: 'Was jedes im Inventar erfasste Deck insgesamt noch braucht — Decks, die als "Nicht im Inventar" markiert sind, zählen nicht mit.', crypt: 'Krypta', library: 'Bibliothek', noCryptOwned: 'Noch keine Kryptakarten besessen.', noLibraryOwned: 'Noch keine Bibliothekskarten besessen.', removeAria: (name) => `${name} aus dem Inventar entfernen`,
+  },
+  addCardBox: {
+    placeholderCrypt: 'Kryptakarte per Namen hinzufügen…', placeholderLibrary: 'Bibliothekskarte per Namen hinzufügen…',
+  },
+  precons: {
+    title: 'Vorkonstruierte Decks', intro: 'Offizielle vorkonstruierte Decks aus dem V5-Pool, gruppiert nach Set. Kartenmengen pro Deck werden von der Datenquelle nicht erfasst — jeder Eintrag zeigt den bekannten Kartenpool des Decks.', cardCountNote: 'Kartenpool dieser Vorkonstruktion — Mengen werden von der Datenquelle nicht erfasst, daher zeigt dies, welche Karten dazugehören, keine spielfertige Deckliste.', loading: 'Lade Vorkonstruktionen…', loadError: (error) => `Vorkonstruktionen konnten nicht geladen werden: ${error}`, backToPrecons: '← Vorkonstruktionen', cardsSuffix: (count) => `${count} Karten`, cryptCount: (count) => `Krypta · ${count}`, libraryCount: (count) => `Bibliothek · ${count}`, none: 'Keine',
+  },
+  decks: {
+    newDeckPlaceholder: 'Name des neuen Decks', createDeck: 'Deck erstellen', compareTwoDecks: 'Zwei Decks vergleichen →', loading: 'Lade Decks…', loadError: (error) => `Deine Decks konnten nicht geladen werden: ${error}`, noDecks: 'Noch keine Decks — Decks werden lokal in diesem Browser gespeichert (kein Konto nötig).', ownsCopies: 'Besitzt Exemplare', sharesCopies: 'Teilt Exemplare', missingSuffix: (count) => `${count} fehlend`, byAuthor: (author) => `von ${author}`, clone: 'Klonen', delete: 'Löschen', confirmDelete: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`,
+  },
+}
+
+const STRINGS: Record<UiLanguage, UiStrings> = { en, es, fr, de }
 
 export function getUiStrings(language: string): UiStrings {
   return STRINGS[resolveUiLanguage(language)]

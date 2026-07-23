@@ -47,6 +47,8 @@ export function languageLabel(language: string): string {
       return 'Español'
     case 'fr':
       return 'Français'
+    case 'de':
+      return 'Deutsch'
     case 'pt':
     case 'pt-br':
       return 'Português'

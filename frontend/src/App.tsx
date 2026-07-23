@@ -17,25 +17,21 @@ import LimitedFormatPage from './components/LimitedFormatPage'
 import { AboutPage, HelpPage } from './components/InfoPages'
 import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
-import { getUiStrings } from './lib/i18n'
+import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
 import { useHashRoute, navigate } from './lib/route'
 
 const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'precons', 'rules', 'changelog', 'help', 'about'] as const
+const LANGUAGE_FLAGS: Record<string, string> = { en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪' }
 
 export default function App() {
   const [meta, setMeta] = useState<CardMeta | null>(null)
   const route = useHashRoute()
   const { language, setLanguage } = useCardLanguage()
-  const availableLanguages = meta?.languages?.length ? meta.languages : ['en']
   const ui = getUiStrings(language)
 
   useEffect(() => {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
-
-  useEffect(() => {
-    if (meta && !availableLanguages.includes(language)) setLanguage('en')
-  }, [availableLanguages, language, meta, setLanguage])
 
   const wide =
     route.page === 'crypt' ||
@@ -62,23 +58,24 @@ export default function App() {
           ⌘K
         </kbd>
         <div className="ml-auto flex items-center gap-2">
-          {availableLanguages.length > 1 && (
-            <label className="flex items-center gap-1.5 text-xs text-ink-dim">
-              <span className="hidden sm:inline">{ui.header.cardTextLabel}</span>
-              <select
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-                aria-label="Card text language"
-                className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-blood-hi"
+          <div className="flex items-center gap-0.5" role="group" aria-label={ui.header.cardTextLabel}>
+            {UI_LANGUAGES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setLanguage(option)}
+                aria-pressed={language === option}
+                aria-label={languageLabel(option)}
+                title={languageLabel(option)}
+                className={
+                  'grid size-7 place-items-center rounded-lg text-base leading-none transition ' +
+                  (language === option ? 'bg-raised ring-1 ring-blood-hi' : 'opacity-60 hover:opacity-100')
+                }
               >
-                {availableLanguages.map((option) => (
-                  <option key={option} value={option}>
-                    {languageLabel(option)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+                {LANGUAGE_FLAGS[option] ?? option.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <span className="hidden rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted sm:inline">
           {meta ? ui.header.cardCounts(meta.crypt, meta.library) : ui.header.v5Only}
           </span>
@@ -171,6 +168,7 @@ export default function App() {
         <span className="flex justify-center gap-3">
           <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">{ui.footer.help}</button>
           <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">{ui.footer.about}</button>
+          <a href="https://ko-fi.com/jannikostertag" target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted">{ui.footer.support}</a>
         </span>
       </footer>
     </div>
