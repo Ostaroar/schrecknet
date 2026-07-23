@@ -39,6 +39,9 @@ pub struct PlayerResultInput {
     pub player_name: String,
     #[serde(default)]
     pub deck_name: Option<String>,
+    /// Optional private archetype id from SchreckNet's local archetype catalog.
+    #[serde(default)]
+    pub archetype_id: Option<String>,
     /// Victory points earned (0–5 in halves, per standard VTES scoring).
     pub vp: f64,
     /// Whether this player achieved the game-win condition (tiebreak marker).
@@ -51,6 +54,16 @@ pub struct DeleteGameParams {
     pub code: String,
     /// The game's id, as returned by log_group_game/list_group_games.
     pub game_id: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct UpdateGameParams {
+    pub code: String,
+    pub game_id: i64,
+    pub played_at: String,
+    #[serde(default)]
+    pub notes: Option<String>,
+    pub results: Vec<PlayerResultInput>,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -68,6 +81,7 @@ pub struct LogGameParams {
 pub struct PlayerResultRecord {
     pub player_name: String,
     pub deck_name: Option<String>,
+    pub archetype_id: Option<String>,
     pub vp: f64,
     pub game_win: bool,
 }
@@ -181,7 +195,7 @@ fn group_id(conn: &Connection, code: &str) -> rusqlite::Result<Option<i64>> {
 
 fn results_for_game(conn: &Connection, game_id: i64) -> rusqlite::Result<Vec<PlayerResultRecord>> {
     let mut statement = conn.prepare(
-        "SELECT player_name, deck_name, vp, game_win FROM group_game_results
+        "SELECT player_name, deck_name, archetype_id, vp, game_win FROM group_game_results
          WHERE game_id = ?1 ORDER BY position",
     )?;
     let results = statement
@@ -189,8 +203,9 @@ fn results_for_game(conn: &Connection, game_id: i64) -> rusqlite::Result<Vec<Pla
             Ok(PlayerResultRecord {
                 player_name: row.get(0)?,
                 deck_name: row.get(1)?,
-                vp: row.get(2)?,
-                game_win: row.get::<_, i64>(3)? != 0,
+                archetype_id: row.get(2)?,
+                vp: row.get(3)?,
+                game_win: row.get::<_, i64>(4)? != 0,
             })
         })?
         .collect();
@@ -217,13 +232,15 @@ pub fn log_game(
 
     for (position, result) in params.results.iter().enumerate() {
         conn.execute(
-            "INSERT INTO group_game_results (game_id, position, player_name, deck_name, vp, game_win)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO group_game_results
+             (game_id, position, player_name, deck_name, archetype_id, vp, game_win)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params![
                 game_id,
                 position as i64,
                 result.player_name,
                 result.deck_name,
+                result.archetype_id,
                 result.vp,
                 result.game_win,
             ],
@@ -235,6 +252,53 @@ pub fn log_game(
         played_at: params.played_at.clone(),
         notes: params.notes.clone(),
         results: results_for_game(conn, game_id)?,
+    }))
+}
+
+/// Replaces a game's metadata and ordered results atomically. The group code
+/// scopes the update just like deletion; false means unknown code/game.
+pub fn update_game(
+    conn: &Connection,
+    params: &UpdateGameParams,
+) -> Result<Option<GameRecord>, GameGroupError> {
+    if params.results.is_empty() {
+        return Err(GameGroupError::EmptyResults);
+    }
+    let transaction = conn.unchecked_transaction()?;
+    let changed = transaction.execute(
+        "UPDATE group_games SET played_at = ?1, notes = ?2
+         WHERE id = ?3 AND group_id = (SELECT id FROM game_groups WHERE code = ?4)",
+        rusqlite::params![params.played_at, params.notes, params.game_id, params.code],
+    )?;
+    if changed == 0 {
+        return Ok(None);
+    }
+    transaction.execute(
+        "DELETE FROM group_game_results WHERE game_id = ?1",
+        [params.game_id],
+    )?;
+    for (position, result) in params.results.iter().enumerate() {
+        transaction.execute(
+            "INSERT INTO group_game_results
+             (game_id, position, player_name, deck_name, archetype_id, vp, game_win)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![
+                params.game_id,
+                position as i64,
+                result.player_name,
+                result.deck_name,
+                result.archetype_id,
+                result.vp,
+                result.game_win,
+            ],
+        )?;
+    }
+    transaction.commit()?;
+    Ok(Some(GameRecord {
+        id: params.game_id,
+        played_at: params.played_at.clone(),
+        notes: params.notes.clone(),
+        results: results_for_game(conn, params.game_id)?,
     }))
 }
 
@@ -370,6 +434,7 @@ mod tests {
             results: vec![PlayerResultInput {
                 player_name: "Alex".into(),
                 deck_name: None,
+                archetype_id: None,
                 vp: 1.0,
                 game_win: false,
             }],
@@ -606,10 +671,124 @@ mod tests {
         .unwrap());
     }
 
+    #[test]
+    fn updates_a_game_atomically_and_round_trips_archetypes() {
+        let conn = seed();
+        let group = create_group(&conn, &CreateGroupParams { name: "G".into() }).unwrap();
+        let game = log_game(
+            &conn,
+            &LogGameParams {
+                code: group.code.clone(),
+                played_at: "2026-07-20".into(),
+                notes: None,
+                results: vec![player("Alex", 2.0, true), player("Sam", 0.0, false)],
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        let updated = update_game(
+            &conn,
+            &UpdateGameParams {
+                code: group.code.clone(),
+                game_id: game.id,
+                played_at: "2026-07-21".into(),
+                notes: Some("corrected seating".into()),
+                results: vec![
+                    PlayerResultInput {
+                        player_name: "Sam".into(),
+                        deck_name: Some("Brujah".into()),
+                        archetype_id: Some("big-stick".into()),
+                        vp: 3.0,
+                        game_win: true,
+                    },
+                    PlayerResultInput {
+                        player_name: "Jo".into(),
+                        deck_name: None,
+                        archetype_id: Some("swarm".into()),
+                        vp: 1.0,
+                        game_win: false,
+                    },
+                ],
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(updated.played_at, "2026-07-21");
+        assert_eq!(updated.notes.as_deref(), Some("corrected seating"));
+        assert_eq!(updated.results[0].player_name, "Sam");
+        assert_eq!(
+            updated.results[0].archetype_id.as_deref(),
+            Some("big-stick")
+        );
+        assert_eq!(updated.results[1].player_name, "Jo");
+
+        let board = leaderboard(&conn, &GroupCodeParams { code: group.code })
+            .unwrap()
+            .unwrap();
+        assert_eq!(board.len(), 2);
+        assert_eq!(board[0].player_name, "Sam");
+        assert_eq!(board[0].total_vp, 3.0);
+        assert!(board.iter().all(|entry| entry.player_name != "Alex"));
+    }
+
+    #[test]
+    fn update_refuses_other_groups_and_empty_results_without_changing_the_game() {
+        let conn = seed();
+        let group_a = create_group(&conn, &CreateGroupParams { name: "A".into() }).unwrap();
+        let group_b = create_group(&conn, &CreateGroupParams { name: "B".into() }).unwrap();
+        let game = log_game(
+            &conn,
+            &LogGameParams {
+                code: group_a.code.clone(),
+                played_at: "2026-07-20".into(),
+                notes: Some("original".into()),
+                results: vec![player("Alex", 1.0, true)],
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        assert!(update_game(
+            &conn,
+            &UpdateGameParams {
+                code: group_b.code,
+                game_id: game.id,
+                played_at: "2026-07-22".into(),
+                notes: None,
+                results: vec![player("Intruder", 5.0, true)],
+            },
+        )
+        .unwrap()
+        .is_none());
+        assert!(matches!(
+            update_game(
+                &conn,
+                &UpdateGameParams {
+                    code: group_a.code.clone(),
+                    game_id: game.id,
+                    played_at: "2026-07-22".into(),
+                    notes: None,
+                    results: vec![],
+                },
+            ),
+            Err(GameGroupError::EmptyResults)
+        ));
+
+        let games = list_games(&conn, &GroupCodeParams { code: group_a.code })
+            .unwrap()
+            .unwrap();
+        assert_eq!(games[0].played_at, "2026-07-20");
+        assert_eq!(games[0].notes.as_deref(), Some("original"));
+        assert_eq!(games[0].results[0].player_name, "Alex");
+    }
+
     fn player(name: &str, vp: f64, game_win: bool) -> PlayerResultInput {
         PlayerResultInput {
             player_name: name.into(),
             deck_name: None,
+            archetype_id: None,
             vp,
             game_win,
         }

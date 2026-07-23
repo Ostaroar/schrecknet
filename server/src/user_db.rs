@@ -5,6 +5,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0002_deck_author.sql"),
     include_str!("../../migrations/0003_inventory.sql"),
     include_str!("../../migrations/0004_game_groups.sql"),
+    include_str!("../../migrations/0005_game_group_archetypes.sql"),
 ];
 
 pub fn migrate(path: &str) -> rusqlite::Result<()> {
@@ -64,11 +65,20 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
+        let archetype_columns: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('group_game_results')
+                 WHERE name = 'archetype_id'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(version, MIGRATIONS.len());
         assert_eq!(author_columns, 1);
         assert_eq!(inventory_mode_columns, 1);
         assert_eq!(inventory_tables, 2);
         assert_eq!(game_group_tables, 3);
+        assert_eq!(archetype_columns, 1);
     }
 
     #[test]

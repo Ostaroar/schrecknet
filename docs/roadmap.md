@@ -312,9 +312,10 @@ model as a shared document link. Full design, data model, and milestone breakdow
 - ☑ G3 log-game form (date, notes, per-player name/deck/VP/game-win) + recent-games
   history list. Live-verified: 4-player 2-game fixture, leaderboard matches
   hand-computed numbers exactly; leave/rejoin by code round-trips.
-- ☐ G4 (optional follow-ups): localize the page, seating/predator-prey chain per
-  game, edit/delete a logged game, archetype-performance tie-in with
-  `lib/archetypeTags.ts`, CSV/text export
+- ☑ G4 complete: localized table page (en/es/fr/de), circular seating with
+  predator/prey display, atomic edit/delete over matching REST + MCP operations,
+  private archetype-performance summaries reusing `lib/archetypeTags.ts`, and
+  complete CSV/text history export. No public or cross-group rankings.
 
 ## Phase 7 — SEO / GEO / AEO (additive, owner-requested)
 _Requested directly by the project owner (2026-07-23): the site needs to be findable

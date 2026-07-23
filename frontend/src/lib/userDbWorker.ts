@@ -13,6 +13,7 @@ import migration001 from '../../../migrations/0001_user_data.sql?raw'
 import migration002 from '../../../migrations/0002_deck_author.sql?raw'
 import migration003 from '../../../migrations/0003_inventory.sql?raw'
 import migration004 from '../../../migrations/0004_game_groups.sql?raw'
+import migration005 from '../../../migrations/0005_game_group_archetypes.sql?raw'
 
 type OpenMsg = { id: number; kind: 'open' }
 type QueryMsg = { id: number; kind: 'query'; sql: string; params: (string | number | null)[] }
@@ -20,7 +21,7 @@ type RunMsg = { id: number; kind: 'run'; sql: string; params: (string | number |
 type InMsg = OpenMsg | QueryMsg | RunMsg
 
 const DB_NAME = '/user.sqlite'
-const MIGRATIONS = [migration001, migration002, migration003, migration004]
+const MIGRATIONS = [migration001, migration002, migration003, migration004, migration005]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null

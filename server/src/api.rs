@@ -10,7 +10,7 @@ use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::game_groups::{
     self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,
-    PlayerResultInput,
+    PlayerResultInput, UpdateGameParams,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
 use crate::AppState;
@@ -229,6 +229,26 @@ pub async fn delete_group_game(
         Ok(Err(error)) => game_group_error_response(error),
         Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     }
+}
+
+pub async fn update_group_game(
+    State(state): State<AppState>,
+    Path((code, game_id)): Path<(String, i64)>,
+    Json(body): Json<LogGameBody>,
+) -> impl IntoResponse {
+    run_app_optional(state, move |conn| {
+        game_groups::update_game(
+            conn,
+            &UpdateGameParams {
+                code,
+                game_id,
+                played_at: body.played_at,
+                notes: body.notes,
+                results: body.results,
+            },
+        )
+    })
+    .await
 }
 
 fn game_group_error_response(error: GameGroupError) -> axum::response::Response {

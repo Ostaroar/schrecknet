@@ -16,6 +16,19 @@ export interface ArchetypeMatch {
   blurb: string
 }
 
+export const ARCHETYPE_OPTIONS = [
+  { id: 'stealth-bleed', label: 'Stealth Bleed' },
+  { id: 'big-stick', label: 'Big Stick Melee' },
+  { id: 'vote-kingdom', label: 'Vote Kingdom' },
+  { id: 'fast-master', label: 'Fast Master' },
+  { id: 'swarm', label: 'Swarm' },
+  { id: 'star-vampire', label: 'Star Vampire' },
+] as const
+
+export function archetypeLabel(id: string | null | undefined): string | null {
+  return ARCHETYPE_OPTIONS.find((option) => option.id === id)?.label ?? null
+}
+
 const BLEED_TRAITS = new Set(['bleed', '1 bleed', '2 bleed'])
 const STEALTH_TRAITS = new Set(['stealth', '1 stealth'])
 const COMBAT_TRAITS = new Set(['strength', '1 strength', '2 strength', 'combat ends', 'additional strike', 'aggravated', 'maneuver'])

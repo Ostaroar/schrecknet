@@ -104,7 +104,7 @@ async fn main() {
         )
         .route(
             "/api/v1/groups/{code}/games/{game_id}",
-            delete(api::delete_group_game),
+            delete(api::delete_group_game).put(api::update_group_game),
         )
         // Build-time-prerendered static card page (docs/seo-geo-aeo-plan.md
         // § 4.3, S3) — falls back to the SPA shell for an id with no

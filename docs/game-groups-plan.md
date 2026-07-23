@@ -153,7 +153,7 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
   logged two games in-browser (create → log → leaderboard → leave/rejoin by code),
   numbers match the same fixture used in the Rust tests exactly.
 
-### G4 — (Optional follow-ups, not blocking)
+### G4 — Complete ☑
 - ☑ Join multiple groups — owner-requested (2026-07-23). `lib/gameGroups.ts` now
   stores a *list* of joined codes (`schrecknet.game-group-codes`, migrated
   transparently from the old single-code key) plus a separate "active code"
@@ -172,14 +172,17 @@ hand-rolled-over-a-dependency precedent (the base64 share-token encoder). Retry 
   live-verified both the cancel path (declined confirm leaves the game/leaderboard
   untouched) and the accept path (game and its leaderboard contribution disappear
   immediately).
-- Localize `TablePage.tsx` (en/es/fr/de), matching the rest of the interface.
-- Seating/predator-prey chain per game (if the group wants positional stats).
-- Edit a logged game's numbers after the fact (delete-and-relog covers the
-  common case now).
-- Per-deck-archetype tie-in: reuse `lib/archetypeTags.ts` to tag which archetypes
-  perform best in the group's own game history — genuinely novel, no other VTES tool
-  does this, but explicitly deferred past the first working slice.
-- CSV/text export of game history.
+- ☑ Localized `TablePage.tsx` in English, Spanish, French, and German through the
+  same typed `lib/i18n.ts` catalog as the rest of the interface.
+- ☑ Seating/predator-prey chain per game. Result order is the canonical circular
+  seating order; every history entry and export names each player's predator and prey.
+- ☑ Edit a logged game through atomic REST + MCP update operations. The group code
+  scopes updates, and replacing metadata/results happens in one SQLite transaction.
+- ☑ Per-deck-archetype tie-in reuses `lib/archetypeTags.ts`. Optional archetypes
+  persist per result and the private group view aggregates games, average VP, wins,
+  and win rate; there is no public or cross-group ranking.
+- ☑ CSV/text export of complete game history, including seating, predator/prey,
+  deck, archetype, VP, and game win.
 
 ## 8. Guardrails
 

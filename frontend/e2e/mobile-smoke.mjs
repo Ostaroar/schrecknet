@@ -47,7 +47,7 @@ try {
   const page = await browser.newPage({ viewport: { width: viewportWidth, height: 800 }, isMobile: true, hasTouch: true })
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
-  const routes = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'changelog', 'help', 'about', 'cards/100401']
+  const routes = ['crypt', 'library', 'decks', 'inventory', 'precons', 'table', 'rules', 'changelog', 'help', 'about', 'cards/100401']
 
   async function checkRoute(route) {
     await page.goto(`${baseUrl}/${route}`, { waitUntil: 'domcontentloaded' })

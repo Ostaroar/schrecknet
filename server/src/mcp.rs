@@ -18,6 +18,7 @@ use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::game_groups::{
     self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,
+    UpdateGameParams,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
 
@@ -208,6 +209,19 @@ impl SchreckNetMcp {
         json_value(
             &game_groups::delete_game(&conn, &params).map_err(|e| game_group_error(e.into()))?,
         )
+    }
+
+    #[tool(
+        description = "Replace one logged game's date, notes, ordered seating/results, deck names, \
+        archetypes, VP, and game-win markers. The game must belong to the private group identified \
+        by `code`. Returns null if the code or game id does not match."
+    )]
+    async fn update_group_game(
+        &self,
+        Parameters(params): Parameters<UpdateGameParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open_app()?;
+        json_value(&game_groups::update_game(&conn, &params).map_err(game_group_error)?)
     }
 
     #[tool(

@@ -12,6 +12,7 @@ export interface GroupInfo {
 export interface PlayerResult {
   player_name: string
   deck_name?: string | null
+  archetype_id?: string | null
   vp: number
   game_win: boolean
 }
@@ -144,4 +145,21 @@ export async function deleteGroupGame(code: string, gameId: number): Promise<boo
     throw new Error(message || `request failed with status ${response.status}`)
   }
   return true
+}
+
+export async function updateGroupGame(
+  code: string,
+  gameId: number,
+  game: { played_at: string; notes?: string | null; results: PlayerResult[] },
+): Promise<GameRecord | null> {
+  const response = await fetch(
+    `/api/v1/groups/${encodeURIComponent(code)}/games/${gameId}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(game),
+    },
+  )
+  if (response.status === 404) return null
+  return asJson<GameRecord>(response)
 }
