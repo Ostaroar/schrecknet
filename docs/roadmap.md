@@ -345,8 +345,11 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   server binary + a real browser; the new Dockerfile `prerender-build` stage
   is confirmed green in CI (`docker.yml` run 29990857841 — full multi-stage
   build succeeded).
-- ☐ S4 prerender secondary routes (`/rules`, `/precons`, `/help`, `/about`,
-  `/changelog`) + sitemap regenerated against real paths
+- ◐ S4 prerender secondary routes: ☑ `/precons` (data-driven, zero content-drift
+  risk, live-verified); `/rules`/`/help`/`/about`/`/changelog` deliberately deferred
+  until there's a shared EN-copy source both TS and Rust can read, rather than a
+  second hand-copied version that silently drifts — see plan doc S4. Sitemap
+  regeneration still pending.
 - ☐ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers,
   `llms.txt` (informal/unproven convention, kept low-effort)
 - ☐ S6 (optional, infra-adjacent): Core Web Vitals/Lighthouse check once a real

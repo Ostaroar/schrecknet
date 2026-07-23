@@ -87,6 +87,18 @@ pub async fn get_card(State(state): State<AppState>, Path(id): Path<i64>) -> imp
     }
 }
 
+async fn serve_prerendered(state: &AppState, relative_path: &str) -> axum::response::Response {
+    let path = format!("{}/{relative_path}", state.static_dir);
+    if let Ok(html) = tokio::fs::read_to_string(&path).await {
+        return Html(html).into_response();
+    }
+    let index_path = format!("{}/index.html", state.static_dir);
+    match tokio::fs::read_to_string(&index_path).await {
+        Ok(html) => Html(html).into_response(),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
+}
+
 /// Serves the build-time-prerendered static HTML for one card id at the same
 /// real path the SPA itself navigates to (docs/seo-geo-aeo-plan.md § 4.3).
 /// Falls back to the SPA shell for an id with no prerendered file — same
@@ -95,15 +107,13 @@ pub async fn get_prerendered_card(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    let card_path = format!("{}/cards/{id}.html", state.static_dir);
-    if let Ok(html) = tokio::fs::read_to_string(&card_path).await {
-        return Html(html).into_response();
-    }
-    let index_path = format!("{}/index.html", state.static_dir);
-    match tokio::fs::read_to_string(&index_path).await {
-        Ok(html) => Html(html).into_response(),
-        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
-    }
+    serve_prerendered(&state, &format!("cards/{id}.html")).await
+}
+
+/// Serves the build-time-prerendered precons index (docs/seo-geo-aeo-plan.md
+/// S4) — falls back to the SPA shell if the build didn't produce one yet.
+pub async fn get_prerendered_precons(State(state): State<AppState>) -> impl IntoResponse {
+    serve_prerendered(&state, "precons.html").await
 }
 
 pub async fn get_card_by_name(

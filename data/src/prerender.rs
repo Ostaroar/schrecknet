@@ -225,40 +225,65 @@ fn body_html(card: &CardRow) -> String {
     html
 }
 
-fn render_page(template: &str, card: &CardRow, base_url: Option<&str>) -> String {
-    let title = format!("{} \u{2014} SchreckNet", card.name);
-    let description = description_for(card);
-    let canonical =
-        base_url.map(|base| format!("{}/cards/{}", base.trim_end_matches('/'), card.id));
-
+/// Stamps title/description/OG/Twitter/canonical/JSON-LD into the frontend's
+/// own built `index.html` (its hashed `<script>`/`<link>` tags carry over
+/// untouched) and fills `<div id="root">` with real semantic HTML. Shared by
+/// every prerendered page — card detail pages and the precons index alike.
+fn render_shell(
+    template: &str,
+    title: &str,
+    description: &str,
+    og_type: &str,
+    canonical: Option<&str>,
+    json_ld_script: Option<&str>,
+    body_html: &str,
+) -> String {
     let mut head_extra = format!(
         "<meta name=\"description\" content=\"{d}\">\n\
          <meta property=\"og:title\" content=\"{t}\">\n\
          <meta property=\"og:description\" content=\"{d}\">\n\
-         <meta property=\"og:type\" content=\"article\">\n\
+         <meta property=\"og:type\" content=\"{og_type}\">\n\
          <meta name=\"twitter:card\" content=\"summary\">\n\
          <meta name=\"twitter:title\" content=\"{t}\">\n\
          <meta name=\"twitter:description\" content=\"{d}\">\n",
-        t = escape_html(&title),
-        d = escape_html(&description),
+        t = escape_html(title),
+        d = escape_html(description),
     );
-    if let Some(url) = &canonical {
+    if let Some(url) = canonical {
         head_extra.push_str(&format!(
             "<link rel=\"canonical\" href=\"{}\">\n",
             escape_html(url)
         ));
     }
-    head_extra.push_str(&format!(
-        "<script type=\"application/ld+json\">{}</script>\n",
-        json_ld(card, canonical.as_deref())
-    ));
+    if let Some(json) = json_ld_script {
+        head_extra.push_str(&format!(
+            "<script type=\"application/ld+json\">{json}</script>\n"
+        ));
+    }
 
-    let with_title = replace_between(template, "<title>", "</title>", &escape_html(&title));
+    let with_title = replace_between(template, "<title>", "</title>", &escape_html(title));
     let with_head = with_title.replacen("</head>", &format!("{head_extra}</head>"), 1);
     with_head.replacen(
         "<div id=\"root\"></div>",
-        &format!("<div id=\"root\">{}</div>", body_html(card)),
+        &format!("<div id=\"root\">{body_html}</div>"),
         1,
+    )
+}
+
+fn render_page(template: &str, card: &CardRow, base_url: Option<&str>) -> String {
+    let title = format!("{} \u{2014} SchreckNet", card.name);
+    let description = description_for(card);
+    let canonical =
+        base_url.map(|base| format!("{}/cards/{}", base.trim_end_matches('/'), card.id));
+    let json_ld_script = json_ld(card, canonical.as_deref());
+    render_shell(
+        template,
+        &title,
+        &description,
+        "article",
+        canonical.as_deref(),
+        Some(&json_ld_script),
+        &body_html(card),
     )
 }
 
@@ -296,6 +321,94 @@ pub fn write_card_pages(
         std::fs::write(cards_dir.join(format!("{}.html", card.id)), page)?;
     }
     Ok(cards.len())
+}
+
+struct PreconGroup {
+    set: String,
+    precons: Vec<(String, i64)>,
+}
+
+fn fetch_precons(conn: &Connection) -> rusqlite::Result<Vec<PreconGroup>> {
+    let mut stmt = conn.prepare(
+        "SELECT s.name, p.precon, COUNT(DISTINCT p.card_id) AS card_count
+         FROM printings p JOIN sets s ON s.id = p.set_id
+         WHERE p.precon IS NOT NULL
+         GROUP BY s.name, p.precon
+         ORDER BY s.name, p.precon",
+    )?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    let mut groups: Vec<PreconGroup> = Vec::new();
+    for (set, precon, card_count) in rows {
+        match groups.last_mut() {
+            Some(group) if group.set == set => group.precons.push((precon, card_count)),
+            _ => groups.push(PreconGroup {
+                set,
+                precons: vec![(precon, card_count)],
+            }),
+        }
+    }
+    Ok(groups)
+}
+
+fn precons_body_html(groups: &[PreconGroup]) -> String {
+    let mut html = String::from("<article><h1>VTES V5 Precons</h1>");
+    html.push_str(
+        "<p>Every official Vampire: The Eternal Struggle Fifth Edition preconstructed \
+         starter deck, grouped by set.</p>",
+    );
+    for group in groups {
+        html.push_str(&format!("<h2>{}</h2><ul>", escape_html(&group.set)));
+        for (precon, card_count) in &group.precons {
+            html.push_str(&format!(
+                "<li>{} \u{2014} {} distinct cards</li>",
+                escape_html(precon),
+                card_count
+            ));
+        }
+        html.push_str("</ul>");
+    }
+    html.push_str("</article>");
+    html
+}
+
+/// Writes a single static index page at `out_dir/precons.html` listing every
+/// official V5 precon by set — real, crawlable content, zero maintenance risk
+/// since it's entirely data-driven (no hand-authored copy to fall out of sync
+/// with the TS side, unlike help/about/changelog — deferred, see
+/// docs/seo-geo-aeo-plan.md S4).
+pub fn write_precons_page(
+    conn: &Connection,
+    template: &str,
+    out_dir: &Path,
+    base_url: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
+    let groups = fetch_precons(conn)?;
+    let title = "Precons \u{2014} SchreckNet".to_owned();
+    let description =
+        "Every official Vampire: The Eternal Struggle V5 preconstructed starter deck, \
+         grouped by set."
+            .to_owned();
+    let canonical = base_url.map(|base| format!("{}/precons", base.trim_end_matches('/')));
+    let page = render_shell(
+        template,
+        &title,
+        &description,
+        "website",
+        canonical.as_deref(),
+        None,
+        &precons_body_html(&groups),
+    );
+    std::fs::write(out_dir.join("precons.html"), page)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -374,6 +487,42 @@ mod tests {
         write_card_pages(&conn, TEMPLATE, &dir, None).unwrap();
         let page = std::fs::read_to_string(dir.join("cards/1.html")).unwrap();
         assert!(!page.contains("rel=\"canonical\""));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn writes_a_precons_index_grouped_by_set() {
+        let conn = Connection::open_in_memory().unwrap();
+        seed(&conn);
+        // A second precon in the same set, and one in a different set, to
+        // exercise the grouping.
+        conn.execute_batch(
+            "INSERT INTO cards VALUES
+               (3,'crypt','Baron','','Brujah',6,6,NULL,NULL,NULL,NULL);
+             INSERT INTO sets VALUES (2,'Fifth Edition','2023-03-17');
+             INSERT INTO printings VALUES (3,1,'Path of Death'), (2,2,'Tremere');",
+        )
+        .unwrap();
+
+        let dir = std::env::temp_dir().join(format!(
+            "schrecknet-prerender-test-precons-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        write_precons_page(&conn, TEMPLATE, &dir, Some("https://example.test/")).unwrap();
+        let page = std::fs::read_to_string(dir.join("precons.html")).unwrap();
+
+        assert!(page.contains("<title>Precons \u{2014} SchreckNet</title>"));
+        assert!(page.contains("<link rel=\"canonical\" href=\"https://example.test/precons\">"));
+        assert!(page.contains("<h2>Sabbat V5</h2>"));
+        assert!(page.contains("Path of Power \u{2014} 1 distinct cards"));
+        assert!(page.contains("Path of Death \u{2014} 1 distinct cards"));
+        assert!(page.contains("<h2>Fifth Edition</h2>"));
+        assert!(page.contains("Tremere \u{2014} 1 distinct cards"));
+        assert!(page.contains("/assets/main-XYZ.js"));
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

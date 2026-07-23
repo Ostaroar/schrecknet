@@ -260,10 +260,30 @@ DOKS node pool:
   `cargo test --workspace` and `cargo clippy --workspace --all-targets -- -D
   warnings` both clean.
 
-### S4 — Prerender secondary routes + sitemap regeneration tied to real paths
-- `/rules`, `/precons`, `/help`, `/about`, `/changelog` (§ 4.4); `sitemap.xml`
-  regenerated against the real paths from S2/S3
-- **DoD:** same no-JS `curl` check as S3 for each of these five routes.
+### S4 — Prerender secondary routes + sitemap regeneration tied to real paths (◐ partial)
+- ☑ `/precons` (§ 4.4): `data/src/prerender.rs::write_precons_page` — every official V5
+  precon grouped by set, sourced from the exact same `printings`/`sets` join
+  `cards_db.rs::list_precons` already uses server-side, so it's zero-maintenance
+  (data-driven, no hand-authored copy to fall out of sync). `render_page`'s head-
+  injection logic was factored out into a shared `render_shell` helper, reused by
+  both card pages and this one. Server gains `GET /precons`
+  (`api::get_prerendered_precons`), same fallback-to-SPA-shell pattern as card pages.
+  Wired into the same `schrecknet-data prerender` subcommand and Dockerfile stage as
+  S3 — no new build step. **DoD met:** live-verified — `curl`ing `/precons` with no
+  JS returns all 32 real precons across 7 sets with correct title/description/OG/
+  canonical; the SPA (the actual `PreconBrowser` component) still boots fully
+  interactive on top with no console errors; 3 new Rust unit tests.
+- ☐ `/rules`, `/help`, `/about`, `/changelog` — **deliberately deferred**, not
+  forgotten: unlike precons, their content is hand-authored English copy that
+  already lives in `frontend/src/lib/i18n.ts`. Duplicating it into Rust for
+  prerendering would create a second copy that silently drifts out of sync every
+  time the TS copy changes — a real maintenance trap, not a one-time cost. Needs a
+  shared-source solution first (e.g. a single JSON/data file both the frontend and
+  `schrecknet-data` read) rather than ad hoc duplication; worth its own small design
+  note before picking this back up, not a mechanical extension of S3/the precons work.
+- ☐ `sitemap.xml` regenerated against the real paths from S2/S3 — still pending,
+  independent of the above; can land once a real domain exists (§ 5) to build
+  absolute `<loc>` URLs against.
 
 ### S5 — GEO/AEO-specific extras
 - `robots.txt` GEO/AEO crawler allow-list (§ 4.5); `llms.txt` (§ 4.6)

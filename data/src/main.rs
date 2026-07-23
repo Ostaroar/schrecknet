@@ -97,6 +97,8 @@ fn prerender_cards(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         "prerendered {written} card pages into {}/cards/",
         out_dir.display()
     );
+    prerender::write_precons_page(&conn, &template, &out_dir, base_url.as_deref())?;
+    println!("prerendered {}/precons.html", out_dir.display());
     Ok(())
 }
 

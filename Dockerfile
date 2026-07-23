@@ -30,7 +30,8 @@ COPY --from=rust-build /out/wasm src/wasm
 COPY --from=rust-build /out/models public/models
 RUN npm run build
 
-# --- stage 3: prerender card pages (docs/seo-geo-aeo-plan.md S3) ---
+# --- stage 3: prerender card pages + precons index (docs/seo-geo-aeo-plan.md
+# S3/S4) ---
 # Needs cards.sqlite from rust-build (real card data) and the frontend's
 # already-built index.html from web-build (its hashed script/CSS tags get
 # reused verbatim in every prerendered page). Runs the already-compiled
@@ -40,8 +41,8 @@ RUN npm run build
 # dependency (confirmed via `otool -L` on a local build: no onnxruntime dylib
 # in the link table) -- so unlike the final image below, this stage doesn't
 # need to match rust-build's exact ONNX-linked runtime, just its Debian
-# release for baseline glibc compatibility. Not yet verified with a real
-# `docker build` in CI as of this change -- check docker.yml's next run.
+# release for baseline glibc compatibility. Verified green in CI (docker.yml
+# run 29990857841).
 # SITE_URL is optional: leave unset until a real domain is chosen (see
 # docs/seo-geo-aeo-plan.md § 5) and prerendered pages simply omit the
 # canonical link + JSON-LD url, rather than baking in a wrong one.
