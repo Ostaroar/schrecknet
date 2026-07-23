@@ -9,8 +9,8 @@
 # Node 22 LTS is recommended. If Vite hangs on a newer Node release, use
 # `--prod` with an existing build or switch to Node 22 before `--rebuild`.
 #
-# Requires: rust toolchain, node, wasm-pack, and a built dist/cards.sqlite
-# (run `schrecknet-data build` once if missing).
+# Requires: rust toolchain, node, and wasm-pack. Card data is built on first
+# run and rebuilt whenever the data pipeline is newer than dist/cards.sqlite.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -82,11 +82,18 @@ if [ "$NODE_MAJOR" -gt 22 ]; then
   echo "⚠ Node $(node --version) detected; Node 22 LTS is recommended if Vite hangs."
 fi
 
-# 3. card data (server serves this at /data/*)
-if [ ! -f dist/cards.sqlite ]; then
-  echo "✗ dist/cards.sqlite is missing — run the data pipeline first:"
-  echo "    cargo run -p schrecknet-data -- build"
-  exit 1
+# 3. card data (server serves this at /data/*). A file-exists-only check is
+# insufficient: schema changes in the pipeline would leave an old local DB
+# behind and make new browser queries fail with "no such column".
+DATA_NEEDED=false
+if [ ! -f dist/cards.sqlite ] || [ "$REBUILD" = true ]; then
+  DATA_NEEDED=true
+elif find data/src data/Cargo.toml core/src core/Cargo.toml -type f -newer dist/cards.sqlite -print -quit | grep -q .; then
+  DATA_NEEDED=true
+fi
+if [ "$DATA_NEEDED" = true ]; then
+  echo "→ Building current V5 card database…"
+  cargo run -p schrecknet-data -- build
 fi
 
 # 4. backend on :8000 (serves /data/* + /api/*)

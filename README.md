@@ -54,13 +54,10 @@ This starts the Rust server at <http://localhost:8000>, starts Vite at
 <http://localhost:5173>, and opens the Vite URL. Vite proxies `/api`, `/data`,
 and `/models` to the Rust server. Press `Ctrl-C` once to stop both processes.
 
-The script installs frontend packages and rebuilds the Rust WASM bindings when
-needed. It expects `dist/cards.sqlite` to exist; generate the database first if
-the script reports it missing:
-
-```bash
-cargo run -p schrecknet-data -- build --out dist
-```
+The script installs frontend packages, rebuilds the Rust WASM bindings when
+needed, and creates or refreshes `dist/cards.sqlite` whenever the checked-out
+data pipeline is newer than the local database. This prevents an old local
+schema from surviving a pull.
 
 To exercise the production-style single-server build instead:
 
