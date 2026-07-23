@@ -5,6 +5,7 @@
 // second query path.
 
 import { query } from './db'
+import { query as userQuery, run as userRun } from './userDb'
 
 export interface PreconSummary {
   set: string
@@ -39,4 +40,45 @@ export async function getPreconCardCounts(set: string, precon: string): Promise<
     [set, precon],
   )
   return new Map(rows.map((r) => [r.card_id, r.copies]))
+}
+
+export interface OwnedPrecon {
+  set: string
+  precon: string
+  qty: number
+}
+
+export async function listOwnedPrecons(): Promise<OwnedPrecon[]> {
+  return userQuery<OwnedPrecon>(
+    `SELECT set_name AS "set", precon, qty
+     FROM inventory_precons
+     ORDER BY set_name, precon`,
+  )
+}
+
+export async function getOwnedPreconQty(set: string, precon: string): Promise<number> {
+  const rows = await userQuery<{ qty: number }>(
+    'SELECT qty FROM inventory_precons WHERE set_name = ?1 AND precon = ?2',
+    [set, precon],
+  )
+  return rows[0]?.qty ?? 0
+}
+
+/** Records physical product ownership independently from loose card counts. */
+export async function adjustOwnedPreconQty(
+  set: string,
+  precon: string,
+  delta: number,
+): Promise<number> {
+  const next = Math.max(0, (await getOwnedPreconQty(set, precon)) + delta)
+  if (next === 0) {
+    await userRun('DELETE FROM inventory_precons WHERE set_name = ?1 AND precon = ?2', [set, precon])
+  } else {
+    await userRun(
+      `INSERT INTO inventory_precons (set_name, precon, qty) VALUES (?1, ?2, ?3)
+       ON CONFLICT(set_name, precon) DO UPDATE SET qty = ?3`,
+      [set, precon, next],
+    )
+  }
+  return next
 }

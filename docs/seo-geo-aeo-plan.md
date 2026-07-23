@@ -32,7 +32,7 @@ That's invisible to most of the audience we're trying to reach:
   fed either by live browsing tools or by crawlers that fetch raw HTML and generally
   **do not execute JavaScript at all** (`GPTBot`, `ChatGPT-User`, `ClaudeBot`,
   `anthropic-ai`, `PerplexityBot`, `Google-Extended`, `CCBot`, …). To any of them,
-  every one of our 662 card pages and the rules reference currently looks like an
+  every one of our 829 card pages and the rules reference currently looks like an
   empty `<div id="root">`.
 - **Chat-app link previews** (Slack/Discord/iMessage unfurls, which matter for a
   hobbyist community sharing card links) also read static `<meta>` tags without
@@ -76,7 +76,7 @@ currently reachable without executing our bundle.
 
 | Content | Indexable? | Why |
 |---|---|---|
-| Card detail pages (662, crypt+library) | **Yes — highest value** | Factual, evergreen, exactly what GEO/AEO answer engines want to cite |
+| Card detail pages (829, crypt+library) | **Yes — highest value** | Factual, evergreen, exactly what GEO/AEO answer engines want to cite |
 | `#/rules` game-loop reference | **Yes** | Also factual/evergreen, the "beyond parity" differentiator (Phase 5) |
 | Precons list, Help, About, Changelog | **Yes, lower priority** | Cheap wins once the mechanism exists |
 | Crypt/Library search UI itself | **No** (or minimal) | It's a tool, not a document; no stable canonical URL per query today |
@@ -135,7 +135,7 @@ semantics — see the S3 milestone note below for what actually shipped.)*
 Same mechanism, much smaller: `#/rules` → `/rules/index.html` (i.e. the current
 JSON-derived game-loop content rendered as static text, not just an empty shell),
 `/precons/`, `/help/`, `/about/`, `/changelog/`. Lower priority than card pages
-because there are 5 of these vs. 662 cards, but cheap once § 4.3's plumbing exists.
+because there are 5 of these vs. 829 cards, but cheap once § 4.3's plumbing exists.
 
 ### 4.5 `robots.txt` + `sitemap.xml` (S1, mostly independent of the rest)
 - `robots.txt`: allow everything by default; **explicitly allow** the named GEO/AEO
@@ -188,7 +188,7 @@ DOKS node pool:
   allow-list for GEO/AEO crawlers (§ 4.5), `Disallow` for `/table` and `/share/`.
 - **`sitemap.xml` deliberately deferred to S3/S4.** A sitemap of hash-fragment URLs
   (`#/cards/123`) has no real value — search engines don't crawl fragments as
-  separate documents, so listing 662 of them would just be noise. Shipping a
+  separate documents, so listing 829 of them would just be noise. Shipping a
   low-value stub now would look done without being useful; it lands for real once
   S2/S3 give us real per-card paths to list.
 - **DoD:** live-verified in-browser: `document.title`/`<meta name="description">`/
@@ -271,7 +271,7 @@ DOKS node pool:
   consume it. The rules page consumes the same generated `gameloop.json` as the
   interactive browser reference.
 - Sitemap generation is data-driven: root + five static pages + every card
-  (668 URLs for the current V5 pool). It runs only when `--base-url` (Docker
+  (835 URLs for the current modern BCP/V5 pool). It runs only when `--base-url` (Docker
   `SITE_URL`) is set because sitemap locations must be absolute; an unknown
   production domain is never replaced with a misleading placeholder.
 - Tests assert shared-copy rendering, game-loop rendering, canonical links,

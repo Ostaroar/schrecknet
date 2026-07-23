@@ -79,7 +79,9 @@ CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
                        -- this card one physical copy of `precon` contains
                        -- (KRCG's own per-printing "copies" field; NULL when
                        -- `precon` is NULL, defaults to 1 when precon is set
-                       -- but "copies" was omitted from the source)
+                       -- but "copies" was omitted from the source; anniversary
+                       -- products are normalized to their official 100-card
+                       -- deck, excluding separately packaged bonus cards)
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);   -- KRCG rulings
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
@@ -89,7 +91,7 @@ CREATE TABLE card_embeddings(
   dimensions INT NOT NULL,
   embedding BLOB NOT NULL,         -- normalized little-endian float32 values
   PRIMARY KEY(card_id, model_id)
-) WITHOUT ROWID;                   -- schema v4; ~1 MB for the 662-card V5 pool
+) WITHOUT ROWID;                   -- schema v4; compact vectors for the 829-card pool
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards);
 ```
 
@@ -128,7 +130,7 @@ Multi-Discipline, Advancement, Burn Option, Banned, and No Requirement cases), s
 client filters are pure indexed lookups. KRCG's `Ⓓ` directed-action glyph is
 normalized to VEKN/VDB's `(D)` exclusion semantics. The real-data smoke suite locks
 every positive trait's V5 cardinality and exact representative AND-compositions;
-an independent source-oracle comparison covers all 662 current cards.
+an independent source-oracle comparison covers all 829 current cards.
 
 ## User data
 

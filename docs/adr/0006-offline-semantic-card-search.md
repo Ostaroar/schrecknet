@@ -5,7 +5,7 @@
 ## Context
 
 SchreckNet already supports exact substring, scoped name/text, and regular-expression
-search over the 662-card V5 pool. Semantic search is additive: it should answer concept
+search over the 829-card modern BCP/V5 pool. Semantic search is additive: it should answer concept
 queries such as "wake and block", "gain pool", or "punish actions" even when those
 words do not appear verbatim on a card.
 
@@ -21,7 +21,7 @@ This feature crosses every architectural boundary in the project:
 
 The V5 pool is small enough that vector indexing is not the hard problem. A 384-value
 `f32` embedding for every current card occupies about 1.0 MB before SQLite overhead,
-and ranking all 662 vectors requires only 254,208 multiply-add pairs per query. Model
+and ranking all 829 vectors requires only 318,336 multiply-add pairs per query. Model
 inference and reproducibility matter more than approximate-nearest-neighbour indexing.
 
 ## Decision
@@ -116,7 +116,7 @@ inference and reproducibility matter more than approximate-nearest-neighbour ind
 2. **Embedded corpus — complete:** `models/semantic.json` pins revision
    `751bff37182d3f1213fa05d7196b954e230abad9` and all six file checksums;
    `schrecknet-data` emits schema/data v4 with deterministic document-v1 vectors and
-   browser-local assets. A real build verifies all 662 cards have one 384-dimensional,
+   browser-local assets. A real build verifies all 829 cards have one 384-dimensional,
    1,536-byte normalized embedding; SQLite integrity passes.
 3. **Machine APIs — complete:** `core::semantic_native` owns the checksum-verified
    local model contract shared by the data builder and server. One lazy server
@@ -148,7 +148,7 @@ Docker, reviewed relevance, parity, and true-offline behavior are now covered.
 - **Browser-only embeddings:** rejected because it would violate the MCP + REST parity
   rule and leave machine clients with different search capabilities.
 - **`sqlite-vec`:** capable and portable, but currently pre-1.0 and unnecessary for an
-  exact scan of 662 vectors. It would add native and WASM extension loading plus a new
+  exact scan of 829 vectors. It would add native and WASM extension loading plus a new
   storage contract without a measurable product benefit at this scale. Reconsider if
   the searchable corpus grows by orders of magnitude.
 - **WebGPU-only inference:** rejected because browser support is narrower than the

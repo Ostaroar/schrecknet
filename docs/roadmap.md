@@ -16,7 +16,7 @@ docs/feature-parity.md's scope note).
 
 ## Phase 1 — Card search (offline-first)
 - ☑ Real `cards.sqlite`: `schrecknet-data` fetches KRCG's live export, filters to
-  the V5 pool (662 cards: 218 crypt / 444 library, groups 5–7), populates cards,
+  the modern BCP/V5 pool (829 cards: 299 crypt / 530 library), populates cards,
   disciplines (superior/inferior), official VEKN crypt/requirement metadata, printings, sets,
   artists, rulings, translations, and an FTS5 index — verified end-to-end with
   `sqlite3` queries
@@ -71,7 +71,7 @@ docs/feature-parity.md's scope note).
   ported to shared native Rust and precomputed into indexed `card_traits` rows;
   pool-derived controls, REST/MCP arrays, semantic candidate filtering, exact
   multi-trait result sets, and all current per-trait counts agree with the
-  original source over all 662 V5 cards
+  original source over all 829 modern BCP/V5 cards
 - ☑ ⌘K command palette (name search, prefix-ranked, keyboard-driven) + routed
   card page with shareable `#/cards/{id}` deep links, full translations,
   printings + rulings UI; hash router hand-rolled to avoid a router dep
@@ -201,12 +201,12 @@ docs/feature-parity.md's scope note).
 - ☑ Deck diff — compare any two saved local decks at `#/diff`; shared Rust
   core classifies additions, removals, quantity changes, and unchanged cards
 - ☑ Precon browser — `#/precons`, all 3 surfaces (`list_precons` in
-  cards_db.rs), 32 real V5 precons grouped by set (verified live: matches
-  the actual V5 product lineup — 7 Fifth Edition clan starters, 4 Anarch/
-  Companion, 5×New Blood I-III, 4 Sabbat V5 Paths). Building this surfaced
-  and fixed two pre-existing data-correctness bugs (see below); card
-  quantities per precon aren't tracked by the source data (✎ noted, not a
-  bug) — precon detail shows the deck's card pool, not exact copy counts
+  cards_db.rs), 43 official modern BCP/V5 precons grouped by set. This includes
+  First Blood, the 2019 Sabbat decks, 25th Anniversary's "Reign of Stanislava",
+  30th Anniversary's "The Endless Dance", Fifth Edition, New Blood, and Sabbat
+  V5. KRCG supplies real per-card quantities; the anniversary products are
+  normalized against Black Chantry's official 100-card lists so their separate
+  bonus cards are not presented as part of the playable decks.
 - ☑ Proxy printing — `#/decks/{id}/proxy`, one image per physical copy at
   2.5"×3.5" (real card size), 9 per US Letter page via CSS grid. Deliberately
   no PDF-generation library: `window.print()` (browser's native Print/Save-
@@ -256,6 +256,11 @@ across deck editor / proxy / search / card pages:
 - ☑ I5 search integration (owned badge, only-owned filter — browser-local only)
 
 **Phase 2.5 complete (I1–I5).** Only I6 (Phase 3 server sync) remains, by design.
+
+- ☑ Physical precon ownership overview: adding/removing a product through
+  Inventory records its identity and quantity separately from loose cards;
+  `#/precons` shows total and per-product ownership without double-counting
+  overlapping loose cards as several physical decks.
 
 ## Phase 4 — Polish & v1.0
 - Full feature-parity audit vs vdb.im (side-by-side golden tests)
@@ -338,7 +343,7 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
   `replaceState` instead of 404ing. Live-verified against the real server: deep
   link reload, no-reload in-app navigation, browser back/forward, legacy-hash
   redirect all confirmed working.
-- ☑ S3 build-time static prerendering for all 662 card pages (real HTML + title/
+- ☑ S3 build-time static prerendering for all 829 card pages (real HTML + title/
   description/OG/Twitter/JSON-LD, new `schrecknet-data prerender` subcommand,
   served by a small new `GET /cards/{id}` handler — corrected from this doc's
   earlier "no new server code" claim). Live-verified locally against the real
@@ -348,8 +353,8 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
 - ☑ S4 prerender secondary routes: `/precons`, `/rules`, `/help`, `/about`, and
   `/changelog` return real no-JS HTML. English help/about/changelog copy lives in
   one shared JSON source consumed by React and Rust; rules HTML uses the same
-  generated game-loop JSON as the browser. The data build generates a 668-URL
-  sitemap (root + five static routes + 662 cards) when `SITE_URL`/`--base-url`
+  generated game-loop JSON as the browser. The data build generates an 835-URL
+  sitemap (root + five static routes + 829 cards) when `SITE_URL`/`--base-url`
   supplies the real deployment origin; without one it deliberately emits no
   invalid placeholder sitemap.
 - ☑ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers

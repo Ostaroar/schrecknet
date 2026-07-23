@@ -204,7 +204,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '7'), ('data_version', '9'), ('scope', 'v5'),
+         ('schema_version', '7'), ('data_version', '10'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -225,13 +225,14 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // normalized derived library capacity requirements into their own table;
         // v6: added normalized official VEKN requirement tokens; v7: added
         // printings.precon_copies).
-        // data_version changes whenever emitted content changes (v9 fills
-        // printings.precon_copies from KRCG's own per-printing "copies" field,
-        // previously discarded — see docs/data.md; v8 fills card_traits plus
+        // data_version changes whenever emitted content changes (v10 adds
+        // omitted modern BCP precons and separates anniversary bonus cards
+        // from their real 100-card decks; v9 fills printings.precon_copies
+        // from KRCG's per-printing "copies" field; v8 fills card_traits plus
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
         "schema_version": 7,
-        "data_version": 9,
+        "data_version": 10,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

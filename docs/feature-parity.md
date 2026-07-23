@@ -236,12 +236,16 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
 - ☑ Missing cards vs. inventory ("what do I need to buy") — deck editor's
       expandable missing-cards list + inventory page's collection-wide,
       exportable want-list (see [inventory-plan.md](inventory-plan.md) I4)
-- ☑ Precon decks browser — live at `#/precons`, all 32 official V5 precons
-      grouped by set (list_precons: MCP + REST + browser). Real per-card copy
+- ☑ Precon decks browser — live at `#/precons`, all 43 official modern BCP/V5
+      precons grouped by set (list_precons: MCP + REST + browser), including
+      First Blood, 2019 Sabbat, 25th Anniversary, and 30th Anniversary. Real per-card copy
       counts within one physical copy of each precon are also tracked
       (`precon_card_counts`/`get_precon_card_counts`: MCP + REST + browser),
       sourced from KRCG's own per-printing `copies` field (schema v7,
       2026-07-23) — some V5 precon crypts do ship a vampire twice
+- ☑ Physical precon ownership overview — product quantities are stored
+      separately from loose card inventory and shown as a total plus per-precon
+      badges, avoiding false ownership inferred from overlapping cards
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
 
 ## Inventory (`/inventory`)

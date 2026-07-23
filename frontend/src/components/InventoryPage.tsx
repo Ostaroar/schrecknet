@@ -11,7 +11,13 @@ import {
   type InventoryImportResult,
   type MissingCard,
 } from '../lib/inventoryStore'
-import { listPrecons, getPreconCardCounts, type PreconSummary } from '../lib/precons'
+import {
+  listPrecons,
+  getPreconCardCounts,
+  adjustOwnedPreconQty,
+  getOwnedPreconQty,
+  type PreconSummary,
+} from '../lib/precons'
 import { navigate } from '../lib/route'
 import { useUiStrings, type UiStrings } from '../lib/i18n'
 import AddCardBox from './AddCardBox'
@@ -168,12 +174,19 @@ function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiString
 
   const apply = async (mode: 'add' | 'remove') => {
     if (!selectedPrecon) return
-    const amount = Math.max(1, Math.floor(qty) || 1)
+    const requested = Math.max(1, Math.floor(qty) || 1)
+    const owned = await getOwnedPreconQty(selectedPrecon.set, selectedPrecon.precon)
+    const amount = mode === 'add' ? requested : Math.min(requested, owned)
+    if (amount === 0) {
+      setStatus(ui.noOwnedPrecons)
+      return
+    }
     setBusy(mode)
     const counts = await getPreconCardCounts(selectedPrecon.set, selectedPrecon.precon)
     const sign = mode === 'add' ? 1 : -1
     const deltas = new Map([...counts].map(([cardId, copies]) => [cardId, sign * amount * copies]))
     await adjustInventoryQtyByMap(deltas)
+    await adjustOwnedPreconQty(selectedPrecon.set, selectedPrecon.precon, sign * amount)
     setStatus(
       mode === 'add' ? ui.addedCopies(amount, counts.size) : ui.removedCopies(amount, counts.size),
     )

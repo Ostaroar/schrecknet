@@ -13,7 +13,7 @@ use schrecknet_core::requirements::normalize_library_requirements;
 use schrecknet_core::traits::{classify_crypt_traits, classify_library_traits, LibraryTraitFacts};
 use serde_json::Value;
 
-use crate::v5pool::{is_in_v5_pool, V5_SET_NAMES};
+use crate::v5pool::{is_in_v5_pool, precon_name, V5_SET_NAMES};
 use crate::vekn::{LibraryMetadata, LibraryRequirements, VeknMetadata};
 
 pub fn run(
@@ -277,6 +277,10 @@ fn insert_disciplines(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
 
 fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
     let id = card.get("id").and_then(|v| v.as_i64()).unwrap_or_default();
+    let card_name = str_field(card, "_name")
+        .or_else(|| str_field(card, "printed_name"))
+        .or_else(|| str_field(card, "name"))
+        .unwrap_or_default();
     let Some(sets) = card.get("sets").and_then(|v| v.as_object()) else {
         return Ok(());
     };
@@ -294,7 +298,11 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
             continue;
         };
         for (i, p) in printings.iter().enumerate() {
-            let precon = p.get("precon").and_then(|v| v.as_str());
+            let precon = precon_name(
+                set_name,
+                card_name,
+                p.get("precon").and_then(|v| v.as_str()),
+            );
             let rarity = p.get("rarity").and_then(|v| v.as_str());
             // KRCG records how many physical copies of this card one copy of
             // the precon itself contains (some V5 precon crypts do ship a
@@ -687,6 +695,52 @@ mod tests {
                 ("".to_string(), None), // not a precon printing at all -> NULL, not 1
                 ("Salubri".to_string(), Some(2)), // explicit "copies": 2
                 ("Ventrue".to_string(), Some(1)), // precon set, "copies" omitted -> defaults to 1
+            ]
+        );
+    }
+
+    #[test]
+    fn anniversary_printings_separate_decks_from_bonus_cards() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);",
+        )
+        .unwrap();
+        for card in [
+            json!({"id": 1, "_name": "François Villon", "sets": {
+                "Thirtieth Anniversary": [{"copies": 3}]
+            }}),
+            json!({"id": 2, "_name": "Annabelle Triabell", "sets": {
+                "Thirtieth Anniversary": [{"copies": 2}]
+            }}),
+            json!({"id": 3, "_name": "Stanislava", "sets": {
+                "Twenty-Fifth Anniversary": [{"copies": 4}]
+            }}),
+            json!({"id": 4, "_name": "Signet of King Saul, The", "sets": {
+                "Twenty-Fifth Anniversary": [{"copies": 1}]
+            }}),
+        ] {
+            insert_printings(&conn, &card).unwrap();
+        }
+
+        let rows: Vec<(i64, Option<String>, Option<i64>)> = conn
+            .prepare(
+                "SELECT card_id, precon, precon_copies
+                 FROM printings ORDER BY card_id",
+            )
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                (1, Some("The Endless Dance".into()), Some(3)),
+                (2, None, None),
+                (3, Some("Reign of Stanislava".into()), Some(4)),
+                (4, None, None),
             ]
         );
     }

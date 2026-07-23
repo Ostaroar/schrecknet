@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { listPrecons, type PreconSummary } from '../lib/precons'
+import {
+  getPreconCardCounts,
+  listOwnedPrecons,
+  listPrecons,
+  type PreconSummary,
+} from '../lib/precons'
 import { searchCrypt, emptyCryptFilters, type CryptCard } from '../lib/cryptSearch'
 import { searchLibrary, emptyLibraryFilters, type LibraryCard } from '../lib/librarySearch'
 import { navigate } from '../lib/route'
@@ -19,6 +24,7 @@ function PreconDetail({
 }) {
   const [crypt, setCrypt] = useState<CryptCard[] | null>(null)
   const [library, setLibrary] = useState<LibraryCard[] | null>(null)
+  const [copies, setCopies] = useState<Map<number, number>>(new Map())
 
   useEffect(() => {
     setCrypt(null)
@@ -26,9 +32,11 @@ function PreconDetail({
     Promise.all([
       searchCrypt({ ...emptyCryptFilters, precons: [{ set, precon }] }),
       searchLibrary({ ...emptyLibraryFilters, precons: [{ set, precon }] }),
-    ]).then(([c, l]) => {
+      getPreconCardCounts(set, precon),
+    ]).then(([c, l, cardCopies]) => {
       setCrypt(c)
       setLibrary(l)
+      setCopies(cardCopies)
     })
   }, [set, precon])
 
@@ -57,6 +65,7 @@ function PreconDetail({
                   >
                     <span className="w-6 text-right font-mono text-xs text-blood-hi">{c.capacity}</span>
                     <span className="flex-1 truncate">{c.name}</span>
+                    <span className="font-mono text-xs text-ink-dim">×{copies.get(c.id) ?? 1}</span>
                     <span className="hidden items-center gap-0.5 sm:flex">
                       {c.disciplines.map((discipline) => (
                         <DisciplineSymbol
@@ -83,6 +92,7 @@ function PreconDetail({
                     className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-raised"
                   >
                     <span className="flex-1 truncate">{c.name}</span>
+                    <span className="font-mono text-xs text-ink-dim">×{copies.get(c.id) ?? 1}</span>
                     <CardTypeSummary types={c.types} className="shrink-0 text-xs text-ink-dim" />
                   </button>
                 </li>
@@ -101,10 +111,14 @@ export default function PreconBrowser() {
   const [precons, setPrecons] = useState<PreconSummary[] | null>(null)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<PreconSummary | null>(null)
+  const [owned, setOwned] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
-    listPrecons()
-      .then(setPrecons)
+    Promise.all([listPrecons(), listOwnedPrecons()])
+      .then(([allPrecons, ownedPrecons]) => {
+        setPrecons(allPrecons)
+        setOwned(new Map(ownedPrecons.map((item) => [`${item.set}:${item.precon}`, item.qty])))
+      })
       .catch((e: Error) => setError(e.message))
   }, [])
 
@@ -121,25 +135,43 @@ export default function PreconBrowser() {
     if (list) list.push(p)
     else bySet.set(p.set, [p])
   }
+  const ownedEntries = [...owned.values()].filter((qty) => qty > 0)
+  const ownedCopies = ownedEntries.reduce((sum, qty) => sum + qty, 0)
 
   return (
     <div className="grid gap-4">
       <h1 className="font-display text-xl">{ui.title}</h1>
       <p className="text-xs text-ink-dim">{ui.intro}</p>
+      <div className="rounded-lg border border-line bg-surface px-4 py-3">
+        <p className="font-display text-lg text-ink">{ui.ownedOverview(ownedCopies, ownedEntries.length)}</p>
+        <p className="mt-1 text-xs text-ink-dim">{ui.ownedOverviewNote}</p>
+      </div>
       {[...bySet.entries()].map(([set, items]) => (
         <section key={set} className="grid gap-2">
           <h2 className="text-xs uppercase tracking-wide text-ink-dim">{set}</h2>
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
-            {items.map((p) => (
-              <button
-                key={p.precon}
-                onClick={() => setSelected(p)}
-                className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
-              >
-                <span className="flex-1 truncate">{p.precon}</span>
-                <span className="text-xs text-ink-dim">{ui.cardsSuffix(p.card_count)}</span>
-              </button>
-            ))}
+            {items.map((p) => {
+              const ownedQty = owned.get(`${p.set}:${p.precon}`) ?? 0
+              return (
+                <button
+                  key={p.precon}
+                  onClick={() => setSelected(p)}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised"
+                >
+                  <span className="flex-1 truncate">{p.precon}</span>
+                  <span
+                    className={
+                      ownedQty > 0
+                        ? 'rounded-full bg-blood/20 px-2 py-0.5 text-xs text-blood-hi'
+                        : 'text-xs text-ink-dim'
+                    }
+                  >
+                    {ownedQty > 0 ? ui.ownedCopies(ownedQty) : ui.notOwned}
+                  </span>
+                  <span className="text-xs text-ink-dim">{ui.cardsSuffix(p.card_count)}</span>
+                </button>
+              )
+            })}
           </div>
         </section>
       ))}

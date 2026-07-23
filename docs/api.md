@@ -17,7 +17,7 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | `semantic_search` | **Live.** Local semantic retrieval over canonical English V5 card documents, optional crypt/library kind and existing structured filters, `limit` (1–50, default 20), and `min_score` (-1–1). The lazy native model and exact shared-Rust ranker return card summaries with cosine `score` + `model_id`. REST mirror: `POST /api/v1/cards/semantic` |
 | `get_card` | **Live.** Card by id → text, printings, artists, rulings, translations (`server/src/card_detail.rs`) |
 | `get_card_by_name` | **Live.** Exact case-insensitive canonical/ASCII name lookup; REST mirror: `GET /api/v1/cards/lookup?name=…` |
-| `list_precons` | **Live.** Every V5 precon grouped by (set, precon) with a distinct-card count; REST mirror: `GET /api/v1/precons`. Card quantities per precon aren't tracked by the data source |
+| `list_precons` | **Live.** All 43 modern BCP/V5 precons grouped by (set, precon) with a distinct-card count; REST mirror: `GET /api/v1/precons`. `get_precon_card_counts` returns each product's real per-card quantities. |
 | `list_decks` / `get_deck` | Authenticated user's decks (or a deck shared via deck-in-URL) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |
 | `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |

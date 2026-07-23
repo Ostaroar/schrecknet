@@ -139,7 +139,7 @@ consciously deferred with a note.
 | **Missing-cards view** ("what do I need to buy", feature-parity § Deck) | Per-deck and global: aggregated missing list, exportable as text. Cross-references `usage()`. | I4 |
 | **Crypt/Library search** | "Owned" badge on result rows; an "only owned" / "in inventory" filter toggle. Frontend-only filter (post-filter on the result set or JOIN into the local query) — **do not** add an inventory param to server search: the server has no inventory until Phase 3, and both-or-neither forbids a browser-only search param on the shared surface. The browser's SQL runs locally, so a local JOIN against `user.sqlite` is fine — but note the two DBs are separate SQLite files in separate workers: fetch the inventory id-set first and filter in TS, don't try cross-database JOINs. | I5 |
 | **Card page** (`CardPage.tsx`) | "You own N" line + quick +/− stepper (same interaction tier as deck steppers). | I2 |
-| **Precon browser** | "How much of this precon do I already own" is tempting but precon *quantities* aren't in the data (known limitation, see feature-parity § precons) — show owned/not-owned per card only, no copy math. Defer; note in UI if added. | deferred |
+| **Precon browser** | Physical product quantities are stored separately from loose cards and shown as total/per-product ownership. This avoids counting the same overlapping loose cards as multiple precons. | shipped |
 | **Proxy printing** (`ProxySheet.tsx`) | High-value synergy: "print only missing copies" toggle — proxy exactly `missing` per card instead of full qty. | I4 |
 | **Deck import/export, share URLs** (`dtext.rs`, `share.rs`) | Unchanged. An imported/shared deck defaults to `inventory_mode='excluded'` so it never silently claims copies. Inventory *itself* gets text import/export (I2) reusing the same `<qty>x <name>` line format and name-resolution helper (`resolveByName`) — one parser family, no new format. ✎ check what vdb's inventory import accepts (it has file + text import). | I2 |
 | **Deck diff / clone** | Clone copies `inventory_mode`? No — cloned decks default to `excluded` (a clone would double-claim fixed copies). State this in a test. Diff is unaffected. | I3 |
@@ -209,8 +209,10 @@ distinct UI surface either): "only owned" filtering lives with I5, not here.
 `inventoryStore.adjustInventoryQtyForCards(cardIds, delta)`, reusing
 `lib/precons.ts` and the same `searchCrypt`/`searchLibrary` precon filter
 `PreconBrowser.tsx` already uses (no new query path). Explicitly adds/removes
-one copy of each distinct card, since precon quantities aren't tracked by the
-data pipeline — the UI states this rather than implying a ready-to-play count.
+each card's real KRCG `copies` quantity; physical product ownership is tracked
+separately so the precon overview remains exact rather than inferred from the
+overlapping loose-card pool. The UI states this rather than implying a
+ready-to-play count.
 Live-verified: adding Fifth Edition — Malkavian (30 cards) took the inventory
 from empty to 9 crypt/21 library at qty 1 each; Remove reversed it exactly.
 
