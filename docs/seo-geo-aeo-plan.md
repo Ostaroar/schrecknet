@@ -176,12 +176,27 @@ DOKS node pool:
 
 ## 6. Milestones
 
-### S1 — Fast, low-risk wins (no architecture change)
-- Per-route `<title>`/description via a hand-rolled head-tag hook (§ 4.1)
-- `robots.txt` + a first `sitemap.xml` covering the current hash-routed URLs (even
-  before § 4.2 lands, this loses nothing and documents crawl intent)
-- **DoD:** built site has a correct `robots.txt`/`sitemap.xml`; each route sets a
-  distinct `document.title` verified live in-browser across a sample of routes.
+### S1 — Fast, low-risk wins (no architecture change) ☑
+- Per-route `<title>`/description via a hand-rolled head-tag hook (§ 4.1):
+  `frontend/src/lib/documentHead.ts` (the hook) + `frontend/src/lib/seo.ts` (per-route
+  copy), wired into `App.tsx` for the static routes and into `CardPage.tsx` for the
+  dynamic, highest-value card routes (title + a real card-text-derived description,
+  once the async card fetch resolves).
+- `robots.txt` (`frontend/public/robots.txt`) — allow-by-default, explicit named
+  allow-list for GEO/AEO crawlers (§ 4.5), `Disallow` for `/table` and `/share/`.
+- **`sitemap.xml` deliberately deferred to S3/S4.** A sitemap of hash-fragment URLs
+  (`#/cards/123`) has no real value — search engines don't crawl fragments as
+  separate documents, so listing 662 of them would just be noise. Shipping a
+  low-value stub now would look done without being useful; it lands for real once
+  S2/S3 give us real per-card paths to list.
+- **DoD:** live-verified in-browser: `document.title`/`<meta name="description">`/
+  `og:title` update correctly navigating between routes and on a real card page
+  (confirmed against Aaradhya, The Callous Tyrant — clan/group/text-derived
+  description generated correctly); `robots.txt` served as plain ASCII (an initial
+  em-dash/§ draft mangled under the dev server's default text/plain encoding —
+  rewritten ASCII-only, since robots.txt should be plain ASCII by convention
+  anyway) with the disallow/allow-list rules present; `tsc --noEmit` + `vite build`
+  both clean.
 
 ### S2 — Path-based routing (own ADR: `docs/adr/0008-path-based-routing-for-seo.md`)
 - Migrate `route.ts`/`navigate()`/every internal link from `#/x` to `/x`;

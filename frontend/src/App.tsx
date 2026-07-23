@@ -20,6 +20,8 @@ import { getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
 import { useHashRoute, navigate } from './lib/route'
+import { useDocumentHead } from './lib/documentHead'
+import { routeDocumentHead } from './lib/seo'
 
 const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'table', 'precons', 'rules', 'changelog', 'help', 'about'] as const
 const LANGUAGE_FLAGS: Record<string, string> = { en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪' }
@@ -29,6 +31,7 @@ export default function App() {
   const route = useHashRoute()
   const { language, setLanguage } = useCardLanguage()
   const ui = getUiStrings(language)
+  useDocumentHead(routeDocumentHead(route))
 
   useEffect(() => {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))

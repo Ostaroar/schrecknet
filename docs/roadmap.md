@@ -315,8 +315,11 @@ runtime dependency and no framework migration (no Next.js/Astro/SSR rewrite); th
 existing `schrecknet-data` build step and the server's static-file serving already
 do the heavy lifting once card pages are prerendered. Full plan, content inventory,
 and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
-- ☐ S1 per-route `<title>`/description (hand-rolled head-tag hook, no dependency),
-  `robots.txt` + first `sitemap.xml`
+- ☑ S1 per-route `<title>`/description (hand-rolled head-tag hook, no dependency;
+  `lib/documentHead.ts` + `lib/seo.ts`, wired into `App.tsx` + `CardPage.tsx`) and
+  `robots.txt` (allow-by-default + named GEO/AEO crawler allow-list + disallow
+  `/table`/`/share/`). Live-verified in-browser. `sitemap.xml` deliberately deferred
+  to S3/S4 — hash-fragment URLs have no crawl value, see plan doc § S1.
 - ☐ S2 path-based routing migration (`#/x` → `/x`, History API) — **needs its own
   ADR** (`docs/adr/0008-path-based-routing-for-seo.md`) before implementation;
   old hash links must redirect, not 404

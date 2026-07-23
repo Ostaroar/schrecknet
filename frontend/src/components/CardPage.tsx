@@ -7,6 +7,18 @@ import InventoryOwnedControl from './InventoryOwnedControl'
 import { navigate } from '../lib/route'
 import CardText from './CardText'
 import { CardTypeSummary, DisciplineBadge } from './VtesSymbol'
+import { useDocumentHead } from '../lib/documentHead'
+import { DEFAULT_HEAD } from '../lib/seo'
+
+function cardDescription(card: CardDetail, text: string): string {
+  const kind =
+    card.kind === 'crypt'
+      ? `${card.clan}${card.group !== null ? ` group ${card.group}` : ''} vampire`
+      : `${(card.types ?? []).join('/')} card`
+  const trimmed = text.replace(/\s+/g, ' ').trim()
+  const snippet = trimmed.length > 160 ? `${trimmed.slice(0, 157)}…` : trimmed
+  return snippet ? `${card.name} — VTES V5 ${kind}. ${snippet}` : `${card.name} — VTES V5 ${kind}.`
+}
 
 export default function CardPage({ id }: { id: number }) {
   const [card, setCard] = useState<CardDetail | null>(null)
@@ -27,6 +39,16 @@ export default function CardPage({ id }: { id: number }) {
       })
   }, [id])
 
+  const localizedForHead = card ? localizeCardText(card, language) : null
+  useDocumentHead(
+    card && localizedForHead
+      ? {
+          title: `${localizedForHead.name} — SchreckNet`,
+          description: cardDescription(card, localizedForHead.card_text ?? ''),
+        }
+      : DEFAULT_HEAD,
+  )
+
   if (status === 'loading') return <p className="text-sm text-ink-dim">Loading…</p>
   if (status === 'error')
     return <p className="text-sm text-blood-hi">Couldn't load card: {error}</p>
@@ -40,7 +62,7 @@ export default function CardPage({ id }: { id: number }) {
       </div>
     )
 
-  const localized = localizeCardText(card, language)
+  const localized = localizedForHead ?? localizeCardText(card, language)
 
   return (
     <article className="grid max-w-2xl gap-5">

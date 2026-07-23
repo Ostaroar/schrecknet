@@ -1,0 +1,40 @@
+# SchreckNet - docs/seo-geo-aeo-plan.md section 4.5.
+#
+# Default: allow everything. /table (game-groups) and /share/ (deck-in-URL)
+# are excluded because both rely on an unguessable code/token being private,
+# like a shared-document link - indexing either would break that trust model
+# (see docs/game-groups-plan.md section 1-2). Real per-card paths and a
+# generated sitemap.xml land in S2/S3; until then this only affects the
+# hash-routed SPA shell itself, which crawlers already can't see past.
+User-agent: *
+Disallow: /table
+Disallow: /share/
+Allow: /
+
+# Named allow-list for GEO/AEO crawlers (AI answer engines / training bots) -
+# explicit, not just relying on the wildcard default, because the whole point
+# of this project's SEO work is to be citable by them, unlike sites that block
+# AI crawlers defensively.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
