@@ -370,9 +370,12 @@ and milestone breakdown in [docs/seo-geo-aeo-plan.md](seo-geo-aeo-plan.md)._
 - ☑ S5 GEO/AEO-specific: `robots.txt` explicit allow-list for named AI crawlers
   (shipped in S1) + `llms.txt` (informal/unproven convention, kept low-effort;
   plain ASCII, verified served correctly).
-- ☐ S6 (optional, infra-adjacent): Core Web Vitals/Lighthouse check once a real
-  domain + CDN sit in front of the DOKS deployment; overlaps Phase 4's performance
-  budget item
+- ☑ S6: checking the live site directly found two real gaps — no response
+  compression at all, and no cache headers on content-hashed assets despite
+  ADR 0004 claiming otherwise. Fixed: `CompressionLayer` (gzip/br/deflate,
+  whole router) + immutable `Cache-Control` on `/assets`, `/data`,
+  `/models/semantic`. Main JS bundle 477 KB → 137 KB. A full Lighthouse run
+  against the live domain is still open, tracked as a Phase 4 follow-up.
 - **Guardrail carried over from [docs/game-groups-plan.md](game-groups-plan.md):**
   `/table` and `/share/<token>` must stay `noindex` + `robots.txt`-disallowed and
   never appear in the sitemap — indexing either would break their "unguessable

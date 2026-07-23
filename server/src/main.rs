@@ -13,11 +13,27 @@ mod user_db;
 
 use std::sync::Arc;
 
+use axum::http::{header, HeaderValue};
 use axum::{routing::delete, routing::get, routing::post, Json, Router};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::ServiceExt;
+use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
+use tower_http::set_header::SetResponseHeaderLayer;
+
+/// Vite's build output under `/assets` is content-hashed (a filename never
+/// changes meaning), so it's safe to tell browsers/CDNs to cache it forever —
+/// a repeat visit re-fetches nothing until the next deploy changes the hash.
+/// `/data` and `/models/semantic` are versioned the same way (ADR 0004; see
+/// docs/data.md) but that comment predates any header actually enforcing it.
+fn immutable_cache_layer() -> SetResponseHeaderLayer<HeaderValue> {
+    SetResponseHeaderLayer::overriding(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=31536000, immutable"),
+    )
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -119,12 +135,34 @@ async fn main() {
         .route("/about", get(api::get_prerendered_about))
         .route("/changelog", get(api::get_prerendered_changelog))
         .with_state(state)
+        // Vite's hashed build output — safe to cache forever (see
+        // immutable_cache_layer's doc comment).
+        .nest_service(
+            "/assets",
+            ServiceBuilder::new()
+                .layer(immutable_cache_layer())
+                .service(ServeDir::new(format!("{static_dir}/assets"))),
+        )
         // cards.sqlite + cards.meta.json for the browser's sql.js loader
         // (docs/adr/0004); long cache since the DB is content-versioned.
-        .nest_service("/data", ServeDir::new(&data_dir))
-        .nest_service("/models/semantic", ServeDir::new(&model_dir))
+        .nest_service(
+            "/data",
+            ServiceBuilder::new()
+                .layer(immutable_cache_layer())
+                .service(ServeDir::new(&data_dir)),
+        )
+        .nest_service(
+            "/models/semantic",
+            ServiceBuilder::new()
+                .layer(immutable_cache_layer())
+                .service(ServeDir::new(&model_dir)),
+        )
         .nest_service("/mcp", mcp_service)
-        .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)));
+        .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))
+        // gzip/br/deflate negotiated per Accept-Encoding, applied to every
+        // response (API JSON, HTML, JS/CSS/wasm alike) — the live site was
+        // serving everything uncompressed until this landed.
+        .layer(CompressionLayer::new());
 
     let listener = tokio::net::TcpListener::bind(&bind)
         .await

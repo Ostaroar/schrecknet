@@ -3,7 +3,9 @@
 Status: **S1-S5 implemented; live at schreck-net.com** (2026-07-23). `SITE_URL` is
 now wired into `docker.yml`'s build so the next image build generates a real
 `sitemap.xml` (previously deliberately skipped rather than publish one with a
-placeholder domain). S6 (Core Web Vitals/Lighthouse) is the only open item.
+placeholder domain). S6 shipped compression + immutable caching after finding both
+missing on the live site; a full Lighthouse run against the live domain is the
+only thing still open, tracked as a Phase 4 follow-up.
 Requested directly by the project owner: the site
 needs to be findable — through traditional search engines (SEO), through AI answer
 engines and LLM browsing/training crawlers (GEO — Generative Engine Optimization —
@@ -294,10 +296,28 @@ DOKS node pool:
   `llms.txt` verified served correctly via a real local server (`curl
   /llms.txt`) and present in `dist/` after `vite build`.
 
-### S6 — (Optional, infra-adjacent, not blocking)
-- Verify Core Web Vitals / Lighthouse SEO score on the deployed DO instance once a
-  domain + CDN are in place; tune cache headers for the new static/prerendered
-  paths. Overlaps with Phase 4's existing performance-budget item.
+### S6 — (Optional, infra-adjacent, not blocking) ☑
+- Checked the live site directly (`curl -I`/`-D -` against schreck-net.com) instead
+  of waiting for a formal Lighthouse run, and found two real, fixable gaps: **no
+  response compression at all** (the main JS bundle transferred all 477 KB
+  uncompressed) and **no `Cache-Control` on content-hashed assets** (`/assets`,
+  `/data`, `/models/semantic` — despite ADR 0004's own comment claiming "long
+  cache since the DB is content-versioned," no header ever actually enforced it).
+  Fixed both server-side: `tower_http::compression::CompressionLayer` wraps the
+  whole router (gzip/br/deflate negotiated per `Accept-Encoding`, applies to API
+  JSON and HTML too, not just JS/CSS); a `SetResponseHeaderLayer` sets
+  `public, max-age=31536000, immutable` specifically on the three content-hashed
+  nests, leaving `index.html` and the prerendered card/precon/rules/help/about/
+  changelog pages uncached (correct — those aren't hash-named). `tower-http`
+  gained the already-transitively-present `compression-full`/`set-header`
+  features (no new crate); `tower` promoted from transitive to direct for
+  `ServiceBuilder`. **DoD met:** live-verified locally — main bundle 477 KB →
+  137 KB (71% smaller) with real gzip bytes confirmed, `cache-control` present on
+  `/assets`/`/data`/`/models`, absent on `/` and the prerendered pages, SPA still
+  renders and is fully interactive with no console errors. A full Lighthouse/Core
+  Web Vitals run against the live domain remains open (this fix should meaningfully
+  move that number, but nobody's actually run it yet) — tracked as a Phase 4
+  follow-up, not blocking here.
 
 ## 7. Guardrails
 

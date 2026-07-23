@@ -8,7 +8,11 @@ description = "SchreckNet server: static hosting + REST + MCP (single binary)"
 [dependencies]
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-tower-http = { version = "0.6", features = ["fs"] }
+# tower is already pulled in transitively by axum/tower-http; promoted to a
+# direct dependency for ServiceBuilder (per-route compression/cache-header
+# composition), not a new addition to the dependency tree.
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "compression-full", "set-header"] }
 serde_json = { workspace = true }
 schrecknet-core = { path = "../core" }
 rmcp = { version = "2.2.0", features = ["server", "transport-streamable-http-server", "transport-io"] }
