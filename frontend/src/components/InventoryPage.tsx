@@ -158,6 +158,7 @@ function ImportExportPanel({ onImported, ui }: { onImported: () => void; ui: UiS
 function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiStrings['inventory'] }) {
   const [precons, setPrecons] = useState<PreconSummary[]>([])
   const [selected, setSelected] = useState('')
+  const [qty, setQty] = useState(1)
   const [busy, setBusy] = useState<'add' | 'remove' | null>(null)
   const [status, setStatus] = useState('')
 
@@ -179,10 +180,13 @@ function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiString
 
   const apply = async (mode: 'add' | 'remove') => {
     if (!selectedPrecon) return
+    const amount = Math.max(1, Math.floor(qty) || 1)
     setBusy(mode)
     const cardIds = await preconCardIds()
-    await adjustInventoryQtyForCards(cardIds, mode === 'add' ? 1 : -1)
-    setStatus(mode === 'add' ? ui.addedCopies(cardIds.length) : ui.removedCopies(cardIds.length))
+    await adjustInventoryQtyForCards(cardIds, mode === 'add' ? amount : -amount)
+    setStatus(
+      mode === 'add' ? ui.addedCopies(amount, cardIds.length) : ui.removedCopies(amount, cardIds.length),
+    )
     setBusy(null)
     onChanged()
   }
@@ -204,6 +208,16 @@ function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiString
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-1.5 text-xs text-ink-dim">
+          {ui.preconQuantityLabel}
+          <input
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(event) => setQty(Number(event.target.value))}
+            className="min-h-10 w-16 rounded-lg border border-line bg-ground px-2 py-1.5 text-sm text-ink outline-none focus:border-blood-hi sm:min-h-0"
+          />
+        </label>
         <button
           onClick={() => apply('add')}
           disabled={!selectedPrecon || busy !== null}
