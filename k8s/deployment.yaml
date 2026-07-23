@@ -1,0 +1,60 @@
+# Single replica: schrecknet-data volume is ReadWriteOnce (DO block storage).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schrecknet-server
+  namespace: schrecknet
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # avoid two pods mounting the same RWO volume during rollout
+  selector:
+    matchLabels:
+      app: schrecknet-server
+  template:
+    metadata:
+      labels:
+        app: schrecknet-server
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: server
+          image: ghcr.io/ostaroar/schrecknet:main
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: schrecknet-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: schrecknet-server
+  namespace: schrecknet
+spec:
+  selector:
+    app: schrecknet-server
+  ports:
+    - port: 80
+      targetPort: 8000

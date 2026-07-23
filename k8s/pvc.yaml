@@ -1,0 +1,12 @@
+# Persists /data (app.sqlite) across pod restarts/redeploys.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: schrecknet-data
+  namespace: schrecknet
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: do-block-storage
+  resources:
+    requests:
+      storage: 5Gi
