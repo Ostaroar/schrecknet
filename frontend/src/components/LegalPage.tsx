@@ -119,7 +119,23 @@ export default function LegalPage() {
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          4. Spielgruppen (&bdquo;Table&ldquo;-Funktion)
+          4. Semantische Suche (lokales KI-Modell)
+        </p>
+        <p>
+          Die optionale &bdquo;Semantisch&ldquo;-Suche findet Karten anhand von Begriffen statt
+          exakter Textübereinstimmung. Dafür wird ein kleines, vortrainiertes Sprachmodell
+          (all-MiniLM-L6-v2, quantisiert) verwendet, das nach Aktivierung dieser Funktion einmalig
+          (ca. 46&nbsp;MB) heruntergeladen und anschließend vollständig lokal in Ihrem Browser
+          ausgeführt wird (ONNX Runtime, WebAssembly). Ihre Suchanfragen und der Kartentext
+          verlassen dabei zu keinem Zeitpunkt Ihr Gerät — es findet keine Übertragung an uns, an
+          Dritte oder an einen externen KI-Dienst statt. Die Funktion ist rein optional und muss
+          aktiv ausgewählt werden; ohne Aktivierung wird kein Modell geladen. Es findet keine
+          automatisierte Entscheidungsfindung oder Profilbildung im Sinne von Art.&nbsp;22 DSGVO
+          statt — das Modell rankt lediglich vorhandene Karten nach Ähnlichkeit zur Suchanfrage.
+        </p>
+
+        <p className="text-xs uppercase tracking-wide text-ink-dim">
+          5. Spielgruppen (&bdquo;Table&ldquo;-Funktion)
         </p>
         <p>
           Legen Sie eine Spielgruppe an oder tragen Sie Spielergebnisse ein, werden die von Ihnen
@@ -132,7 +148,7 @@ export default function LegalPage() {
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          5. Kartenbilder von Drittanbietern
+          6. Kartenbilder von Drittanbietern
         </p>
         <p>
           Kartenbilder werden direkt von KRCG (static.krcg.org) geladen. Beim Laden eines
@@ -143,7 +159,7 @@ export default function LegalPage() {
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          6. Unterstützung über Ko-fi
+          7. Unterstützung über Ko-fi
         </p>
         <p>
           Der Footer enthält einen Link zu einer Spendenseite bei Ko-fi (Ko-fi Labs Ltd.,
@@ -155,7 +171,7 @@ export default function LegalPage() {
           Mitgliedschaften oder kostenpflichtigen Funktionen angeboten.
         </p>
 
-        <p className="text-xs uppercase tracking-wide text-ink-dim">7. Ihre Rechte</p>
+        <p className="text-xs uppercase tracking-wide text-ink-dim">8. Ihre Rechte</p>
         <p>
           Sie haben gegenüber dem Verantwortlichen das Recht auf Auskunft (Art. 15 DSGVO),
           Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18),
