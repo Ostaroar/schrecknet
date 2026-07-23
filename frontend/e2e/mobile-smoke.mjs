@@ -50,7 +50,7 @@ try {
   const routes = ['crypt', 'library', 'decks', 'inventory', 'precons', 'rules', 'changelog', 'help', 'about', 'cards/100401']
 
   async function checkRoute(route) {
-    await page.goto(`${baseUrl}/#/${route}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${baseUrl}/${route}`, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('main')
     await page.waitForTimeout(250)
     const metrics = await page.evaluate(() => {
@@ -131,12 +131,12 @@ try {
 
   for (const route of routes) await checkRoute(route)
 
-  // The card-text selector also controls the UI locale. Exercise both search
-  // surfaces in every shipped UI language so typed translations cannot drift
-  // into dead, unrendered entries.
-  await page.goto(`${baseUrl}/#/crypt`, { waitUntil: 'domcontentloaded' })
-  const language = page.getByLabel('Card text language')
-  await language.selectOption('es')
+  // The flag buttons in the header also control the UI locale. Exercise both
+  // search surfaces in every shipped UI language so typed translations cannot
+  // drift into dead, unrendered entries.
+  await page.goto(`${baseUrl}/crypt`, { waitUntil: 'domcontentloaded' })
+  const selectLanguage = (name) => page.getByRole('button', { name, exact: true }).click()
+  await selectLanguage('Español')
   await page.getByPlaceholder('Nombre / texto').waitFor()
   await page.getByRole('option', { name: 'Cualquier clan', exact: true }).waitFor({ state: 'attached' })
   await page.getByText('Rasgos', { exact: true }).waitFor()
@@ -147,7 +147,7 @@ try {
   await page.locator('button[data-route="changelog"]').click()
   await page.getByRole('heading', { name: 'Qué ha cambiado en SchreckNet.' }).waitFor()
 
-  await language.selectOption('fr')
+  await selectLanguage('Français')
   await page.getByRole('heading', { name: 'Ce qui a changé dans SchreckNet.' }).waitFor()
   await page.locator('button[data-route="library"]').click()
   await page.getByPlaceholder('Nom / texte').waitFor()
@@ -157,12 +157,12 @@ try {
   await page.getByPlaceholder('Nom / texte').waitFor()
   await page.getByRole('option', { name: 'Tout clan', exact: true }).waitFor({ state: 'attached' })
   await page.getByText('Traits', { exact: true }).waitFor()
-  await language.selectOption('en')
+  await selectLanguage('English')
 
-  await page.goto(`${baseUrl}/#/decks`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${baseUrl}/decks`, { waitUntil: 'domcontentloaded' })
   await page.getByPlaceholder('New deck name').fill('Mobile smoke')
   await page.getByRole('button', { name: 'Create deck', exact: true }).click()
-  await page.waitForFunction(() => location.hash.startsWith('#/decks/'))
+  await page.waitForFunction(() => location.pathname.startsWith('/decks/'))
   await page.getByPlaceholder('Add crypt card by name…').fill('Aaradhya')
   await page.getByRole('button', { name: /Aaradhya/ }).click()
   try {
@@ -174,12 +174,12 @@ try {
       { cause: error },
     )
   }
-  const deckRoute = new URL(page.url()).hash.slice(2)
+  const deckRoute = new URL(page.url()).pathname.slice(1)
   await checkRoute(deckRoute)
   await page.getByRole('button', { name: 'Review', exact: true }).click()
-  await page.waitForFunction(() => location.hash.endsWith('/review'))
+  await page.waitForFunction(() => location.pathname.endsWith('/review'))
   await page.getByText('Deck review', { exact: true }).waitFor()
-  await checkRoute(new URL(page.url()).hash.slice(2))
+  await checkRoute(new URL(page.url()).pathname.slice(1))
 
   console.log(`mobile layout contract passed across ${routes.length + 2} routes at ${viewportWidth}px`)
 } finally {

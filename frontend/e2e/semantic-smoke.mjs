@@ -128,7 +128,7 @@ try {
     assetAccounting.push(accounting)
   })
 
-  await page.goto(`${baseUrl}/#/crypt`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${baseUrl}/crypt`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('main')
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready
@@ -249,7 +249,7 @@ try {
   await waitForExactIds(preconFixture.crypt.expected_ids)
 
   await page.getByRole('button', { name: 'library search', exact: true }).click()
-  await page.waitForFunction(() => location.hash === '#/library')
+  await page.waitForFunction(() => location.pathname === '/library')
   await page.getByPlaceholder('Name / text').waitFor()
   const libraryRest = await exactRestSearch('library', searchFixture.library.rest_query)
   assert.deepEqual(
@@ -386,14 +386,14 @@ try {
   }
 
   const searchDeckName = 'Search bridge e2e'
-  await page.goto(`${baseUrl}/#/decks`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${baseUrl}/decks`, { waitUntil: 'domcontentloaded' })
   await page.getByPlaceholder('New deck name').fill(searchDeckName)
   await page.getByRole('button', { name: 'Create deck', exact: true }).click()
-  await page.waitForFunction(() => /^#\/decks\/\d+$/.test(location.hash))
+  await page.waitForFunction(() => /^\/decks\/\d+$/.test(location.pathname))
 
   for (const kind of ['crypt', 'library']) {
     const sortFixture = searchFixture.result_sort[kind]
-    await page.goto(`${baseUrl}/#/${kind}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${baseUrl}/${kind}`, { waitUntil: 'domcontentloaded' })
     await page.getByPlaceholder('Name / text').waitFor()
     await page.getByLabel(`Trait ${sortFixture.trait_control}`, { exact: true }).click()
     await page.getByLabel(`Sort ${kind} results`, { exact: true }).selectOption(sortFixture.control)
@@ -427,7 +427,7 @@ try {
   // VDB card-text bracket tokens render as accessible visual symbols on both
   // card-detail surfaces. Lock inferior/superior discipline levels, card-type
   // tokens, translated text, and the removal of the raw bracket notation.
-  await page.goto(`${baseUrl}/#/cards/100401`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${baseUrl}/cards/100401`, { waitUntil: 'domcontentloaded' })
   await page.getByRole('heading', { name: 'Conditioning', level: 1 }).waitFor()
   const inferiorDominate = page.locator('[data-card-text-symbol="dom"]')
   const superiorDominate = page.locator('[data-card-text-symbol="DOM"]')
@@ -444,25 +444,25 @@ try {
     'raw discipline tokens remained visible',
   )
 
-  await page.getByLabel('Card text language', { exact: true }).selectOption('es')
+  await page.getByRole('button', { name: 'Español', exact: true }).click()
   await page.getByRole('heading', { name: 'Condicionamiento', level: 1 }).waitFor()
   assert.equal(await page.locator('[data-card-text-symbol="dom"]').count(), 1)
   assert.equal(await page.locator('[data-card-text-symbol="DOM"]').count(), 1)
 
-  await page.getByLabel('Card text language', { exact: true }).selectOption('en')
-  await page.goto(`${baseUrl}/#/cards/201598`, { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await page.goto(`${baseUrl}/cards/201598`, { waitUntil: 'domcontentloaded' })
   const politicalAction = page.locator('[data-card-text-symbol="POLITICAL ACTION"]')
   await politicalAction.waitFor()
   assert.equal(await politicalAction.getAttribute('aria-label'), 'Political Action symbol')
 
-  await page.goto(`${baseUrl}/#/library`, { waitUntil: 'domcontentloaded' })
-  await page.getByLabel('Card text language', { exact: true }).selectOption('es')
+  await page.goto(`${baseUrl}/library`, { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Español', exact: true }).click()
   await page.getByPlaceholder('Nombre / texto').fill('Conditioning')
   await waitForExactIds([100401])
   await page.locator('main button[data-card-id="100401"]').click()
   await page.locator('[data-card-text-symbol="dom"]').waitFor()
   await page.getByText('Card text: Español', { exact: true }).waitFor()
-  await page.getByLabel('Card text language', { exact: true }).selectOption('en')
+  await page.getByRole('button', { name: 'English', exact: true }).click()
 
   // The semantic golden queries intentionally start with no structured
   // filters. Reload to discard the exact-search component state above while
@@ -476,7 +476,7 @@ try {
       // Navigation labels are localized by the persisted card-text language.
       // Route hooks are deliberately language-independent.
       await page.locator(`nav button[data-route="${kind}"]`).click()
-      await page.waitForFunction((expected) => location.hash === `#/${expected}`, kind)
+      await page.waitForFunction((expected) => location.pathname === `/${expected}`, kind)
       await page.getByPlaceholder('Name / text').waitFor()
       activeKind = kind
     }
