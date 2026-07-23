@@ -221,7 +221,19 @@ docs/feature-parity.md's scope note).
   storage; authenticated create/update/import/export tools remain Phase 3 work
 
 ## Phase 3 — Accounts & sync
+_Direction confirmed by the project owner (2026-07-23): "Search fast. Build locally.
+Keep control." stays the default, account-free experience — everything shipped so
+far (search, decks, inventory, limited format, game-groups) keeps working with zero
+login. Accounts/cloud sync are purely additive on top, for whoever wants their decks
+follow them across devices._
 - Register/login/reset (parity) + passkeys; server-synced decks & branches
+- **Login via Google/Apple OAuth** (in addition to email/password) — the two
+  providers users actually already have on their phone/desktop, avoiding yet another
+  password to manage. Needs its own design pass when picked up: OAuth client
+  registration/secrets handling, and a real server-side user-account store (today
+  `app.sqlite` only holds the code-gated, account-free game-groups tables — this
+  would be the first *identity-bound* server data, a meaningfully bigger trust
+  boundary than anything shipped so far).
 - Inventory **sync** (the inventory feature itself is local-first and pulled
   forward — full design & milestones in [docs/inventory-plan.md](inventory-plan.md);
   Phase 3 only adds server storage + the `get_inventory`/`update_inventory`
