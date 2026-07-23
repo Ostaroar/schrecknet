@@ -129,13 +129,27 @@ impl SchreckNetMcp {
 
     #[tool(
         description = "List every official V5 precon (starter deck), grouped by set, with the \
-        count of distinct cards known to belong to it. Card quantities per precon aren't \
-        tracked — use search_crypt/search_library with matching `set`+`precon` to browse a \
-        precon's actual cards."
+        count of distinct cards known to belong to it. Use search_crypt/search_library with \
+        matching `set`+`precon` to browse a precon's actual cards, or get_precon_card_counts for \
+        real per-card copy counts within one physical copy of it."
     )]
     async fn list_precons(&self) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open()?;
         json_result(cards_db::list_precons(&conn))
+    }
+
+    #[tool(
+        description = "Get real per-card copy counts for one physical copy of a precon (set + \
+        precon exact, as returned by list_precons) — how many of each card the actual product \
+        contains, not just which cards it contains. Some V5 precon crypts do ship a vampire \
+        twice."
+    )]
+    async fn get_precon_card_counts(
+        &self,
+        Parameters(params): Parameters<cards_db::PreconCardCountsParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(cards_db::precon_card_counts(&conn, &params))
     }
 
     #[tool(

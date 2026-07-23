@@ -74,7 +74,12 @@ CREATE TABLE card_requirements(
 ) WITHOUT ROWID;                    -- schema v6; V5 rows only
 CREATE TABLE card_traits(card_id INT, trait TEXT);         -- precomputed trait flags
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
-                       first_print BOOLEAN);
+                       first_print BOOLEAN,
+                       precon_copies INT);  -- schema v7; how many copies of
+                       -- this card one physical copy of `precon` contains
+                       -- (KRCG's own per-printing "copies" field; NULL when
+                       -- `precon` is NULL, defaults to 1 when precon is set
+                       -- but "copies" was omitted from the source)
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);   -- KRCG rulings
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);

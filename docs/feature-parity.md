@@ -237,11 +237,11 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       expandable missing-cards list + inventory page's collection-wide,
       exportable want-list (see [inventory-plan.md](inventory-plan.md) I4)
 - ☑ Precon decks browser — live at `#/precons`, all 32 official V5 precons
-      grouped by set (list_precons: MCP + REST + browser). ✎ known
-      limitation, not a bug: card *quantities* per precon deck aren't
-      tracked by the data source (KRCG's export records which printings
-      existed, not each deck's exact copy counts), so this shows each
-      precon's card pool rather than a ready-to-play decklist
+      grouped by set (list_precons: MCP + REST + browser). Real per-card copy
+      counts within one physical copy of each precon are also tracked
+      (`precon_card_counts`/`get_precon_card_counts`: MCP + REST + browser),
+      sourced from KRCG's own per-printing `copies` field (schema v7,
+      2026-07-23) — some V5 precon crypts do ship a vampire twice
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
 
 ## Inventory (`/inventory`)
@@ -249,8 +249,9 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
 (no account needed), synced later in Phase 3. All five planned local milestones
 (I1–I5) are complete._
 - ☑ Add crypt/library cards with quantities — `#/inventory`, add-by-name, qty
-      steppers, remove, precon bulk add/remove (one copy per distinct card,
-      since precon quantities aren't tracked by the data source)
+      steppers, remove, precon bulk add/remove with a "how many precons do you
+      own" quantity field, applying each card's real per-precon copy count
+      (not a flat amount — see the precon browser entry above)
 - ☑ Import/export inventory (text/file) ✎ — Lackey/JOL-style `<qty>x <name>`,
       unresolved names reported rather than dropped, matches deck import/export
 - ☑ Usage view: how many copies used across decks, missing counts — deck

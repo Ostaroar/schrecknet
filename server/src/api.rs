@@ -6,7 +6,7 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Json};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
-use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
+use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams, PreconCardCountsParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::game_groups::{
     self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,
@@ -31,6 +31,16 @@ pub async fn search_library(
 
 pub async fn list_precons(State(state): State<AppState>) -> impl IntoResponse {
     run(state, cards_db::list_precons).await
+}
+
+pub async fn get_precon_card_counts(
+    State(state): State<AppState>,
+    Query(params): Query<PreconCardCountsParams>,
+) -> impl IntoResponse {
+    run(state, move |conn| {
+        cards_db::precon_card_counts(conn, &params)
+    })
+    .await
 }
 
 pub async fn draw_hand(Json(params): Json<DrawHandParams>) -> impl IntoResponse {

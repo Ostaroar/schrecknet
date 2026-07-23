@@ -970,14 +970,12 @@ pub struct PreconSummary {
 }
 
 /// Lists every (set, precon) pair with at least one printing, plus the
-/// number of distinct cards known to belong to it. Card *quantities* per
-/// precon deck are not tracked — KRCG's export records which printings
-/// existed, not each deck's exact copy counts (see docs/feature-parity.md's
-/// precon-browser note, same NULL-honesty policy as sect/votes/banned).
-/// To browse a precon's actual cards, call search_crypt/search_library with
-/// this pair's `set` + `precon` (both exact for this purpose — the two
-/// filters together are precise enough that reusing the search path avoids
-/// a second copy of the same query logic).
+/// number of distinct cards known to belong to it. To browse a precon's
+/// actual cards, call search_crypt/search_library with this pair's `set` +
+/// `precon` (both exact for this purpose — the two filters together are
+/// precise enough that reusing the search path avoids a second copy of the
+/// same query logic). For real per-card copy counts within one physical
+/// copy of the precon, see `precon_card_counts` below.
 pub fn list_precons(conn: &Connection) -> rusqlite::Result<Vec<PreconSummary>> {
     let mut stmt = conn.prepare(
         "SELECT s.name, p.precon, COUNT(DISTINCT p.card_id) AS card_count
@@ -991,6 +989,48 @@ pub fn list_precons(conn: &Connection) -> rusqlite::Result<Vec<PreconSummary>> {
             set: row.get(0)?,
             precon: row.get(1)?,
             card_count: row.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct PreconCardCountsParams {
+    /// Exact set name, as returned by list_precons (e.g. "Fifth Edition").
+    pub set: String,
+    /// Exact precon name within that set, as returned by list_precons.
+    pub precon: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PreconCardCount {
+    pub card_id: i64,
+    /// How many physical copies of this card one copy of the precon itself
+    /// contains — some V5 precon crypts do ship a vampire twice. Sourced
+    /// from KRCG's own per-printing `copies` field (see docs/data.md);
+    /// defaults to 1 for the rare precon entries that omit it.
+    pub copies: i64,
+}
+
+/// Real per-card copy counts for one physical copy of a precon — the data
+/// `list_precons`'s `card_count` deliberately doesn't have (that's a count
+/// of *distinct* cards, this is "how many of each"). Used by the inventory
+/// page's "I own N copies of this precon" quantity feature.
+pub fn precon_card_counts(
+    conn: &Connection,
+    params: &PreconCardCountsParams,
+) -> rusqlite::Result<Vec<PreconCardCount>> {
+    let mut stmt = conn.prepare(
+        "SELECT p.card_id, SUM(COALESCE(p.precon_copies, 1)) AS copies
+         FROM printings p JOIN sets s ON s.id = p.set_id
+         WHERE s.name = ?1 AND p.precon = ?2
+         GROUP BY p.card_id
+         ORDER BY p.card_id",
+    )?;
+    let rows = stmt.query_map([&params.set, &params.precon], |row| {
+        Ok(PreconCardCount {
+            card_id: row.get(0)?,
+            copies: row.get(1)?,
         })
     })?;
     rows.collect()
@@ -2764,6 +2804,72 @@ mod tests {
         let precons = list_precons(&conn).unwrap();
         assert_eq!(precons.len(), 1);
         assert_eq!(precons[0].precon, "Anarch Precon");
+    }
+
+    #[test]
+    fn precon_card_counts_reports_real_per_card_copies_and_defaults_null_to_one() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE sets(id INT, name TEXT, release_date TEXT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
+               first_print INT, precon_copies INT);
+             INSERT INTO sets VALUES (1,'Fifth Edition','2020-11-30'),(2,'New Blood','2022-04-17');
+             INSERT INTO printings VALUES
+               (1,1,'Ventrue','U',1,2),
+               (2,1,'Ventrue','C',1,NULL),
+               (3,1,'Tremere','C',1,1),
+               (1,2,'Ventrue','U',1,1);",
+        )
+        .unwrap();
+
+        let counts = precon_card_counts(
+            &conn,
+            &PreconCardCountsParams {
+                set: "Fifth Edition".into(),
+                precon: "Ventrue".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            counts,
+            vec![
+                PreconCardCount {
+                    card_id: 1,
+                    copies: 2
+                }, // explicit precon_copies
+                PreconCardCount {
+                    card_id: 2,
+                    copies: 1
+                }, // NULL -> defaults to 1
+            ]
+        );
+
+        // A different set's "Ventrue" precon is a different printing row entirely.
+        let other_set = precon_card_counts(
+            &conn,
+            &PreconCardCountsParams {
+                set: "New Blood".into(),
+                precon: "Ventrue".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            other_set,
+            vec![PreconCardCount {
+                card_id: 1,
+                copies: 1
+            }]
+        );
+
+        let unknown = precon_card_counts(
+            &conn,
+            &PreconCardCountsParams {
+                set: "Fifth Edition".into(),
+                precon: "Nosferatu".into(),
+            },
+        )
+        .unwrap();
+        assert!(unknown.is_empty());
     }
 
     #[test]

@@ -45,7 +45,7 @@ CREATE TABLE card_requirements(
 ) WITHOUT ROWID;
 CREATE TABLE card_traits(card_id INT, trait TEXT);
 CREATE INDEX card_traits_card_trait_idx ON card_traits(card_id, trait);
-CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
+CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
 CREATE TABLE translations(card_id INT, lang TEXT, name TEXT, card_text TEXT);
@@ -197,7 +197,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '6'), ('data_version', '8'), ('scope', 'v5'),
+         ('schema_version', '7'), ('data_version', '9'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -216,12 +216,15 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // image_url added to cards; v3: dropped the never-populated twd_*
         // tables; v4: added card_embeddings for local semantic search; v5:
         // normalized derived library capacity requirements into their own table;
-        // v6: added normalized official VEKN requirement tokens).
-        // data_version changes whenever emitted content changes (v8 fills
-        // card_traits plus official library Burn Option/Banned; v7 filled
-        // crypt sect/title/vote/advancement/banned columns).
-        "schema_version": 6,
-        "data_version": 8,
+        // v6: added normalized official VEKN requirement tokens; v7: added
+        // printings.precon_copies).
+        // data_version changes whenever emitted content changes (v9 fills
+        // printings.precon_copies from KRCG's own per-printing "copies" field,
+        // previously discarded — see docs/data.md; v8 fills card_traits plus
+        // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
+        // advancement/banned columns).
+        "schema_version": 7,
+        "data_version": 9,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

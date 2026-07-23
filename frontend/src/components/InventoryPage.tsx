@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   getInventoryCardDetails,
   setInventoryQty,
-  adjustInventoryQtyForCards,
+  adjustInventoryQtyByMap,
   exportInventoryText,
   importInventoryText,
   computeGlobalMissing,
@@ -11,9 +11,7 @@ import {
   type InventoryImportResult,
   type MissingCard,
 } from '../lib/inventoryStore'
-import { listPrecons, type PreconSummary } from '../lib/precons'
-import { searchCrypt, emptyCryptFilters } from '../lib/cryptSearch'
-import { searchLibrary, emptyLibraryFilters } from '../lib/librarySearch'
+import { listPrecons, getPreconCardCounts, type PreconSummary } from '../lib/precons'
 import { navigate } from '../lib/route'
 import { useUiStrings, type UiStrings } from '../lib/i18n'
 import AddCardBox from './AddCardBox'
@@ -168,24 +166,16 @@ function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiString
 
   const selectedPrecon = precons.find((p) => `${p.set}:${p.precon}` === selected) ?? null
 
-  const preconCardIds = async (): Promise<number[]> => {
-    if (!selectedPrecon) return []
-    const { set, precon } = selectedPrecon
-    const [crypt, library] = await Promise.all([
-      searchCrypt({ ...emptyCryptFilters, precons: [{ set, precon }] }),
-      searchLibrary({ ...emptyLibraryFilters, precons: [{ set, precon }] }),
-    ])
-    return [...crypt.map((c) => c.id), ...library.map((c) => c.id)]
-  }
-
   const apply = async (mode: 'add' | 'remove') => {
     if (!selectedPrecon) return
     const amount = Math.max(1, Math.floor(qty) || 1)
     setBusy(mode)
-    const cardIds = await preconCardIds()
-    await adjustInventoryQtyForCards(cardIds, mode === 'add' ? amount : -amount)
+    const counts = await getPreconCardCounts(selectedPrecon.set, selectedPrecon.precon)
+    const sign = mode === 'add' ? 1 : -1
+    const deltas = new Map([...counts].map(([cardId, copies]) => [cardId, sign * amount * copies]))
+    await adjustInventoryQtyByMap(deltas)
     setStatus(
-      mode === 'add' ? ui.addedCopies(amount, cardIds.length) : ui.removedCopies(amount, cardIds.length),
+      mode === 'add' ? ui.addedCopies(amount, counts.size) : ui.removedCopies(amount, counts.size),
     )
     setBusy(null)
     onChanged()

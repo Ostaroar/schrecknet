@@ -296,9 +296,16 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
         for (i, p) in printings.iter().enumerate() {
             let precon = p.get("precon").and_then(|v| v.as_str());
             let rarity = p.get("rarity").and_then(|v| v.as_str());
+            // KRCG records how many physical copies of this card one copy of
+            // the precon itself contains (some V5 precon crypts do ship a
+            // vampire twice) — only meaningful when `precon` is set; defaults
+            // to 1 for the (rare) precon entries that omit it.
+            let precon_copies =
+                precon.map(|_| p.get("copies").and_then(|v| v.as_i64()).unwrap_or(1));
             conn.execute(
-                "INSERT INTO printings (card_id, set_id, precon, rarity, first_print) VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![id, set_id, precon, rarity, (i == 0) as i64],
+                "INSERT INTO printings (card_id, set_id, precon, rarity, first_print, precon_copies) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, set_id, precon, rarity, (i == 0) as i64, precon_copies],
             )?;
         }
     }
@@ -626,7 +633,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
-             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);",
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);",
         )
         .unwrap();
         insert_printings(&conn, &card).unwrap();
@@ -644,5 +651,43 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM printings", [], |r| r.get(0))
             .unwrap();
         assert_eq!(printing_count, 1);
+    }
+
+    #[test]
+    fn insert_printings_reads_precon_copies_from_the_source_and_defaults_to_one() {
+        let card = json!({
+            "id": 1,
+            "sets": {
+                "Fifth Edition": [{"release_date": "2020-11-30", "precon": "Salubri", "copies": 2}],
+                "New Blood": [{"release_date": "2022-04-17", "precon": "Ventrue"}],
+                "Sabbat V5": [{"release_date": "2025-10-26"}],
+            },
+        });
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);",
+        )
+        .unwrap();
+        insert_printings(&conn, &card).unwrap();
+
+        let mut rows: Vec<(String, Option<i64>)> = conn
+            .prepare(
+                "SELECT precon, precon_copies FROM printings p JOIN sets s ON s.id = p.set_id ORDER BY s.name",
+            )
+            .unwrap()
+            .query_map([], |r| Ok((r.get::<_, Option<String>>(0)?.unwrap_or_default(), r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        rows.sort();
+        assert_eq!(
+            rows,
+            vec![
+                ("".to_string(), None), // not a precon printing at all -> NULL, not 1
+                ("Salubri".to_string(), Some(2)), // explicit "copies": 2
+                ("Ventrue".to_string(), Some(1)), // precon set, "copies" omitted -> defaults to 1
+            ]
+        );
     }
 }

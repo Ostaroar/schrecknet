@@ -91,6 +91,7 @@ async fn main() {
         .route("/api/v1/cards/lookup", get(api::get_card_by_name))
         .route("/api/v1/cards/{id}", get(api::get_card))
         .route("/api/v1/precons", get(api::list_precons))
+        .route("/api/v1/precons/cards", get(api::get_precon_card_counts))
         .route("/api/v1/decks/draw-hand", post(api::draw_hand))
         .route("/api/v1/groups", post(api::create_game_group))
         .route("/api/v1/groups/{code}", get(api::get_game_group))
