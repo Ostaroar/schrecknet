@@ -69,3 +69,28 @@ jobs:
             SITE_URL=https://schreck-net.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    # Only main pushes -- never PRs (no cluster credentials there, and
+    # nothing should touch prod from an untrusted fork) and never tags
+    # (a `v*` tag build isn't necessarily what's rolled out to the live
+    # single-replica deployment, which always tracks `:main`; see
+    # docs/adr/0013-ci-deploys-on-push-to-main.md).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Save kubeconfig
+        run: doctl kubernetes cluster kubeconfig save k8s-1-36-0-do-3-fra1-1784797648512
+
+      # imagePullPolicy: Always + a rollout restart is enough here -- the
+      # deployment always tracks the `:main` tag (k8s/deployment.yaml), so
+      # there's no image reference to bump, just a pod to recreate.
+      - name: Roll out schreck-net.com
+        run: |
+          kubectl -n schrecknet rollout restart deployment/schrecknet-server
+          kubectl -n schrecknet rollout status deployment/schrecknet-server --timeout=120s

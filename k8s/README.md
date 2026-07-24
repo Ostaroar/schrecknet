@@ -87,6 +87,10 @@ kubectl -n schrecknet get certificate
 
 ## 5. Redeploy after a new image push
 
+CI does this automatically on every push to `main` (`.github/workflows/docker.yml`'s
+`deploy` job, docs/adr/0013). Manual fallback if that job is broken or you need
+to force a restart without a new commit:
+
 ```bash
 kubectl -n schrecknet rollout restart deployment/schrecknet-server
 ```
