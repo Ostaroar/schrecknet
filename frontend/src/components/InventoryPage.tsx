@@ -209,6 +209,7 @@ function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiString
       <p className="text-xs text-ink-dim">{ui.preconNote}</p>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <select
+          aria-label={ui.addRemovePreconTitle}
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
           className="min-h-10 w-full min-w-0 max-w-full rounded-lg border border-line bg-ground px-3 py-1.5 text-sm text-ink outline-none focus:border-blood-hi sm:min-h-0 sm:flex-1"

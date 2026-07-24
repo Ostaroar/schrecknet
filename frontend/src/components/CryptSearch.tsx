@@ -412,6 +412,7 @@ export default function CryptSearch() {
           onRemove={removeModel}
         />
         <select
+          aria-label={ui.cryptSearch.clanLabel}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={clan ?? ''}
           onChange={(e) => setClan(e.target.value || null)}
@@ -425,6 +426,7 @@ export default function CryptSearch() {
           ))}
         </select>
         <select
+          aria-label={ui.cryptSearch.titleLabel}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={title ?? ''}
           onChange={(e) => setTitle(e.target.value || null)}

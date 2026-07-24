@@ -9,9 +9,15 @@
   --color-line-soft: #2c2127;
   --color-ink: #ece4e6;
   --color-ink-muted: #a08f95;
-  --color-ink-dim: #6e5f65;
+  /* ink-dim and blood-hi are brightened from their original #6e5f65/#d04b58
+     (same hue) to clear 4.5:1 WCAG AA contrast against every surface tone
+     above, including composited ones (a bg-blood/20 badge over the page
+     background is the worst case for blood-hi, at ~#39181e) — axe-core
+     flagged the originals as failing on 50 elements across the crypt page
+     alone. */
+  --color-ink-dim: #928188;
   --color-blood: #b32e40;
-  --color-blood-hi: #d04b58;
+  --color-blood-hi: #d76772;
   --color-gold: #c9a15a;
   --color-ok: #6fae84;
   --font-display: Palatino, "Palatino Linotype", Georgia, serif;

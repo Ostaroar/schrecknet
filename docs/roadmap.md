@@ -292,7 +292,17 @@ across deck editor / proxy / search / card pages:
   regex, filtered, crypt+library) now sit at **2-9ms p95**, under budget.
   Client-perceived latency (add network/browser overhead) isn't measured, but
   the dominant cost — server processing — now has real headroom.
-- Accessibility pass (WCAG AA), keyboard map, docs
+- ◐ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
+  4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
+  found and fixed two real classes of violation — 4 unlabeled `<select>`s
+  (crypt clan/title, library clan-requirement, inventory precon-picker; the
+  votes/set/precon-add/sort selects already had `aria-label`s, these four
+  didn't) and `--color-ink-dim`/`--color-blood-hi` (design tokens used
+  pervasively — 50 flagged elements on the crypt page alone) falling short of
+  4.5:1 against the surface/raised/blood-badge backgrounds they actually
+  render on. Both tokens brightened same-hue to clear 4.5:1 with margin
+  (docs/design.md's tokens are the values in frontend/src/index.css). All 12
+  routes now audit clean. Keyboard map and remaining WCAG docs still open.
 
 ## Phase 5 — VTES v5 game-loop / rules reference (additive, beyond vdb parity)
 _Independent of Phases 3–4; could be pulled earlier. Additive reference tooling in the

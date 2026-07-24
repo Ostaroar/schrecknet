@@ -22,9 +22,9 @@ ships as re-stepped tokens; dark is the definitive reading.
 | `line` | `#332630` / `#2C2127` | borders, dividers |
 | `ink` | `#ECE4E6` | primary text |
 | `ink-muted` | `#A08F95` | secondary text |
-| `ink-dim` | `#6E5F65` | labels, placeholders |
+| `ink-dim` | `#928188` | labels, placeholders (4.5:1+ on every surface, axe-validated 2026-07-24) |
 | `blood` | `#B32E40` | primary actions, active state |
-| `blood-data` | `#D04B58` | chart marks (≥3:1 on surfaces, validated) |
+| `blood-data` | `#D76772` | chart marks + small text (4.5:1+ incl. `bg-blood/20` badges, axe-validated 2026-07-24 — the original `#D04B58` was only validated to ≥3:1, which undershot AA once it got used for small text like badge numerals) |
 | `gold` | `#C9A15A` | superior disciplines, lore accents |
 | `ok` | `#6FAE84` | legality / success |
 

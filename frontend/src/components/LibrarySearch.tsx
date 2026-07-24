@@ -529,6 +529,7 @@ export default function LibrarySearch() {
           </select>
         </label>
         <select
+          aria-label={ui.librarySearch.anyClanRequirement}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink"
           value={clan ?? ''}
           onChange={(e) => setClan(e.target.value || null)}
