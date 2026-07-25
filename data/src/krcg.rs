@@ -74,9 +74,7 @@ pub fn fetch_v5_exception_ids(
         .filter(|card| {
             card.get("formats")
                 .and_then(|f| f.as_array())
-                .is_some_and(|formats| {
-                    formats.iter().any(|f| f.as_str() == Some("V5"))
-                })
+                .is_some_and(|formats| formats.iter().any(|f| f.as_str() == Some("V5")))
         })
         .filter_map(|card| card.get("id").and_then(|id| id.as_i64()))
         .collect();
