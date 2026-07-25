@@ -138,6 +138,10 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(std::env::var("SCHRECKNET_DATA_CACHE").unwrap_or_else(|_| ".cache".into()));
     let all_cards = krcg::fetch_cards(&cache_dir)?;
     eprintln!("krcg: {} total cards fetched", all_cards.len());
+    // Cards Black Chantry legalised individually rather than via a V5 product
+    // (docs/adr/0014). Fetched, not hardcoded — this is the part of the pool
+    // that grows without any new set appearing.
+    let v5_exception_ids = krcg::fetch_v5_exception_ids(&cache_dir)?;
     let vekn_metadata = vekn::fetch_metadata(&cache_dir)?;
     eprintln!(
         "vekn: {} library card rows, {} library requirement rows, and {} crypt metadata rows fetched",
@@ -149,7 +153,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let conn = rusqlite::Connection::open(&db_path)?;
     conn.execute_batch(SCHEMA)?;
 
-    let stats = ingest::run(&conn, &all_cards, &vekn_metadata)?;
+    let stats = ingest::run(&conn, &all_cards, &vekn_metadata, &v5_exception_ids)?;
     let (requirement_cards, requirement_tokens): (i64, i64) = conn.query_row(
         "SELECT COUNT(DISTINCT card_id), COUNT(*) FROM card_requirements",
         [],
@@ -206,7 +210,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '9'), ('data_version', '12'), ('scope', 'v5'),
+         ('schema_version', '9'), ('data_version', '13'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -231,7 +235,12 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // and precon-filtered search were doing a correlated-subquery table
         // scan per candidate row, ~50ms server-side for the slowest query;
         // indexed, ~2ms).
-        // data_version changes whenever emitted content changes (v12 removes
+        // data_version changes whenever emitted content changes (v13 removes
+        // First Blood + Twenty-Fifth Anniversary + V5 Polish Edition promo
+        // from V5_SET_NAMES — none is among Black Chantry's 28 official V5
+        // products — and adds the promo cards Black Chantry legalised
+        // individually, now read from KRCG's `formats` field instead of being
+        // hardcoded, see docs/adr/0014; v12 removes
         // Sabbat Preconstructed — a Standard Constructed reprint product, not
         // V5 — from V5_SET_NAMES and adds the previously-missing Fall of
         // London/Shadows of Berlin sets, see docs/adr/0012; v11 preserves
@@ -242,7 +251,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
         "schema_version": 9,
-        "data_version": 12,
+        "data_version": 13,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
@@ -281,6 +290,10 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
             "tokens": requirement_tokens,
         },
         "v5_sets": v5pool::V5_SET_NAMES,
+        // Card ids legal via Black Chantry's individual promo legalisation
+        // rather than via a V5 product (docs/adr/0014). Emitted so the shipped
+        // database states its own pool rule, not just its contents.
+        "v5_exception_card_ids": v5_exception_ids,
     });
     std::fs::write(
         out_dir.join("cards.meta.json"),

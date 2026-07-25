@@ -13,6 +13,8 @@ use schrecknet_core::requirements::normalize_library_requirements;
 use schrecknet_core::traits::{classify_crypt_traits, classify_library_traits, LibraryTraitFacts};
 use serde_json::Value;
 
+use std::collections::BTreeSet;
+
 use crate::v5pool::{is_in_v5_pool, precon_name, V5_SET_NAMES};
 use crate::vekn::{LibraryMetadata, LibraryRequirements, VeknMetadata};
 
@@ -20,8 +22,12 @@ pub fn run(
     conn: &Connection,
     all_cards: &[Value],
     vekn: &VeknMetadata,
+    v5_exception_ids: &BTreeSet<i64>,
 ) -> Result<IngestStats, Box<dyn std::error::Error>> {
-    let pool: Vec<&Value> = all_cards.iter().filter(|c| is_in_v5_pool(c)).collect();
+    let pool: Vec<&Value> = all_cards
+        .iter()
+        .filter(|c| is_in_v5_pool(c, v5_exception_ids))
+        .collect();
 
     let mut stats = IngestStats::default();
     for card in &pool {
@@ -285,13 +291,22 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
     let Some(sets) = card.get("sets").and_then(|v| v.as_object()) else {
         return Ok(());
     };
+    // Cards legalised individually by Black Chantry (the Promo Pack 3/4
+    // list — see v5pool.rs) have NO printing in any V5 set: their only
+    // printings are in promo/classic products. Filtering those away would
+    // leave them with zero sets and zero printings, so they'd vanish from
+    // the set filter and show no provenance on their detail page. For those
+    // cards the non-V5 printings are the only truth there is, so keep them.
+    let has_v5_printing = sets
+        .keys()
+        .any(|set_name| V5_SET_NAMES.contains(&set_name.as_str()));
     for (set_name, printings) in sets {
         // A card can be V5-legal via one printing while also carrying
         // classic-era printings from its original (pre-V5) release — this
         // site is V5-only (v5pool.rs), so those don't belong in `printings`/
         // `sets` at all, or a card detail page / precon browser would leak
         // non-V5 product names (e.g. "Anarchs", "Sabbat War").
-        if !V5_SET_NAMES.contains(&set_name.as_str()) {
+        if has_v5_printing && !V5_SET_NAMES.contains(&set_name.as_str()) {
             continue;
         }
         let set_id = upsert_set(conn, set_name, printings.as_array().and_then(|a| a.first()))?;

@@ -16,11 +16,18 @@
 A Rust tool that:
 
 1. Downloads pinned-version source files (checksums recorded in `data/lock.json`)
-1a. **Filters to the V5-legal pool** — the VEKN V5 format card list (KRCG carries
-    per-card legality/set data). Cards outside the pool are dropped entirely, which
-    also shrinks `cards.sqlite`. Filter option lists (clans, sects, titles,
-    disciplines, groups, sets, precons, artists) are emitted from the surviving
-    pool, never hardcoded.
+1a. **Filters to the V5-legal pool** (`data/src/v5pool.rs`, ADR 0014). A card is in
+    the pool if either (a) one of its KRCG set names is in `V5_SET_NAMES` — the 10
+    KRCG names covering Black Chantry's 28 official V5 products — or (b) Black
+    Chantry legalised it individually, which is read from the `formats` field of
+    `static.krcg.org/data/v5/vtes.json` rather than hardcoded, because those promo
+    cards' only printings are in classic sets and no set rule can express them.
+    KRCG has no field marking a *set* as V5, so `V5_SET_NAMES` stays curated and is
+    guarded by `every_krcg_set_is_classified`, which fails the build when KRCG
+    publishes a set that is in neither `V5_SET_NAMES` nor `KNOWN_NON_V5_SETS`.
+    Cards outside the pool are dropped entirely, which also shrinks
+    `cards.sqlite`. Filter option lists (clans, sects, titles, disciplines, groups,
+    sets, precons, artists) are emitted from the surviving pool, never hardcoded.
 2. Joins official VEKN metadata by stable card id, reproduces VDB's crypt
    sect/title-vote normalization and library title-implied sect tokens in shared
    Rust, and normalizes into the schema below
@@ -100,7 +107,7 @@ CREATE TABLE card_embeddings(
   dimensions INT NOT NULL,
   embedding BLOB NOT NULL,         -- normalized little-endian float32 values
   PRIMARY KEY(card_id, model_id)
-) WITHOUT ROWID;                   -- schema v4; compact vectors for the 829-card pool
+) WITHOUT ROWID;                   -- schema v4; compact vectors for the V5 pool
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards);
 ```
 
@@ -119,7 +126,7 @@ false positives from ordinary card text; see ADR 0007.
 Crypt sect, canonical title, vote value, advancement, and banned fields come from
 the same archive's `vtescrypt.csv`. `core/src/crypt_metadata.rs` reproduces VDB's
 official-text-prefix sect rule (including `Advanced, <sect>` and Imbued) and its
-title-to-vote table. The build fails unless all 218 current V5 crypt cards join,
+title-to-vote table. The build fails unless all 265 current V5 crypt cards join,
 so search never silently falls back to guessed clan→sect mappings.
 
 The model is not fetched at query time and its binary is not committed. The lock
@@ -139,7 +146,7 @@ Multi-Discipline, Advancement, Burn Option, Banned, and No Requirement cases), s
 client filters are pure indexed lookups. KRCG's `Ⓓ` directed-action glyph is
 normalized to VEKN/VDB's `(D)` exclusion semantics. The real-data smoke suite locks
 every positive trait's V5 cardinality and exact representative AND-compositions;
-an independent source-oracle comparison covers all 829 current cards.
+an independent source-oracle comparison covers all 749 current cards.
 
 ## User data
 
