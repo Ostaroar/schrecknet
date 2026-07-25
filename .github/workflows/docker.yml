@@ -91,7 +91,8 @@ jobs:
       #
       # GITHUB_TOKEN cannot delete package versions for a user-namespace
       # package (only org-linked ones) -- this needs a classic PAT with the
-      # delete:packages scope, stored as GHCR_CLEANUP_TOKEN.
+      # delete:packages scope, stored as GHCR_CLEANUP_TOKEN (added + verified
+      # against a real push-to-main run on 2026-07-25).
       - uses: actions/delete-package-versions@v5
         with:
           package-name: schrecknet
