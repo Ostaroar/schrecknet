@@ -42,8 +42,17 @@ A Rust tool that:
    model assets under `models/semantic/`
 
 Runs in CI weekly (`card-data.yml`) and on demand; when the output hash changes it
-opens a PR bumping the data version. The app fetches `cards.sqlite` by content-hash
-URL → immutable caching, and the service worker swaps versions atomically.
+opens a PR bumping the data version.
+
+`cards.sqlite` and `cards.meta.json` are served from **stable** paths under `/data`
+with `Cache-Control: no-cache`, i.e. revalidated rather than `immutable` — the
+filenames do not carry their version, so a cached copy can be wrong (ADR 0015; an
+earlier revision of this paragraph claimed a content-hash URL that was never
+implemented, and marking `/data` immutable on the strength of that claim stranded
+clients on stale card data). The browser downloads the database only when
+`cards.meta.json` reports a new `schema_version.data_version`, and decides that by
+reading the version out of its *own* stored database, never from a separate stamp.
+The service worker deliberately does not touch `/data` at all.
 
 ## Schema sketch (`cards.sqlite`, read-only)
 

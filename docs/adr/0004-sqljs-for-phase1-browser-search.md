@@ -4,9 +4,13 @@
 by `@sqlite.org/sqlite-wasm` in a dedicated worker with the **opfs-sahpool**
 VFS (`frontend/src/lib/dbWorker.ts`), chosen over the plain OPFS VFS because
 sahpool needs no COOP/COEP headers — cross-origin isolation would have
-blocked the hotlinked KRCG card scans. The DB persists in OPFS keyed by
-schema_version.data_version and is re-downloaded only on version change;
-`db.ts`'s `query()` seam meant zero call-site changes, as designed below.
+blocked the hotlinked KRCG card scans. The DB persists in OPFS and is
+re-downloaded only when `cards.meta.json` reports a new
+schema_version.data_version; `db.ts`'s `query()` seam meant zero call-site
+changes, as designed below. (That version comparison originally used a separate
+OPFS stamp file, which could disagree with the bytes it described and stranded
+clients on stale data; the version is now read from the database's own `meta`
+table — ADR 0015.)
 
 **Original status:** accepted, superseded-by-follow-up expected · 2026-07-18
 

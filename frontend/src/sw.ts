@@ -25,7 +25,10 @@ export {}
 
 declare const self: ServiceWorkerGlobalScope
 
-const CACHE_NAME = 'schrecknet-shell-v3'
+// Bumped to v4 to drop the stale-while-revalidate shell cache when the card
+// database cache fix shipped: SWR would otherwise hand one more load the OLD
+// bundle, i.e. the very dbWorker.ts that got stuck on stale card data.
+const CACHE_NAME = 'schrecknet-shell-v4'
 // Owned by Transformers.js (see semanticSearch.ts). Keep it across shell SW
 // upgrades; otherwise installing a new app build would silently force users
 // to download the optional ~24 MB model again.

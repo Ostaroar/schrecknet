@@ -8,9 +8,19 @@
 //   in:  { id, kind: 'query', sql, params }  → { id, ok, rows?, error? }
 //
 // On open: compare the server's cards.meta.json (schema_version+data_version)
-// with the version stamped in OPFS; on mismatch (or no local DB) fetch
-// cards.sqlite once and import it into the pool. If the network is down but
-// a local DB exists, serve it — that is the offline path.
+// with the version of the locally stored database; on mismatch (or no local
+// DB) fetch cards.sqlite once and import it into the pool. If the network is
+// down but a local DB exists, serve it — that is the offline path.
+//
+// The local version is read from the database's OWN `meta` table rather than
+// from a separate stamp file, so the version and the bytes it describes are
+// always the same artifact. An earlier design kept the stamp in its own OPFS
+// file, which let the two disagree: a cached (stale) cards.sqlite could be
+// imported while the *new* version number was stamped over it, after which
+// every later load saw "versions match" and served stale cards forever. Only
+// clearing site data escaped that — which also wipes the user's decks and
+// inventory. Reading the version out of the database makes that state
+// unrepresentable, and heals clients already stuck in it. See docs/adr/0015.
 
 import { initSqlite } from './sqlite'
 import { installExclusiveOpfsPool } from './opfsLease'
@@ -20,7 +30,6 @@ type QueryMsg = { id: number; kind: 'query'; sql: string; params: (string | numb
 type InMsg = OpenMsg | QueryMsg
 
 const DB_NAME = '/cards.sqlite'
-const VERSION_KEY = 'schrecknet-cards-version'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null
@@ -41,6 +50,23 @@ function registerRegexp(database: any) {
 
 function versionOf(meta: { schema_version: number; data_version: number }): string {
   return `${meta.schema_version}.${meta.data_version}`
+}
+
+// The database states its own version in the `meta` table the data pipeline
+// writes (data/src/main.rs). Reading it back is what makes a stale-bytes /
+// fresh-version-stamp mismatch impossible — see the module comment.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function versionOfDb(database: any): string | null {
+  try {
+    const schema = database.selectValue("SELECT value FROM meta WHERE key = 'schema_version'")
+    const data = database.selectValue("SELECT value FROM meta WHERE key = 'data_version'")
+    if (schema == null || data == null) return null
+    return `${schema}.${data}`
+  } catch {
+    // No meta table at all: a truncated or pre-v2 download. Treat as unknown
+    // so the caller re-fetches rather than trusting it.
+    return null
+  }
 }
 
 // The SAH pool owns exclusive OPFS access handles for the worker's lifetime.
@@ -64,52 +90,57 @@ async function open(): Promise<Record<string, unknown>> {
   try {
     const res = await fetch('/data/cards.meta.json', { cache: 'no-cache' })
     if (res.ok) serverMeta = await res.json()
+    // A non-ok status used to fall through silently and serve stale cards with
+    // no trace. Still degrade to the local copy, but say so.
+    else console.warn(`cards.meta.json responded ${res.status}; using local card data`)
   } catch {
     // offline — fall through to whatever OPFS has
   }
 
-  const localVersion = (await getStoredVersion()) ?? 'none'
-  const haveLocal = pool.getFileNames().includes(DB_NAME)
   const wantVersion = serverMeta ? versionOf(serverMeta) : null
+  const haveLocal = pool.getFileNames().includes(DB_NAME)
 
-  if (haveLocal && (wantVersion === null || wantVersion === localVersion)) {
-    db = new pool.OpfsSAHPoolDb(DB_NAME)
-    registerRegexp(db)
-    return { source: 'opfs', version: localVersion }
+  if (haveLocal) {
+    const local = new pool.OpfsSAHPoolDb(DB_NAME)
+    const localVersion = versionOfDb(local)
+    // Offline (wantVersion null) keeps whatever we have, even if unreadable —
+    // it is still the user's only card data.
+    if (wantVersion === null || (localVersion !== null && localVersion === wantVersion)) {
+      db = local
+      registerRegexp(db)
+      return { source: 'opfs', version: localVersion ?? 'unknown' }
+    }
+    // Stale or unreadable: close before importDb replaces the file underneath.
+    local.close()
   }
 
   if (serverMeta === null && !haveLocal) {
     throw new Error('offline and no local card database yet — connect once to download it')
   }
 
-  const res = await fetch('/data/cards.sqlite')
+  // `cache: 'reload'` bypasses the HTTP cache for this request regardless of
+  // what the server said about caching, so a stale intermediary can never be
+  // what we import.
+  const res = await fetch('/data/cards.sqlite', { cache: 'reload' })
   if (!res.ok) throw new Error(`failed to fetch cards.sqlite: ${res.status}`)
   const bytes = new Uint8Array(await res.arrayBuffer())
   await pool.importDb(DB_NAME, bytes)
-  await setStoredVersion(wantVersion ?? 'unknown')
   db = new pool.OpfsSAHPoolDb(DB_NAME)
-  registerRegexp(db)
-  return { source: 'network', version: wantVersion ?? 'unknown', bytes: bytes.length }
-}
 
-// The version stamp lives in its own tiny OPFS file (not localStorage —
-// workers don't have it; not the pool — importDb replaces the whole file).
-async function getStoredVersion(): Promise<string | null> {
-  try {
-    const root = await navigator.storage.getDirectory()
-    const handle = await root.getFileHandle(VERSION_KEY)
-    return (await (await handle.getFile()).text()) || null
-  } catch {
-    return null
+  // Trust the bytes, not the fetch: confirm the database we just stored really
+  // is the version the server advertised, rather than persisting that claim
+  // unverified the way the old version-stamp file did.
+  const storedVersion = versionOfDb(db)
+  if (wantVersion !== null && storedVersion !== wantVersion) {
+    db.close()
+    db = null
+    throw new Error(
+      `downloaded card database reports version ${storedVersion ?? 'unknown'}, expected ${wantVersion} — refusing to use it`,
+    )
   }
-}
 
-async function setStoredVersion(v: string): Promise<void> {
-  const root = await navigator.storage.getDirectory()
-  const handle = await root.getFileHandle(VERSION_KEY, { create: true })
-  const writable = await handle.createWritable()
-  await writable.write(v)
-  await writable.close()
+  registerRegexp(db)
+  return { source: 'network', version: storedVersion ?? 'unknown', bytes: bytes.length }
 }
 
 function runQuery(sql: string, params: (string | number | null)[]): Record<string, unknown>[] {

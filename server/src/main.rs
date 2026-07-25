@@ -38,15 +38,40 @@ fn init_access_logging() {
         .init();
 }
 
-/// Vite's build output under `/assets` is content-hashed (a filename never
-/// changes meaning), so it's safe to tell browsers/CDNs to cache it forever —
-/// a repeat visit re-fetches nothing until the next deploy changes the hash.
-/// `/data` and `/models/semantic` are versioned the same way (ADR 0004; see
-/// docs/data.md) but that comment predates any header actually enforcing it.
-fn immutable_cache_layer() -> SetResponseHeaderLayer<HeaderValue> {
+/// Safe only where a filename changes whenever its content does, so a cached
+/// copy can never be wrong.
+const IMMUTABLE_CACHE_CONTROL: &str = "public, max-age=31536000, immutable";
+
+/// Not "don't cache" — "revalidate before use", so an unchanged file still
+/// costs only a 304.
+const REVALIDATE_CACHE_CONTROL: &str = "no-cache";
+
+/// The `Cache-Control` for a static mount. The distinction that matters is
+/// whether the mount's *filenames* carry their version:
+///
+/// * `/assets` — Vite content-hashes every filename.
+/// * `/models/semantic` — the path carries the pinned model hash
+///   (e.g. `all-minilm-l6-v2-int8-751bff37`).
+/// * `/data` — **stable** names (`cards.sqlite`, `cards.meta.json`) whose bytes
+///   change on every data build, so `immutable` is simply untrue for them.
+///
+/// `/data` was briefly marked immutable and it caused a nasty bug: the browser
+/// kept serving year-old `cards.sqlite` bytes from its HTTP cache while the
+/// client had already read the *new* version number out of `cards.meta.json`,
+/// stamped that new version onto the old data, and then reused it forever. The
+/// only escape was clearing site data — which also destroys the user's decks
+/// and inventory, since those live in OPFS. See docs/adr/0015.
+fn cache_control_for_mount(mount: &str) -> &'static str {
+    match mount {
+        "/assets" | "/models/semantic" => IMMUTABLE_CACHE_CONTROL,
+        _ => REVALIDATE_CACHE_CONTROL,
+    }
+}
+
+fn cache_layer(mount: &str) -> SetResponseHeaderLayer<HeaderValue> {
     SetResponseHeaderLayer::overriding(
         header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=31536000, immutable"),
+        HeaderValue::from_static(cache_control_for_mount(mount)),
     )
 }
 
@@ -153,19 +178,20 @@ async fn main() {
         .route("/changelog", get(api::get_prerendered_changelog))
         .with_state(state)
         // Vite's hashed build output — safe to cache forever (see
-        // immutable_cache_layer's doc comment).
+        // cache_control_for_mount's doc comment).
         .nest_service(
             "/assets",
             ServiceBuilder::new()
-                .layer(immutable_cache_layer())
+                .layer(cache_layer("/assets"))
                 .service(ServeDir::new(format!("{static_dir}/assets"))),
         )
-        // cards.sqlite + cards.meta.json for the browser's sql.js loader
-        // (docs/adr/0004); long cache since the DB is content-versioned.
+        // cards.sqlite + cards.meta.json for the browser's SQLite loader
+        // (docs/adr/0004). Stable filenames, changing content — must
+        // revalidate, never `immutable` (see cache_control_for_mount).
         .nest_service(
             "/data",
             ServiceBuilder::new()
-                .layer(immutable_cache_layer())
+                .layer(cache_layer("/data"))
                 .service(ServeDir::new(&data_dir)),
         )
         .nest_service("/mcp", mcp_service)
@@ -184,7 +210,7 @@ async fn main() {
         .nest_service(
             "/models/semantic",
             ServiceBuilder::new()
-                .layer(immutable_cache_layer())
+                .layer(cache_layer("/models/semantic"))
                 .service(ServeDir::new(&model_dir)),
         )
         // One line per request (method/path/status/latency) to stderr; see
@@ -211,4 +237,51 @@ async fn meta() -> Json<serde_json::Value> {
         "version": env!("CARGO_PKG_VERSION"),
         "scope": "v5",
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression guard for the incident in `cache_control_for_mount`'s doc
+    /// comment: `/data` serves stable filenames whose bytes change on every
+    /// data build, so marking it `immutable` strands clients on stale card
+    /// data with no escape short of clearing site data (which destroys the
+    /// user's decks and inventory).
+    #[test]
+    fn data_mount_is_never_immutable() {
+        assert_eq!(cache_control_for_mount("/data"), REVALIDATE_CACHE_CONTROL);
+        assert!(!cache_control_for_mount("/data").contains("immutable"));
+    }
+
+    #[test]
+    fn content_addressed_mounts_are_immutable() {
+        for mount in ["/assets", "/models/semantic"] {
+            assert_eq!(
+                cache_control_for_mount(mount),
+                IMMUTABLE_CACHE_CONTROL,
+                "{mount} filenames carry their version, so it should cache forever"
+            );
+        }
+    }
+
+    /// Anything not explicitly known to be content-addressed must fall back to
+    /// revalidation — the safe default. A new mount added without thinking
+    /// about caching should be merely slower, never wrong.
+    #[test]
+    fn unknown_mounts_default_to_revalidating() {
+        assert_eq!(
+            cache_control_for_mount("/something-new"),
+            REVALIDATE_CACHE_CONTROL
+        );
+    }
+
+    #[test]
+    fn cache_control_values_are_valid_header_values() {
+        // from_static panics on an invalid header value; cache_layer would
+        // then panic at startup rather than at test time.
+        for mount in ["/assets", "/data", "/models/semantic"] {
+            let _ = cache_layer(mount);
+        }
+    }
 }

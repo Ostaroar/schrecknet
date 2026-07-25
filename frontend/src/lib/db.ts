@@ -63,7 +63,9 @@ export interface CardMeta {
 }
 
 export async function getCardsMeta(): Promise<CardMeta> {
-  const res = await fetch('/data/cards.meta.json')
+  // Always revalidate: this file is the version oracle for the card database,
+  // so a cached copy defeats the point of asking (see dbWorker.ts).
+  const res = await fetch('/data/cards.meta.json', { cache: 'no-cache' })
   if (!res.ok) throw new Error(`failed to fetch cards.meta.json: ${res.status}`)
   return res.json()
 }
