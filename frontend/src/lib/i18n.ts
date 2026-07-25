@@ -37,6 +37,44 @@ export interface UiStrings {
     about: string
     legal: string
     support: string
+    settings: string
+  }
+  settings: {
+    title: string
+    intro: string
+    yourDataTitle: string
+    yourDataNote: string
+    counts: (decks: number, cards: number, precons: number) => string
+    downloadBackup: string
+    creating: string
+    backupCreated: (name: string) => string
+    restoreTitle: string
+    restoreNote: string
+    chooseFile: string
+    restoring: string
+    restoreConfirm: (
+      currentDecks: number,
+      currentCards: number,
+      backupDecks: number,
+      backupCards: number,
+    ) => string
+    restoreDone: string
+    restoreFailed: (error: string) => string
+    sensitiveNote: string
+    lastBackup: (when: string) => string
+    neverBackedUp: string
+    reminder: string
+    storageTitle: string
+    storagePersisted: string
+    storageNotPersisted: string
+    enablePersistence: string
+    storageUsage: (used: string, quota: string) => string
+    cardDataTitle: string
+    cardDataNote: string
+    cardDataVersion: (version: string) => string
+    refreshCardData: string
+    refreshing: string
+    refreshDone: string
   }
   help: {
     eyebrow: string
@@ -316,6 +354,40 @@ const en: UiStrings = {
     about: 'About',
     legal: 'Legal notice',
     support: 'Support this project',
+    settings: 'Data & backup',
+  },
+  settings: {
+    title: 'Data & backup',
+    intro: 'Your decks and inventory are stored only in this browser. Nothing is uploaded, which also means nothing is recovered for you — so keep a backup.',
+    yourDataTitle: 'Your data',
+    yourDataNote: 'A backup contains everything: decks with their tags, descriptions and inventory modes, your loose card quantities, and your owned precons.',
+    counts: (decks, cards, precons) => `${decks} deck${decks === 1 ? '' : 's'} · ${cards} inventory card${cards === 1 ? '' : 's'} · ${precons} owned precon${precons === 1 ? '' : 's'}`,
+    downloadBackup: 'Download backup',
+    creating: 'Creating backup…',
+    backupCreated: (name) => `Saved ${name}`,
+    restoreTitle: 'Restore a backup',
+    restoreNote: 'Restoring replaces everything currently in this browser with the contents of the backup file. This cannot be undone, so a backup of your current data is downloaded first.',
+    chooseFile: 'Choose backup file…',
+    restoring: 'Restoring…',
+    restoreConfirm: (currentDecks, currentCards, backupDecks, backupCards) =>
+      `Replace your current data (${currentDecks} decks, ${currentCards} inventory cards) with the backup (${backupDecks} decks, ${backupCards} inventory cards)? This cannot be undone.`,
+    restoreDone: 'Backup restored.',
+    restoreFailed: (error) => `Could not restore: ${error}`,
+    sensitiveNote: 'The backup file also contains your game-group codes and passphrases — treat it like a password.',
+    lastBackup: (when) => `Last backup: ${when}`,
+    neverBackedUp: 'You have never made a backup.',
+    reminder: 'Your decks and inventory exist only in this browser. Download a backup so clearing site data cannot lose them.',
+    storageTitle: 'Browser storage',
+    storagePersisted: 'This browser has been asked to keep your data and agreed — it will not be evicted automatically.',
+    storageNotPersisted: 'Your data is stored "best effort": the browser may discard it when storage runs low.',
+    enablePersistence: 'Ask the browser to keep my data',
+    storageUsage: (used, quota) => `Using ${used} of about ${quota} available`,
+    cardDataTitle: 'Card data',
+    cardDataNote: 'The card database is downloaded from the server and refreshes itself when a new version is published. Reloading it never touches your decks or inventory.',
+    cardDataVersion: (version) => `Loaded card data version ${version}`,
+    refreshCardData: 'Reload card data',
+    refreshing: 'Reloading…',
+    refreshDone: 'Card data reloaded.',
   },
   help: staticPagesEn.help,
   about: staticPagesEn.about,
@@ -378,6 +450,40 @@ const es: UiStrings = {
     about: 'Acerca de',
     legal: 'Aviso legal',
     support: 'Apoya este proyecto',
+    settings: 'Datos y copia de seguridad',
+  },
+  settings: {
+    title: 'Datos y copia de seguridad',
+    intro: 'Tus mazos e inventario se guardan solo en este navegador. Nada se sube, lo que también significa que nadie puede recuperarlo por ti: guarda una copia de seguridad.',
+    yourDataTitle: 'Tus datos',
+    yourDataNote: 'Una copia de seguridad contiene todo: los mazos con sus etiquetas, descripciones y modos de inventario, tus cantidades de cartas sueltas y las vorconstrucciones que posees.',
+    counts: (decks, cards, precons) => `${decks} mazo${decks === 1 ? '' : 's'} · ${cards} carta${cards === 1 ? '' : 's'} de inventario · ${precons} vorconstrucción${precons === 1 ? '' : 'es'} en posesión`,
+    downloadBackup: 'Descargar copia de seguridad',
+    creating: 'Creando copia de seguridad…',
+    backupCreated: (name) => `Guardado ${name}`,
+    restoreTitle: 'Restaurar una copia de seguridad',
+    restoreNote: 'Restaurar reemplaza todo lo que hay ahora en este navegador por el contenido del archivo. No se puede deshacer, así que primero se descarga una copia de tus datos actuales.',
+    chooseFile: 'Elegir archivo de copia…',
+    restoring: 'Restaurando…',
+    restoreConfirm: (currentDecks, currentCards, backupDecks, backupCards) =>
+      `¿Reemplazar tus datos actuales (${currentDecks} mazos, ${currentCards} cartas de inventario) por la copia (${backupDecks} mazos, ${backupCards} cartas)? No se puede deshacer.`,
+    restoreDone: 'Copia de seguridad restaurada.',
+    restoreFailed: (error) => `No se pudo restaurar: ${error}`,
+    sensitiveNote: 'El archivo también contiene los códigos y contraseñas de tus grupos de juego: trátalo como una contraseña.',
+    lastBackup: (when) => `Última copia: ${when}`,
+    neverBackedUp: 'Nunca has hecho una copia de seguridad.',
+    reminder: 'Tus mazos e inventario existen solo en este navegador. Descarga una copia para que borrar los datos del sitio no los pierda.',
+    storageTitle: 'Almacenamiento del navegador',
+    storagePersisted: 'Se ha pedido al navegador conservar tus datos y ha aceptado: no se descartarán automáticamente.',
+    storageNotPersisted: 'Tus datos se guardan «según disponibilidad»: el navegador puede descartarlos si queda poco espacio.',
+    enablePersistence: 'Pedir al navegador que conserve mis datos',
+    storageUsage: (used, quota) => `Usando ${used} de aproximadamente ${quota} disponibles`,
+    cardDataTitle: 'Datos de cartas',
+    cardDataNote: 'La base de datos de cartas se descarga del servidor y se actualiza cuando se publica una versión nueva. Recargarla nunca afecta a tus mazos ni a tu inventario.',
+    cardDataVersion: (version) => `Versión de datos de cartas cargada: ${version}`,
+    refreshCardData: 'Recargar datos de cartas',
+    refreshing: 'Recargando…',
+    refreshDone: 'Datos de cartas recargados.',
   },
   help: {
     eyebrow: 'Ayuda',
@@ -487,6 +593,40 @@ const fr: UiStrings = {
     about: 'À propos',
     legal: 'Mentions légales',
     support: 'Soutenir ce projet',
+    settings: 'Données et sauvegarde',
+  },
+  settings: {
+    title: 'Données et sauvegarde',
+    intro: 'Vos decks et votre inventaire sont stockés uniquement dans ce navigateur. Rien n’est envoyé, ce qui signifie aussi que personne ne peut les récupérer à votre place : conservez une sauvegarde.',
+    yourDataTitle: 'Vos données',
+    yourDataNote: 'Une sauvegarde contient tout : les decks avec leurs étiquettes, descriptions et modes d’inventaire, vos quantités de cartes à l’unité et les précons que vous possédez.',
+    counts: (decks, cards, precons) => `${decks} deck${decks === 1 ? '' : 's'} · ${cards} carte${cards === 1 ? '' : 's'} d’inventaire · ${precons} précon${precons === 1 ? '' : 's'} possédé${precons === 1 ? '' : 's'}`,
+    downloadBackup: 'Télécharger la sauvegarde',
+    creating: 'Création de la sauvegarde…',
+    backupCreated: (name) => `${name} enregistré`,
+    restoreTitle: 'Restaurer une sauvegarde',
+    restoreNote: 'La restauration remplace tout ce qui se trouve actuellement dans ce navigateur par le contenu du fichier. C’est irréversible, donc une sauvegarde de vos données actuelles est téléchargée d’abord.',
+    chooseFile: 'Choisir un fichier de sauvegarde…',
+    restoring: 'Restauration…',
+    restoreConfirm: (currentDecks, currentCards, backupDecks, backupCards) =>
+      `Remplacer vos données actuelles (${currentDecks} decks, ${currentCards} cartes d’inventaire) par la sauvegarde (${backupDecks} decks, ${backupCards} cartes) ? C’est irréversible.`,
+    restoreDone: 'Sauvegarde restaurée.',
+    restoreFailed: (error) => `Restauration impossible : ${error}`,
+    sensitiveNote: 'Le fichier contient aussi les codes et mots de passe de vos groupes de jeu — traitez-le comme un mot de passe.',
+    lastBackup: (when) => `Dernière sauvegarde : ${when}`,
+    neverBackedUp: 'Vous n’avez jamais fait de sauvegarde.',
+    reminder: 'Vos decks et votre inventaire n’existent que dans ce navigateur. Téléchargez une sauvegarde pour qu’un effacement des données du site ne les perde pas.',
+    storageTitle: 'Stockage du navigateur',
+    storagePersisted: 'Le navigateur a été invité à conserver vos données et a accepté : elles ne seront pas supprimées automatiquement.',
+    storageNotPersisted: 'Vos données sont stockées « au mieux » : le navigateur peut les supprimer si l’espace manque.',
+    enablePersistence: 'Demander au navigateur de conserver mes données',
+    storageUsage: (used, quota) => `${used} utilisés sur environ ${quota} disponibles`,
+    cardDataTitle: 'Données des cartes',
+    cardDataNote: 'La base de données des cartes est téléchargée depuis le serveur et se met à jour dès qu’une nouvelle version paraît. La recharger ne touche jamais vos decks ni votre inventaire.',
+    cardDataVersion: (version) => `Version des données de cartes chargée : ${version}`,
+    refreshCardData: 'Recharger les données des cartes',
+    refreshing: 'Rechargement…',
+    refreshDone: 'Données des cartes rechargées.',
   },
   help: {
     eyebrow: 'Aide',
@@ -599,6 +739,40 @@ const de: UiStrings = {
     about: 'Über',
     legal: 'Impressum & Datenschutz',
     support: 'Dieses Projekt unterstützen',
+    settings: 'Daten & Backup',
+  },
+  settings: {
+    title: 'Daten & Backup',
+    intro: 'Deine Decks und dein Inventar liegen ausschließlich in diesem Browser. Nichts wird hochgeladen — das heißt aber auch, dass niemand sie für dich wiederherstellen kann. Lege also ein Backup an.',
+    yourDataTitle: 'Deine Daten',
+    yourDataNote: 'Ein Backup enthält alles: Decks mit Tags, Beschreibungen und Inventar-Modus, deine einzelnen Kartenmengen und die Vorkonstruktionen, die du besitzt.',
+    counts: (decks, cards, precons) => `${decks} Deck${decks === 1 ? '' : 's'} · ${cards} Inventarkarte${cards === 1 ? '' : 'n'} · ${precons} besessene Vorkonstruktion${precons === 1 ? '' : 'en'}`,
+    downloadBackup: 'Backup herunterladen',
+    creating: 'Backup wird erstellt…',
+    backupCreated: (name) => `${name} gespeichert`,
+    restoreTitle: 'Backup wiederherstellen',
+    restoreNote: 'Beim Wiederherstellen wird alles, was jetzt in diesem Browser liegt, durch den Inhalt der Backup-Datei ersetzt. Das lässt sich nicht rückgängig machen, deshalb wird vorher automatisch ein Backup deines aktuellen Stands heruntergeladen.',
+    chooseFile: 'Backup-Datei wählen…',
+    restoring: 'Wird wiederhergestellt…',
+    restoreConfirm: (currentDecks, currentCards, backupDecks, backupCards) =>
+      `Aktuelle Daten (${currentDecks} Decks, ${currentCards} Inventarkarten) durch das Backup (${backupDecks} Decks, ${backupCards} Inventarkarten) ersetzen? Das lässt sich nicht rückgängig machen.`,
+    restoreDone: 'Backup wiederhergestellt.',
+    restoreFailed: (error) => `Wiederherstellen fehlgeschlagen: ${error}`,
+    sensitiveNote: 'Die Backup-Datei enthält auch die Codes und Passphrasen deiner Spielgruppen — behandle sie wie ein Passwort.',
+    lastBackup: (when) => `Letztes Backup: ${when}`,
+    neverBackedUp: 'Du hast noch kein Backup angelegt.',
+    reminder: 'Deine Decks und dein Inventar existieren nur in diesem Browser. Lade ein Backup herunter, damit das Löschen von Websitedaten sie nicht vernichtet.',
+    storageTitle: 'Browser-Speicher',
+    storagePersisted: 'Der Browser wurde gebeten, deine Daten zu behalten, und hat zugestimmt — sie werden nicht automatisch verworfen.',
+    storageNotPersisted: 'Deine Daten liegen „nach Möglichkeit“ gespeichert: der Browser darf sie bei Speichermangel verwerfen.',
+    enablePersistence: 'Browser bitten, meine Daten zu behalten',
+    storageUsage: (used, quota) => `${used} von etwa ${quota} verfügbar belegt`,
+    cardDataTitle: 'Kartendaten',
+    cardDataNote: 'Die Kartendatenbank wird vom Server geladen und aktualisiert sich selbst, sobald eine neue Version veröffentlicht ist. Ein Neuladen berührt deine Decks und dein Inventar nie.',
+    cardDataVersion: (version) => `Geladene Kartendaten-Version ${version}`,
+    refreshCardData: 'Kartendaten neu laden',
+    refreshing: 'Wird neu geladen…',
+    refreshDone: 'Kartendaten neu geladen.',
   },
   help: {
     eyebrow: 'Hilfe',

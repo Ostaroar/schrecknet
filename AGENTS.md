@@ -124,6 +124,13 @@ npm run build                               # tsc --noEmit && vite build
 # SCHRECKNET_CHROME_CHANNEL=chrome. Spawns/stops its own test server.
 npm run test:semantic
 
+# local backup/restore round-trip: seeds a user.sqlite from migrations/, restores
+# it through the real Settings UI in a fresh browser profile, exports again, and
+# compares every table + PRAGMA user_version. Same prerequisites as
+# test:semantic. Uses node:sqlite, hence the --experimental-sqlite in the script
+# (a no-op on newer Node, required on the 22 line CI pins).
+npm run test:backup
+
 # full container
 docker build -t schrecknet . && docker run -p 8000:8000 schrecknet
 ```

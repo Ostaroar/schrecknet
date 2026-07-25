@@ -90,6 +90,11 @@ jobs:
         working-directory: frontend
         env:
           SCHRECKNET_CHROME_CHANNEL: chrome
+      - name: full local backup round-trips every user table
+        run: npm run test:backup
+        working-directory: frontend
+        env:
+          SCHRECKNET_CHROME_CHANNEL: chrome
       - name: exact composition + browser/native semantic parity + offline smoke
         run: npm run test:semantic
         working-directory: frontend

@@ -18,8 +18,10 @@ import TablePage from './components/TablePage'
 import BrandMark from './components/BrandMark'
 import KofiButton from './components/KofiButton'
 import LegalPage from './components/LegalPage'
+import SettingsPage from './components/SettingsPage'
+import BackupReminder from './components/BackupReminder'
 import { AboutPage, HelpPage } from './components/InfoPages'
-import { getCardsMeta, type CardMeta } from './lib/db'
+import { cardDbVersion, getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
 import { useRoute, navigate } from './lib/route'
@@ -159,7 +161,10 @@ export default function App() {
         ) : route.page === 'precons' ? (
           <PreconBrowser />
         ) : route.page === 'inventory' ? (
-          <InventoryPage />
+          <>
+            <BackupReminder ui={ui.settings} />
+            <InventoryPage />
+          </>
         ) : route.page === 'limited' ? (
           <LimitedFormatPage />
         ) : route.page === 'table' ? (
@@ -174,8 +179,13 @@ export default function App() {
           <AboutPage ui={ui.about} />
         ) : route.page === 'legal' ? (
           <LegalPage />
+        ) : route.page === 'settings' ? (
+          <SettingsPage ui={ui.settings} cardVersion={cardDbVersion()} />
         ) : route.page === 'decks' ? (
-          <DeckList />
+          <>
+            <BackupReminder ui={ui.settings} />
+            <DeckList />
+          </>
         ) : route.page === 'library' ? (
           <LibrarySearch />
         ) : (
@@ -194,6 +204,7 @@ export default function App() {
           <button onClick={() => navigate({ page: 'help' })} className="hover:text-ink-muted">{ui.footer.help}</button>
           <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">{ui.footer.about}</button>
           <button onClick={() => navigate({ page: 'legal' })} className="hover:text-ink-muted">{ui.footer.legal}</button>
+          <button onClick={() => navigate({ page: 'settings' })} className="hover:text-ink-muted">{ui.footer.settings}</button>
           <a href="https://ko-fi.com/jannikostertag" target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted">{ui.footer.support}</a>
         </span>
       </footer>

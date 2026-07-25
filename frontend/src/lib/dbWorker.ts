@@ -27,12 +27,17 @@ import { installExclusiveOpfsPool } from './opfsLease'
 
 type OpenMsg = { id: number; kind: 'open' }
 type QueryMsg = { id: number; kind: 'query'; sql: string; params: (string | number | null)[] }
-type InMsg = OpenMsg | QueryMsg
+type RefreshMsg = { id: number; kind: 'refresh' }
+type InMsg = OpenMsg | QueryMsg | RefreshMsg
 
 const DB_NAME = '/cards.sqlite'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any = null
+// Held so `refresh` can unlink the cached database in place. Recreating the
+// worker instead would deadlock: the OPFS pool lease is exclusive.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pool: any = null
 
 // Companion to server/src/cards_db.rs::register_regexp — same case-
 // insensitive semantics (docs/adr/0005-regex-crate-for-search.md), but no
@@ -84,7 +89,7 @@ function installPool(
 
 async function open(): Promise<Record<string, unknown>> {
   const sqlite3 = await initSqlite()
-  const pool = await installPool(sqlite3)
+  pool = await installPool(sqlite3)
 
   let serverMeta: { schema_version: number; data_version: number } | null = null
   try {
@@ -156,11 +161,28 @@ function runQuery(sql: string, params: (string | number | null)[]): Record<strin
   return rows
 }
 
+// Throws away the cached card database and downloads it again. Only ever
+// touches DB_NAME — user.sqlite lives in a different pool owned by
+// userDbWorker.ts, and losing it is precisely the harm this escape hatch
+// exists to prevent (docs/adr/0015).
+async function refresh(): Promise<Record<string, unknown>> {
+  if (!pool) return open()
+  if (db) {
+    db.close()
+    db = null
+  }
+  pool.unlink(DB_NAME)
+  return open()
+}
+
 self.onmessage = async (event: MessageEvent<InMsg>) => {
   const msg = event.data
   try {
     if (msg.kind === 'open') {
       const meta = await open()
+      self.postMessage({ id: msg.id, ok: true, meta })
+    } else if (msg.kind === 'refresh') {
+      const meta = await refresh()
       self.postMessage({ id: msg.id, ok: true, meta })
     } else {
       const rows = runQuery(msg.sql, msg.params)

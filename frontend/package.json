@@ -10,7 +10,8 @@
     "test:card-text": "node e2e/card-text-parser.mjs",
     "test:deck-organization": "node e2e/deck-organization.mjs",
     "test:mobile": "node e2e/mobile-smoke.mjs",
-    "test:semantic": "node e2e/semantic-smoke.mjs"
+    "test:semantic": "node e2e/semantic-smoke.mjs",
+    "test:backup": "node --experimental-sqlite e2e/backup-roundtrip.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

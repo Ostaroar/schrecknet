@@ -16,6 +16,12 @@ let worker: Worker | null = null
 let nextId = 1
 const pending = new Map<number, Pending>()
 let openPromise: Promise<void> | null = null
+let loadedVersion: string | null = null
+
+/** Version of the card database currently open, once known. */
+export function cardDbVersion(): string | null {
+  return loadedVersion
+}
 
 function send<T>(msg: Record<string, unknown>): Promise<T> {
   const id = nextId++
@@ -37,10 +43,29 @@ function ensureOpen(): Promise<void> {
       else p.reject(new Error(error))
     }
     openPromise = send<Record<string, unknown>>({ kind: 'open' }).then((meta) => {
+      loadedVersion = typeof meta?.version === 'string' ? meta.version : null
       console.info('[schrecknet] card db ready:', meta)
     })
   }
   return openPromise
+}
+
+/**
+ * Discards the cached card database and downloads it again.
+ *
+ * The user-facing escape hatch that exists so nobody ever reaches for "clear
+ * site data" to fix stale cards again — that wipes decks and inventory too
+ * (docs/adr/0015). Only ever touches cards.sqlite; user.sqlite is a separate
+ * database in a separate pool owned by userDbWorker.ts.
+ */
+export async function refreshCardDb(): Promise<void> {
+  await ensureOpen()
+  // The worker discards and reopens in place. Deliberately NOT by recreating
+  // the worker: the OPFS pool lease is exclusive, so a second worker would
+  // block on the first one's handles instead of taking over.
+  const meta = await send<Record<string, unknown>>({ kind: 'refresh' })
+  loadedVersion = typeof meta?.version === 'string' ? meta.version : null
+  console.info('[schrecknet] card db refreshed:', meta)
 }
 
 /** Runs a parameterized SELECT in the worker and returns rows as objects. */

@@ -263,6 +263,16 @@ across deck editor / proxy / search / card pages:
 
 **Phase 2.5 complete (I1–I5).** Only I6 (Phase 3 server sync) remains, by design.
 
+**Local durability (2026-07-25, ADR 0016).** Deferring all durability to Phase 3
+accounts turned out to be too late: local-only data with no backup path meant a
+user clearing site data — which we had effectively asked them to do, see ADR 0015 —
+lost every deck, their inventory and their owned-precon counts, none of which the
+piecemeal text exports covered. `/settings` now offers a full backup (the raw
+`user.sqlite` plus every `schrecknet.`-prefixed localStorage key, so it is complete
+by construction rather than by enumeration), replace-only restore with a forced
+safety export, `navigator.storage.persist()` on first write, and a dismissible
+reminder. Account-based sync is still Phase 3 and consumes the same envelope.
+
 - ☑ Physical precon ownership overview: adding/removing a product through
   Inventory records its identity and quantity separately from loose cards;
   `#/precons` shows total and per-product ownership without double-counting
