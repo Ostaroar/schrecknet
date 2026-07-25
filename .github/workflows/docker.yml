@@ -70,6 +70,35 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  cleanup-ghcr:
+    needs: build
+    # Same push-to-main-only gate as `deploy` -- no reason to prune on PR
+    # builds (which don't push anyway) or tag builds.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # Every push creates ~3 GHCR package versions (one tagged image plus
+      # two untagged buildx provenance/SBOM attestations), and GitHub's free
+      # shared-storage quota covers Actions artifacts AND package storage
+      # together. Left unpruned this silently exhausts that quota -- it hit
+      # 381 versions / ~0 free MB within a few days of active work, which
+      # then broke the (unrelated) `rust`/`frontend` artifact uploads in
+      # ci.yml with "Artifact storage quota has been hit".
+      #
+      # Keeps the newest 15 versions (~5 builds' worth: current `:main` plus
+      # a rollback buffer) and deletes everything older, mirroring the
+      # one-off manual cleanup this replaces.
+      #
+      # GITHUB_TOKEN cannot delete package versions for a user-namespace
+      # package (only org-linked ones) -- this needs a classic PAT with the
+      # delete:packages scope, stored as GHCR_CLEANUP_TOKEN.
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: schrecknet
+          package-type: container
+          min-versions-to-keep: 15
+          token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
+
   deploy:
     needs: build
     # Only main pushes -- never PRs (no cluster credentials there, and
