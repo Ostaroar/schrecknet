@@ -8,6 +8,14 @@ on:
 permissions:
   contents: read
 
+# Deliberately artifact-free. These jobs used to hand ~77 MB per run
+# (dist/ with the semantic model + cards.sqlite, the debug server binary, and
+# frontend/dist) from `rust`/`frontend` to `semantic-e2e` via upload-artifact.
+# That made every run depend on the account's shared artifact-storage quota, and
+# when that quota filled up the browser tests stopped running entirely — silently
+# skipped, because the jobs they depended on "failed" on the upload step alone
+# while every real check had passed. The e2e job now builds what it needs itself;
+# Swatinem/rust-cache keeps the second Rust build cheap.
 jobs:
   rust:
     runs-on: ubuntu-latest
@@ -23,20 +31,12 @@ jobs:
       - run: cargo test --workspace
       - name: core compiles to wasm
         run: cargo build -p schrecknet-core --target wasm32-unknown-unknown
-      - name: data pipeline builds cards.sqlite
-        run: cargo run -p schrecknet-data -- build --out dist
-      - name: build semantic smoke server
-        run: cargo build -p schrecknet-server
-      - uses: actions/upload-artifact@v7
-        with:
-          name: semantic-runtime
-          path: |
-            dist
-            target/debug/schrecknet-server
-          retention-days: 1
 
-  frontend:
+  e2e:
     runs-on: ubuntu-latest
+    env:
+      # ubuntu-latest includes Google Chrome; avoid downloading a duplicate.
+      SCHRECKNET_CHROME_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -50,54 +50,31 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      # --ignore-scripts skips Playwright's browser download; the tests drive the
+      # runner's preinstalled Chrome via SCHRECKNET_CHROME_CHANNEL instead.
+      - run: npm ci --ignore-scripts
         working-directory: frontend
+
+      # Pure-node contract tests first: they need only the wasm build, so they
+      # fail fast before the slower Rust data pipeline runs.
       - run: npm run test:card-text
         working-directory: frontend
       - run: npm run test:deck-organization
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
-      - uses: actions/upload-artifact@v7
-        with:
-          name: semantic-frontend
-          path: frontend/dist
-          retention-days: 1
 
-  semantic-e2e:
-    needs: [rust, frontend]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v7
-        with:
-          name: semantic-runtime
-          path: .
-      - uses: actions/download-artifact@v7
-        with:
-          name: semantic-frontend
-          path: frontend/dist
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci --ignore-scripts
-        working-directory: frontend
-      - run: chmod +x target/debug/schrecknet-server
+      - name: data pipeline builds cards.sqlite
+        run: cargo run -p schrecknet-data -- build --out dist
+      - name: build smoke-test server
+        run: cargo build -p schrecknet-server
+
       - name: mobile overflow + coarse-pointer controls
         run: npm run test:mobile && SCHRECKNET_MOBILE_WIDTH=320 npm run test:mobile
         working-directory: frontend
-        env:
-          SCHRECKNET_CHROME_CHANNEL: chrome
       - name: full local backup round-trips every user table
         run: npm run test:backup
         working-directory: frontend
-        env:
-          SCHRECKNET_CHROME_CHANNEL: chrome
       - name: exact composition + browser/native semantic parity + offline smoke
         run: npm run test:semantic
         working-directory: frontend
-        env:
-          # ubuntu-latest includes Google Chrome; avoid downloading a duplicate.
-          SCHRECKNET_CHROME_CHANNEL: chrome

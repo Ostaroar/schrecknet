@@ -22,9 +22,9 @@
     {
       "kind": "crypt",
       "query": "gets plus one bleed",
-      "required_top_ids": [201608],
-      "required_within": 1,
-      "reason": "Nonu Dis has the exact +1 bleed special."
+      "required_top_ids": [201619, 201608],
+      "required_within": 2,
+      "reason": "Victoria Ash states '+1 bleed' twice (granting it, and her own) and Nonu Dis has the exact +1 bleed special. Victoria was absent from the pool until the V5 promo cards Black Chantry legalised individually were added (ADR 0014), which is why this expected Nonu Dis alone at top 1 before."
     },
     {
       "kind": "crypt",
