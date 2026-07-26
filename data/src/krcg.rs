@@ -69,7 +69,7 @@ pub fn fetch_v5_exception_ids(
     let body = fetch_cached(cache_dir, "vtes-v5.json", V5_SOURCE_URL)?;
     let cards: Vec<serde_json::Value> = serde_json::from_str(&body)?;
 
-    let ids: BTreeSet<i64> = cards
+    let mut ids: BTreeSet<i64> = cards
         .iter()
         .filter(|card| {
             card.get("formats")
@@ -78,6 +78,52 @@ pub fn fetch_v5_exception_ids(
         })
         .filter_map(|card| card.get("id").and_then(|id| id.as_i64()))
         .collect();
+
+    for (wrong, right) in crate::v5pool::KRCG_FORMAT_CORRECTIONS {
+        if ids.remove(wrong) {
+            eprintln!("krcg: correcting upstream formats bug — {wrong} -> {right}");
+        }
+        ids.insert(*right);
+    }
+
+    // Every crypt card Black Chantry legalises by name is from the V5 card
+    // line, i.e. group 5 or later; the promos are all G6/G7. A group-2 vampire
+    // carrying formats=["V5"] is an upstream data error, not a discovery — that
+    // is exactly how Tegyrius, Vizier (G2) reached the live site. Fail rather
+    // than publish a classic-era card on a V5-only site.
+    let suspicious: Vec<String> = cards
+        .iter()
+        .filter(|card| {
+            card.get("id")
+                .and_then(|id| id.as_i64())
+                .is_some_and(|id| ids.contains(&id))
+        })
+        .filter(|card| {
+            card.get("group")
+                .and_then(|g| g.as_i64())
+                .is_some_and(|g| g < 5)
+        })
+        .map(|card| {
+            format!(
+                "{} (id {}, group {})",
+                card.get("printed_name")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("?"),
+                card.get("id").and_then(|i| i.as_i64()).unwrap_or(-1),
+                card.get("group").and_then(|g| g.as_i64()).unwrap_or(-1),
+            )
+        })
+        .collect();
+    if !suspicious.is_empty() {
+        return Err(format!(
+            "KRCG marks pre-V5 crypt card(s) as V5-legal: {}. Every V5 promo \
+             vampire is group 5 or later, so this is an upstream data error. \
+             Check the card against Black Chantry's promo list and add a \
+             correction to v5pool::KRCG_FORMAT_CORRECTIONS.",
+            suspicious.join(", ")
+        )
+        .into());
+    }
 
     // A structural change upstream (field renamed, format string changed)
     // would silently empty this set and quietly drop every promo from the

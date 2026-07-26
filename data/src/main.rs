@@ -210,7 +210,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '9'), ('data_version', '13'), ('scope', 'v5'),
+         ('schema_version', '9'), ('data_version', '14'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -235,7 +235,10 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // and precon-filtered search were doing a correlated-subquery table
         // scan per candidate row, ~50ms server-side for the slowest query;
         // indexed, ~2ms).
-        // data_version changes whenever emitted content changes (v13 removes
+        // data_version changes whenever emitted content changes (v14 swaps
+        // Tegyrius, Vizier (G2) for the group-6 promo printing: KRCG's
+        // `formats` field marks the wrong one, see docs/adr/0014's follow-up;
+        // v13 removes
         // First Blood + Twenty-Fifth Anniversary + V5 Polish Edition promo
         // from V5_SET_NAMES — none is among Black Chantry's 28 official V5
         // products — and adds the promo cards Black Chantry legalised
@@ -251,7 +254,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
         "schema_version": 9,
-        "data_version": 13,
+        "data_version": 14,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,

@@ -125,10 +125,39 @@ This guard proved itself immediately: it failed on first run against
   pin the 19 ids until it returns.
 - Known divergence from vdb, monitored rather than hidden: vdb's `allowed`
   additionally lists Ambush, Antediluvian Awakening, Bum's Rush and Tribute
-  to the Master (Promo Pack 4 contents that Black Chantry did not name because
-  they are "already printed in other products"), and omits Depravity (already
-  covered by the `Sabbat V5` set). We follow KRCG's `formats`, which matches
-  Black Chantry's named 19 exactly.
+  to the Master, and omits Depravity (already covered by the `Sabbat V5` set).
+  We follow KRCG's `formats`, which matches Black Chantry's named 19 exactly.
+  **Still unresolved:** Black Chantry names only promos "not yet printed in
+  other products", so cards like Bum's Rush are excluded from that list while
+  arguably being in Promo Pack 4 — and the basis for vdb's other three could
+  not be traced to any Black Chantry post. Worth settling before anyone builds
+  a deck around a card we wrongly exclude.
+
+## Follow-up: trusting KRCG's `formats` was not enough (2026-07-26)
+
+A user reported `/cards/201352` — **Tegyrius, Vizier (G2)**, a group-2 vampire
+from Final Nights (2001) — live on a V5-only site. KRCG's `formats` field marks
+that printing V5-legal. It cannot be: it predates the V5 line by two decades and
+is in no promo pack. Black Chantry's promo is the **group-6** printing of the
+same name (id 201654, "2023 War of the Ages Promo" + Promo Pack 4), which KRCG
+leaves unmarked. vdb's `limitedV5.json` has it right, which is what confirms
+this is a KRCG bug rather than a disagreement about the format.
+
+So the decision above — "the exception list is fetched, not curated" — was right
+about *where* the data should come from and wrong to treat a single upstream
+source as authoritative. Two additions:
+
+1. `v5pool::KRCG_FORMAT_CORRECTIONS`, an explicitly evidence-backed map of known
+   upstream errors (currently one entry). Applying it is idempotent, so it keeps
+   working unchanged once KRCG fixes the feed.
+2. A build-time guard: **every V5 promo vampire is group 5 or later**, so a
+   crypt card with `formats: ["V5"]` and a lower group fails the build with the
+   card named. That is a structural property of the V5 card line, not a
+   heuristic about reprints — and it would have caught this before it shipped.
+
+The lesson generalises past this one card: fetched data removes the "someone
+forgot to update the list" failure mode but not the "upstream is wrong" one, and
+a V5-only site needs a sanity check that a classic-era vampire can never pass.
 - The adversarial-verification and design phases of the audit workflow did not
   run (session quota). The set verdicts rest on two independent authoritative
   sources read directly plus the structural analysis above, all of which agree;

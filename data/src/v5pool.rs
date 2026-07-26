@@ -57,6 +57,28 @@ pub const V5_SET_NAMES: &[&str] = &[
     "Thirtieth Anniversary",
 ];
 
+/// Known errors in KRCG's `formats` field, as `(wrong_id, right_id)`.
+///
+/// KRCG is the source for which cards Black Chantry legalises individually
+/// (`krcg::fetch_v5_exception_ids`), but it is not infallible, and a wrong id
+/// here puts a classic-era card on a V5-only site — which is exactly what
+/// happened and what a user reported.
+///
+/// Keep this list tiny and evidence-backed. Each entry needs a reason that
+/// someone can re-check against Black Chantry's promo list, not a hunch.
+pub const KRCG_FORMAT_CORRECTIONS: &[(i64, i64)] = &[
+    // Two distinct cards share the name "Tegyrius, Vizier". KRCG marks the
+    // GROUP 2 printing (id 201352, Final Nights 2001 + Print on Demand) as
+    // V5-legal. It cannot be: it predates the V5 line by two decades and
+    // appears in no promo pack. Black Chantry's promo is the GROUP 6 printing
+    // (id 201654, "2023 War of the Ages Promo" + Promo Pack 4), which KRCG
+    // leaves unmarked. vdb's limitedV5.json agrees — it allows 201654 and not
+    // 201352 — so this is a KRCG bug rather than a disagreement about the
+    // format. Reported upstream; remove this entry once KRCG corrects it (the
+    // insert is idempotent, so a fixed feed changes nothing).
+    (201352, 201654),
+];
+
 /// Every other KRCG set name, explicitly classified as NOT V5.
 ///
 /// This exists so that "we have never considered this set" and "we considered
@@ -345,6 +367,34 @@ mod tests {
         assert!(is_in_v5_pool(&card, &BTreeSet::from([201528])));
     }
 
+    /// Regression test for a user report: Tegyrius, Vizier (G2) — a group-2
+    /// vampire from Final Nights (2001) — was live on a V5-only site because
+    /// KRCG's `formats` field marks that printing instead of the group-6 promo.
+    #[test]
+    fn krcg_format_corrections_replace_the_wrong_tegyrius() {
+        assert!(
+            KRCG_FORMAT_CORRECTIONS.contains(&(201352, 201654)),
+            "the G2 Tegyrius must be corrected to the G6 promo printing"
+        );
+        for (wrong, right) in KRCG_FORMAT_CORRECTIONS {
+            assert_ne!(wrong, right, "a correction must actually change the id");
+        }
+    }
+
+    /// The corrections must survive a KRCG feed that has been fixed upstream:
+    /// removing a `wrong` id that is no longer marked is a no-op, and inserting
+    /// `right` twice is idempotent. Without this the list would have to be
+    /// pruned in lockstep with upstream to avoid breaking the build.
+    #[test]
+    fn corrections_are_idempotent_against_an_already_fixed_feed() {
+        let mut ids: BTreeSet<i64> = BTreeSet::from([201654]);
+        for (wrong, right) in KRCG_FORMAT_CORRECTIONS {
+            ids.remove(wrong);
+            ids.insert(*right);
+        }
+        assert_eq!(ids, BTreeSet::from([201654]));
+    }
+
     #[test]
     fn v5_and_non_v5_set_lists_are_disjoint_and_have_no_duplicates() {
         for name in V5_SET_NAMES {
@@ -429,6 +479,10 @@ mod tests {
             "Antonio d'Erlette (G4)",
             "Rutor (G5)",
             "Camarilla Vitae Slave",
+            // Group-2 vampire from Final Nights (2001). KRCG's `formats` field
+            // marks this printing V5-legal instead of the group-6 promo of the
+            // same name; see KRCG_FORMAT_CORRECTIONS.
+            "Tegyrius, Vizier (G2)",
         ];
 
         let exceptions =
