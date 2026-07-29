@@ -336,6 +336,39 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   `test:mobile`, `test:backup`, and `test:semantic` (which itself exercises
   `/cards/{id}`, `/library`, deck-panel, and offline-reload) all pass with
   route chunks loading on demand.
+  **Attempted and reverted (2026-07-29, same day): deduplicating the
+  `dbWorker.js`/`userDbWorker.js` glue.** Both workers statically import the
+  same `@sqlite.org/sqlite-wasm` Emscripten glue via `lib/sqlite.ts`, and
+  because each is an independent `new Worker(url, {type:'module'})` entry,
+  Rollup duplicated the full glue into both bundles rather than sharing it
+  (confirmed by diffing the built files — both started with the same
+  minified `sqlite3Worker1Promiser` code). Made the import dynamic and set
+  `worker: {format:'es'}` in `vite.config.ts` so Vite would emit it as one
+  shared chunk; local build and the full local e2e suite (all six suites,
+  including a manual check against the real built `dist/` with the
+  server's own access log confirming the chunk was fetched exactly once)
+  passed. **It broke production anyway**: live, both workers hung forever
+  on `initSqlite()` with no error surfacing to `Worker.onerror`. Direct
+  in-browser reproduction (a synthetic worker importing the exact same
+  built chunks, with step-by-step `postMessage` logging) isolated it to
+  `sqlite3InitModule()` itself — the Emscripten glue's internal WASM
+  loader throws `Aborted(SyntaxError: Failed to execute 'open' on
+  'XMLHttpRequest': Invalid URL)` on its synchronous-XHR fetch path when
+  the glue module was reached via dynamic `import()` from inside a worker,
+  a code path the local e2e run never actually exercises identically (the
+  Rust dev server vs. the deployed Cloudflare-fronted origin, or some
+  other environment difference, changes which loader branch Emscripten's
+  environment detection takes). **Reverted immediately** (`git revert`,
+  redeployed, live-verified with real search queries and a fresh browser
+  profile within ~10 minutes of the bad deploy going out) rather than
+  spending more time live-debugging a third-party package's Emscripten
+  build on production. Net effect: current first-load total is still the
+  246 KB from the route-split alone, not the 182 KB this attempt would
+  have reached. Do not retry this exact approach (dynamic-importing
+  `@sqlite.org/sqlite-wasm`'s glue from inside a worker) without first
+  reproducing the fix in an environment that matches production (HTTPS +
+  CDN, not just `localhost`), and ideally without two independent workers
+  racing to instantiate the shared chunk simultaneously.
 - ◐ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
   4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
   found and fixed two real classes of violation — 4 unlabeled `<select>`s
