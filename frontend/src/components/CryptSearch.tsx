@@ -453,7 +453,7 @@ export default function CryptSearch() {
         </select>
         <div
           className="flex items-center overflow-hidden rounded-lg border border-line bg-surface"
-          aria-label="Crypt groups"
+          aria-label={ui.cryptSearch.group}
         >
           <span className="px-2 text-xs text-ink-dim">{ui.cryptSearch.group}</span>
           {groups.map((g) => (
@@ -691,7 +691,7 @@ export default function CryptSearch() {
             <label className="flex items-center gap-2 text-xs text-ink-dim">
               {ui.search.sort}
               <select
-                aria-label="Sort crypt results"
+                aria-label={ui.search.sort}
                 value={sort}
                 onChange={(event) => setSort(event.target.value as CryptSort | 'relevance')}
                 className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink"

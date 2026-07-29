@@ -545,7 +545,7 @@ export default function LibrarySearch() {
         <div className="flex items-center gap-1 text-sm text-ink-dim">
           <span>{ui.librarySearch.requiresCapacity}</span>
           <select
-            aria-label="Capacity requirement comparison"
+            aria-label={ui.librarySearch.requiresCapacity}
             value={capacityRequirementMode}
             onChange={(e) =>
               setCapacityRequirementMode(e.target.value as CapacityRequirementMode)
@@ -560,7 +560,7 @@ export default function LibrarySearch() {
             min={1}
             max={11}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            aria-label="Capacity requirement"
+            aria-label={ui.librarySearch.requiresCapacity}
             value={capacityRequirement ?? ''}
             onChange={(e) =>
               setCapacityRequirement(e.target.value ? Number(e.target.value) : null)
@@ -570,7 +570,7 @@ export default function LibrarySearch() {
         <div className="flex items-center gap-1 text-sm text-ink-dim">
           <span>{ui.librarySearch.blood}</span>
           <select
-            aria-label="Blood cost comparison"
+            aria-label={ui.librarySearch.blood}
             value={bloodCostMode}
             onChange={(e) => setBloodCostMode(e.target.value as CostMode)}
             className="rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
@@ -584,13 +584,13 @@ export default function LibrarySearch() {
             min={0}
             max={9}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            aria-label="Blood cost"
+            aria-label={ui.librarySearch.blood}
             value={bloodCost ?? ''}
             onChange={(e) => setBloodCost(e.target.value ? Number(e.target.value) : null)}
           />
           <span>{ui.librarySearch.pool}</span>
           <select
-            aria-label="Pool cost comparison"
+            aria-label={ui.librarySearch.pool}
             value={poolCostMode}
             onChange={(e) => setPoolCostMode(e.target.value as CostMode)}
             className="rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
@@ -604,7 +604,7 @@ export default function LibrarySearch() {
             min={0}
             max={9}
             className="w-14 rounded-lg border border-line bg-surface px-2 py-2 text-sm text-ink"
-            aria-label="Pool cost"
+            aria-label={ui.librarySearch.pool}
             value={poolCost ?? ''}
             onChange={(e) => setPoolCost(e.target.value ? Number(e.target.value) : null)}
           />
@@ -755,7 +755,7 @@ export default function LibrarySearch() {
             <label className="flex items-center gap-2 text-xs text-ink-dim">
               {ui.search.sort}
               <select
-                aria-label="Sort library results"
+                aria-label={ui.search.sort}
                 value={sort}
                 onChange={(event) => setSort(event.target.value as LibrarySort | 'relevance')}
                 className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink"

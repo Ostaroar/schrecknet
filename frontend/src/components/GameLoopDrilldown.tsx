@@ -9,6 +9,7 @@ import {
   type GameLoopState,
 } from '../lib/gameLoop'
 import RuleDetailList from './RuleDetailList'
+import { useUiStrings, type UiStrings } from '../lib/i18n'
 
 interface GameLoopDrilldownProps {
   gameLoop: GameLoop
@@ -18,11 +19,11 @@ interface GameLoopDrilldownProps {
   onNavigate: (id: GameLoopDrilldownId) => void
 }
 
-function stateKindLabel(state: GameLoopState): string {
-  if (state.kind === 'decision') return 'Decision'
-  if (state.kind === 'note') return 'Timing note'
-  if (state.kind === 'window') return 'Play window'
-  return 'Step'
+function stateKindLabel(state: GameLoopState, ui: UiStrings['gameLoopWidgets']): string {
+  if (state.kind === 'decision') return ui.stateKindDecision
+  if (state.kind === 'note') return ui.stateKindNote
+  if (state.kind === 'window') return ui.stateKindWindow
+  return ui.stateKindStep
 }
 
 export default function GameLoopDrilldown({
@@ -32,6 +33,8 @@ export default function GameLoopDrilldown({
   onBack,
   onNavigate,
 }: GameLoopDrilldownProps) {
+  const strings = useUiStrings()
+  const ui = strings.gameLoopWidgets
   const definition = getDrilldownDefinition(id)
   const states = listDrilldownStates(gameLoop, id, complexity)
   const statesById = new Map(gameLoop.states.map((state) => [state.id, state]))
@@ -39,15 +42,15 @@ export default function GameLoopDrilldown({
 
   return (
     <div className="grid min-w-0 gap-5">
-      <nav aria-label="Rules breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-ink-dim">
+      <nav aria-label={ui.breadcrumbAria} className="flex flex-wrap items-center gap-2 text-sm text-ink-dim">
         <button type="button" onClick={onBack} className="hover:text-ink">
-          Turn phases
+          {strings.rules.turnPhasesAria}
         </button>
         <span aria-hidden="true">›</span>
         {id !== 'action' && (
           <>
             <button type="button" onClick={() => onNavigate('action')} className="hover:text-ink">
-              Action resolution
+              {ui.actionResolution}
             </button>
             <span aria-hidden="true">›</span>
           </>
@@ -65,12 +68,12 @@ export default function GameLoopDrilldown({
             <p className="mt-3 text-sm leading-relaxed text-ink-muted sm:text-base">{definition.summary}</p>
           </div>
           <span className="rounded-full border border-line bg-raised px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink-dim">
-            {states.length} visible nodes
+            {ui.visibleNodes(states.length)}
           </span>
         </div>
       </header>
 
-      <ol className="grid gap-3" aria-label={`${definition.label} flow`}>
+      <ol className="grid gap-3" aria-label={ui.flowAria(definition.label)}>
         {states.map((state, index) => {
           const outgoing = listVisibleTransitions(gameLoop, id, state.id, complexity)
           const stateBranches = branches.filter((branch) => branch.from === state.id)
@@ -98,11 +101,11 @@ export default function GameLoopDrilldown({
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-ink-dim">
-                        {stateKindLabel(state)}
+                        {stateKindLabel(state, ui)}
                       </span>
                       {state.level === 'advanced' && (
                         <span className="rounded-full border border-gold/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-gold">
-                          Advanced
+                          {ui.advanced}
                         </span>
                       )}
                     </div>
@@ -118,7 +121,7 @@ export default function GameLoopDrilldown({
                 )}
 
                 {(outgoing.length > 0 || stateBranches.length > 0) && (
-                  <div className="mt-4 flex flex-wrap gap-2 border-t border-line-soft pt-3" aria-label="Next paths">
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-line-soft pt-3" aria-label={ui.nextPathsAria}>
                     {outgoing.map((transition) => {
                       const target = statesById.get(transition.to)
                       if (!target) return null
@@ -141,7 +144,7 @@ export default function GameLoopDrilldown({
                           className="rounded-full border border-blood-hi/60 bg-blood/15 px-2.5 py-1 text-xs text-ink hover:bg-blood/25"
                         >
                           {branch.label && <span className="mr-1 text-blood-hi">{branch.label}:</span>}
-                          Open {branch.to.label} →
+                          {ui.openBranch(branch.to.label)}
                         </button>
                       ) : (
                         <span

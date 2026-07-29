@@ -7,14 +7,17 @@ import {
   type ImpulseContext,
   type ImpulseSeat,
 } from '../lib/gameLoop'
+import { useUiStrings, type UiStrings } from '../lib/i18n'
 
-const SEAT_LABELS: Record<ImpulseSeat['role'], string> = {
-  acting: 'Acting Methuselah',
-  defender: 'Defender',
-  targeted_clockwise: 'Targeted',
-  clockwise_others: 'Passes',
-  prey: 'Prey',
-  predator: 'Predator',
+function seatLabels(ui: UiStrings['gameLoopWidgets']): Record<ImpulseSeat['role'], string> {
+  return {
+    acting: ui.seatActing,
+    defender: ui.seatDefender,
+    targeted_clockwise: ui.seatTargeted,
+    clockwise_others: ui.seatPasses,
+    prey: ui.seatPrey,
+    predator: ui.seatPredator,
+  }
 }
 
 function seatPosition(seat: number): { left: string; top: string } {
@@ -30,6 +33,9 @@ interface ImpulseOrderWidgetProps {
 }
 
 export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWidgetProps) {
+  const strings = useUiStrings()
+  const ui = strings.gameLoopWidgets
+  const SEAT_LABELS = seatLabels(ui)
   const [context, setContext] = useState<ImpulseContext>('combat')
   const [step, setStep] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -62,26 +68,23 @@ export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWid
 
   return (
     <div className="grid min-w-0 gap-5">
-      <nav aria-label="Rules breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-ink-dim">
+      <nav aria-label={ui.breadcrumbAria} className="flex flex-wrap items-center gap-2 text-sm text-ink-dim">
         <button type="button" onClick={onBack} className="hover:text-ink">
-          Turn phases
+          {strings.rules.turnPhasesAria}
         </button>
         <span aria-hidden="true">›</span>
         <span className="text-ink" aria-current="page">
-          Impulse &amp; priority order
+          {ui.impulsePriorityOrderLabel}
         </span>
       </nav>
 
       <header className="rounded-3xl border border-line bg-surface px-5 py-6 sm:px-7">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-blood-hi">Priority window</p>
-        <h2 className="mt-2 font-display text-2xl text-ink sm:text-3xl">Who passes impulse next?</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-muted">
-          Impulse always returns to the acting Methuselah after any play. Pick a context to see who gets priority,
-          and in what order, once they pass.
-        </p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-blood-hi">{ui.priorityWindow}</p>
+        <h2 className="mt-2 font-display text-2xl text-ink sm:text-3xl">{ui.whoPassesNext}</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-muted">{ui.impulseIntro}</p>
       </header>
 
-      <section className="flex flex-wrap gap-2 rounded-2xl border border-line bg-raised p-3" role="group" aria-label="Context">
+      <section className="flex flex-wrap gap-2 rounded-2xl border border-line bg-raised p-3" role="group" aria-label={ui.contextAria}>
         {IMPULSE_CONTEXTS.map((candidate) => (
           <button
             key={candidate.id}
@@ -106,11 +109,11 @@ export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWid
             const hasPassed = activeSeats.has(seat)
             const role =
               seat === 0
-                ? 'Acting'
+                ? ui.positionActing
                 : seat === 1
-                  ? 'Prey'
+                  ? ui.seatPrey
                   : seat === 4
-                    ? 'Predator'
+                    ? ui.seatPredator
                     : null
             return (
               <div
@@ -139,15 +142,13 @@ export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWid
         <div className="grid content-between gap-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-dim">
-              Step {step + 1} of {sequence.length}
+              {ui.stepOf(step + 1, sequence.length)}
             </p>
             <p className="mt-1 font-display text-xl text-ink">
-              {activeRole ? SEAT_LABELS[activeRole] : ''} — seat {currentSeat + 1}
+              {activeRole ? SEAT_LABELS[activeRole] : ''} {ui.seatSuffix(currentSeat + 1)}
             </p>
             <p className="mt-2 text-sm text-ink-muted">
-              {step === 0
-                ? 'The acting Methuselah has priority first.'
-                : 'Impulse snaps back to the acting Methuselah as soon as anyone plays — this is the pass order if everyone declines in turn.'}
+              {step === 0 ? ui.firstPriority : ui.passOrderNote}
             </p>
           </div>
 
@@ -161,7 +162,7 @@ export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWid
               }}
               className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
             >
-              ← Previous
+              {strings.rules.previous}
             </button>
             <button
               type="button"
@@ -172,7 +173,7 @@ export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWid
               }}
               className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Next →
+              {strings.rules.next}
             </button>
             <button
               type="button"
@@ -182,7 +183,7 @@ export default function ImpulseOrderWidget({ gameLoop, onBack }: ImpulseOrderWid
               }}
               className="rounded-lg border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm text-gold hover:border-gold"
             >
-              {playing ? 'Pause' : 'Animate'}
+              {playing ? ui.pause : ui.animate}
             </button>
           </div>
         </div>
