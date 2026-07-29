@@ -323,19 +323,19 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   `main.js`; the service worker's fetch handler is already generic
   (`sw.ts` caches any same-origin static asset via stale-while-revalidate by
   URL, no static manifest), so the new chunks need no SW changes and still
-  work offline after first visit. Locally measured (`npm run build`):
-  `main.js` gzip **153.6 KB → 108.2 KB** (−45 KB), with the `/crypt` page's
-  own chunk adding back **4.6 KB** — a real ~40 KB net win, but
-  `dbWorker.js`/`userDbWorker.js` (68.0 KB + 69.3 KB, untouched by this
-  change) still keep total first-load JS over the 200 KB line. Verified
-  end-to-end against a real server + browser (not just `tsc`/build) before
-  shipping: `test:card-text`, `test:deck-organization`, `test:deck-timing`,
+  work offline after first visit. **Live remeasurement** (2026-07-29, same
+  `curl -w` methodology against schreck-net.com/crypt, real br transfer
+  sizes): `main.js` 107.0 KB + `dbWorker.js` 66.6 KB + `userDbWorker.js`
+  67.9 KB + the `/crypt` route's own chunk 4.6 KB ≈ **246 KB gzipped/br JS
+  on first load** — down from 275 KB (−29 KB, ~10%) but still over the
+  200 KB budget. `dbWorker.js`/`userDbWorker.js` were untouched by this
+  change and are now the dominant remaining cost; they're the next lever if
+  the budget still needs closing. Verified end-to-end against a real server
+  + browser (not just `tsc`/build) before shipping: `test:card-text`,
+  `test:deck-organization`, `test:deck-timing`,
   `test:mobile`, `test:backup`, and `test:semantic` (which itself exercises
   `/cards/{id}`, `/library`, deck-panel, and offline-reload) all pass with
-  route chunks loading on demand. A live `curl -w` remeasurement against
-  schreck-net.com (matching the 2026-07-24 methodology) is the next step to
-  confirm the real-world number; `dbWorker.js`/`userDbWorker.js` are the
-  next lever if the budget still isn't met after that.
+  route chunks loading on demand.
 - ◐ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
   4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
   found and fixed two real classes of violation — 4 unlabeled `<select>`s
