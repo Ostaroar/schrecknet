@@ -1,10 +1,13 @@
+import { useUiStrings } from '../lib/i18n'
+
 export default function RuleDetailList({ detail }: { detail: string }) {
+  const ui = useUiStrings().badges
   const lines = detail
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
 
-  if (!lines.length) return <p className="text-sm text-ink-dim">No additional detail is recorded for this step.</p>
+  if (!lines.length) return <p className="text-sm text-ink-dim">{ui.noRuleDetail}</p>
 
   return (
     <ul className="grid gap-2 text-sm leading-relaxed text-ink-muted sm:text-base">

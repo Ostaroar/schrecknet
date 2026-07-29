@@ -478,6 +478,36 @@ export interface UiStrings {
     caption: (count: number) => string
     empty: string
   }
+  badges: {
+    outOfFormat: string
+    outOfFormatTooltip: string
+    rulingsHeading: string
+    printingsHeading: string
+    sourceFallback: string
+    noRuleDetail: string
+    previewCardImage: string
+    previewImageFor: (name: string) => string
+    cardImageAlt: (name: string) => string
+  }
+  cardDetail: {
+    loading: string
+    loadError: (error: string) => string
+    notFound: (id: number) => string
+    backToSearch: string
+    backToKindSearch: (kind: string) => string
+    englishName: (name: string) => string
+    groupSuffix: (group: number) => string
+    requiresClan: (clan: string) => string
+    requires: string
+    bloodSuffix: (cost: string) => string
+    poolSuffix: (cost: string) => string
+    noTranslation: (lang: string) => string
+    cardTextLanguage: (lang: string) => string
+    artistsLabel: (count: number, names: string) => string
+    availableCardText: (langs: string) => string
+    printingsInline: string
+    fullPageLink: string
+  }
   commandPalette: {
     searchPlaceholder: string
     noResults: (query: string) => string
@@ -673,6 +703,12 @@ const en: UiStrings = {
   proxy: {
     backToDeck: '← Back to deck', print: 'Print / Save as PDF', onlyMissing: 'Only missing copies', caption: (count) => `${count} card${count === 1 ? '' : 's'} at 2.5"×3.5" (real card size), 9 per US Letter page. For personal proxy use only.`, empty: 'This deck has no cards to print yet.',
   },
+  badges: {
+    outOfFormat: 'Out of format', outOfFormatTooltip: 'Not legal in the active limited format', rulingsHeading: 'Rulings', printingsHeading: 'Printings', sourceFallback: 'Source', noRuleDetail: 'No additional detail is recorded for this step.', previewCardImage: 'Preview card image', previewImageFor: (name) => `Preview image for ${name}`, cardImageAlt: (name) => `${name} card`,
+  },
+  cardDetail: {
+    loading: 'Loading…', loadError: (error) => `Couldn't load card: ${error}`, notFound: (id) => `No card with id ${id} in the V5 pool.`, backToSearch: 'Back to search', backToKindSearch: (kind) => `← back to ${kind} search`, englishName: (name) => `English name: ${name}`, groupSuffix: (group) => `· Group ${group}`, requiresClan: (clan) => `· requires ${clan}`, requires: '· requires', bloodSuffix: (cost) => `· ${cost} blood`, poolSuffix: (cost) => `· ${cost} pool`, noTranslation: (lang) => `No ${lang} translation is available for this card; showing English.`, cardTextLanguage: (lang) => `Card text: ${lang}`, artistsLabel: (count, names) => `Artist${count > 1 ? 's' : ''}: ${names}`, availableCardText: (langs) => `Available card text: ${langs}`, printingsInline: 'Printings:', fullPageLink: 'Full page & share link →',
+  },
   commandPalette: {
     searchPlaceholder: 'Search any card by name…', noResults: (query) => `No cards named "${query}".`,
   },
@@ -848,6 +884,12 @@ const es: UiStrings = {
   },
   proxy: {
     backToDeck: '← Volver al mazo', print: 'Imprimir / Guardar como PDF', onlyMissing: 'Solo copias faltantes', caption: (count) => `${count} carta${count === 1 ? '' : 's'} a 2,5"×3,5" (tamaño real), 9 por página carta EE. UU. Solo para uso personal como proxy.`, empty: 'Este mazo aún no tiene cartas para imprimir.',
+  },
+  badges: {
+    outOfFormat: 'Fuera de formato', outOfFormatTooltip: 'No es legal en el formato limitado activo', rulingsHeading: 'Fallos', printingsHeading: 'Ediciones', sourceFallback: 'Fuente', noRuleDetail: 'No hay más detalle registrado para este paso.', previewCardImage: 'Vista previa de la carta', previewImageFor: (name) => `Vista previa de la imagen de ${name}`, cardImageAlt: (name) => `Carta ${name}`,
+  },
+  cardDetail: {
+    loading: 'Cargando…', loadError: (error) => `No se pudo cargar la carta: ${error}`, notFound: (id) => `No hay ninguna carta con id ${id} en el pool V5.`, backToSearch: 'Volver a la búsqueda', backToKindSearch: (kind) => `← volver a la búsqueda de ${kind}`, englishName: (name) => `Nombre en inglés: ${name}`, groupSuffix: (group) => `· Grupo ${group}`, requiresClan: (clan) => `· requiere ${clan}`, requires: '· requiere', bloodSuffix: (cost) => `· ${cost} sangre`, poolSuffix: (cost) => `· ${cost} pool`, noTranslation: (lang) => `No hay traducción al ${lang} disponible para esta carta; se muestra en inglés.`, cardTextLanguage: (lang) => `Texto de la carta: ${lang}`, artistsLabel: (count, names) => `Artista${count > 1 ? 's' : ''}: ${names}`, availableCardText: (langs) => `Texto de carta disponible: ${langs}`, printingsInline: 'Ediciones:', fullPageLink: 'Página completa y enlace para compartir →',
   },
   commandPalette: {
     searchPlaceholder: 'Busca cualquier carta por nombre…', noResults: (query) => `No hay cartas llamadas «${query}».`,
@@ -1025,6 +1067,12 @@ const fr: UiStrings = {
   proxy: {
     backToDeck: '← Retour au deck', print: 'Imprimer / Enregistrer en PDF', onlyMissing: 'Uniquement les copies manquantes', caption: (count) => `${count} carte${count === 1 ? '' : 's'} au format 2,5"×3,5" (taille réelle), 9 par page Lettre US. Usage proxy personnel uniquement.`, empty: "Ce deck n'a pas encore de cartes à imprimer.",
   },
+  badges: {
+    outOfFormat: 'Hors format', outOfFormatTooltip: 'Non légal dans le format limité actif', rulingsHeading: 'Décisions', printingsHeading: 'Éditions', sourceFallback: 'Source', noRuleDetail: 'Aucun détail supplémentaire enregistré pour cette étape.', previewCardImage: 'Aperçu de la carte', previewImageFor: (name) => `Aperçu de l'image de ${name}`, cardImageAlt: (name) => `Carte ${name}`,
+  },
+  cardDetail: {
+    loading: 'Chargement…', loadError: (error) => `Impossible de charger la carte : ${error}`, notFound: (id) => `Aucune carte avec l'id ${id} dans le pool V5.`, backToSearch: 'Retour à la recherche', backToKindSearch: (kind) => `← retour à la recherche ${kind}`, englishName: (name) => `Nom anglais : ${name}`, groupSuffix: (group) => `· Groupe ${group}`, requiresClan: (clan) => `· nécessite ${clan}`, requires: '· nécessite', bloodSuffix: (cost) => `· ${cost} sang`, poolSuffix: (cost) => `· ${cost} pool`, noTranslation: (lang) => `Aucune traduction en ${lang} disponible pour cette carte ; affichage en anglais.`, cardTextLanguage: (lang) => `Texte de la carte : ${lang}`, artistsLabel: (count, names) => `Artiste${count > 1 ? 's' : ''} : ${names}`, availableCardText: (langs) => `Texte de carte disponible : ${langs}`, printingsInline: 'Éditions :', fullPageLink: 'Page complète et lien de partage →',
+  },
   commandPalette: {
     searchPlaceholder: 'Rechercher une carte par son nom…', noResults: (query) => `Aucune carte nommée « ${query} ».`,
   },
@@ -1200,6 +1248,12 @@ const de: UiStrings = {
   },
   proxy: {
     backToDeck: '← Zurück zum Deck', print: 'Drucken / Als PDF speichern', onlyMissing: 'Nur fehlende Exemplare', caption: (count) => `${count} Karte${count === 1 ? '' : 'n'} in 2,5"×3,5" (echte Kartengröße), 9 pro US-Letter-Seite. Nur für den persönlichen Proxy-Gebrauch.`, empty: 'Dieses Deck hat noch keine Karten zum Drucken.',
+  },
+  badges: {
+    outOfFormat: 'Außerhalb des Formats', outOfFormatTooltip: 'Im aktiven limitierten Format nicht legal', rulingsHeading: 'Urteile', printingsHeading: 'Drucke', sourceFallback: 'Quelle', noRuleDetail: 'Für diesen Schritt sind keine weiteren Details erfasst.', previewCardImage: 'Kartenbild-Vorschau', previewImageFor: (name) => `Bildvorschau für ${name}`, cardImageAlt: (name) => `Karte ${name}`,
+  },
+  cardDetail: {
+    loading: 'Lade…', loadError: (error) => `Karte konnte nicht geladen werden: ${error}`, notFound: (id) => `Keine Karte mit der ID ${id} im V5-Pool.`, backToSearch: 'Zurück zur Suche', backToKindSearch: (kind) => `← zurück zur ${kind}-Suche`, englishName: (name) => `Englischer Name: ${name}`, groupSuffix: (group) => `· Gruppe ${group}`, requiresClan: (clan) => `· erfordert ${clan}`, requires: '· erfordert', bloodSuffix: (cost) => `· ${cost} Blut`, poolSuffix: (cost) => `· ${cost} Pool`, noTranslation: (lang) => `Keine ${lang}-Übersetzung für diese Karte verfügbar; zeige Englisch.`, cardTextLanguage: (lang) => `Kartentext: ${lang}`, artistsLabel: (_count, names) => `Künstler: ${names}`, availableCardText: (langs) => `Verfügbarer Kartentext: ${langs}`, printingsInline: 'Drucke:', fullPageLink: 'Vollständige Seite & Freigabelink →',
   },
   commandPalette: {
     searchPlaceholder: 'Beliebige Karte nach Namen suchen…', noResults: (query) => `Keine Karten namens „${query}“.`,

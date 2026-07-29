@@ -10,6 +10,7 @@ import CardImagePreview from './CardImagePreview'
 import { CardTypeSummary, ClanSymbol, DisciplineBadge, PathSymbol } from './VtesSymbol'
 import { useDocumentHead } from '../lib/documentHead'
 import { DEFAULT_HEAD } from '../lib/seo'
+import { useUiStrings } from '../lib/i18n'
 
 function cardDescription(card: CardDetail, text: string): string {
   const kind =
@@ -22,6 +23,8 @@ function cardDescription(card: CardDetail, text: string): string {
 }
 
 export default function CardPage({ id }: { id: number }) {
+  const strings = useUiStrings()
+  const ui = strings.cardDetail
   const [card, setCard] = useState<CardDetail | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -50,15 +53,15 @@ export default function CardPage({ id }: { id: number }) {
       : DEFAULT_HEAD,
   )
 
-  if (status === 'loading') return <p className="text-sm text-ink-dim">Loading…</p>
+  if (status === 'loading') return <p className="text-sm text-ink-dim">{ui.loading}</p>
   if (status === 'error')
-    return <p className="text-sm text-blood-hi">Couldn't load card: {error}</p>
+    return <p className="text-sm text-blood-hi">{ui.loadError(error)}</p>
   if (status === 'missing' || !card)
     return (
       <div className="grid gap-2 text-sm">
-        <p className="text-ink-muted">No card with id {id} in the V5 pool.</p>
+        <p className="text-ink-muted">{ui.notFound(id)}</p>
         <button onClick={() => navigate({ page: 'crypt' })} className="justify-self-start text-blood-hi underline">
-          Back to search
+          {ui.backToSearch}
         </button>
       </div>
     )
@@ -71,7 +74,7 @@ export default function CardPage({ id }: { id: number }) {
         onClick={() => navigate({ page: card.kind === 'crypt' ? 'crypt' : 'library' })}
         className="justify-self-start text-xs text-ink-dim hover:text-ink-muted"
       >
-        ← back to {card.kind} search
+        {ui.backToKindSearch((card.kind === 'crypt' ? strings.sharedDeck.crypt : strings.sharedDeck.library).toLowerCase())}
       </button>
 
       <header className="grid gap-2">
@@ -84,14 +87,14 @@ export default function CardPage({ id }: { id: number }) {
           )}
         </div>
         {localized.name !== card.name && (
-          <p className="text-xs text-ink-dim">English name: {card.name}</p>
+          <p className="text-xs text-ink-dim">{ui.englishName(card.name)}</p>
         )}
         <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-ink-muted">
           {card.kind === 'crypt' ? (
             <>
               <ClanSymbol clan={card.clan ?? ''} className="size-5" />
               <span>{card.clan}</span>
-              {card.group !== null && <span>· Group {card.group}</span>}
+              {card.group !== null && <span>{ui.groupSuffix(card.group)}</span>}
               {card.title && <span>· {card.title}</span>}
               {card.path && (
                 <>
@@ -104,16 +107,16 @@ export default function CardPage({ id }: { id: number }) {
           ) : (
             <>
               <CardTypeSummary types={card.types ?? []} />
-              {card.clan && <span>· requires {card.clan}</span>}
+              {card.clan && <span>{ui.requiresClan(card.clan)}</span>}
               {card.path && (
                 <>
-                  <span>· requires</span>
+                  <span>{ui.requires}</span>
                   <PathSymbol path={card.path} className="size-5" />
                   <span>{card.path}</span>
                 </>
               )}
-              {card.blood_cost && <span>· {card.blood_cost} blood</span>}
-              {card.pool_cost && <span>· {card.pool_cost} pool</span>}
+              {card.blood_cost && <span>{ui.bloodSuffix(card.blood_cost)}</span>}
+              {card.pool_cost && <span>{ui.poolSuffix(card.pool_cost)}</span>}
             </>
           )}
         </div>
@@ -142,16 +145,14 @@ export default function CardPage({ id }: { id: number }) {
               <CardText text={localized.card_text} />
             </p>
             {localized.isFallback && (
-              <p className="mt-3 text-xs text-ink-dim">
-                No {languageLabel(language)} translation is available for this card; showing English.
-              </p>
+              <p className="mt-3 text-xs text-ink-dim">{ui.noTranslation(languageLabel(language))}</p>
             )}
           </div>
         )}
       </div>
 
       <section className="grid gap-1 text-sm">
-        <h2 className="text-xs uppercase tracking-wide text-ink-dim">Printings</h2>
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">{strings.badges.printingsHeading}</h2>
         <ul className="grid gap-1 text-ink-muted">
           {card.printings.map((p, i) => (
             <li key={i} className="flex items-center gap-1.5">
@@ -165,9 +166,7 @@ export default function CardPage({ id }: { id: number }) {
           ))}
         </ul>
         {card.artists.length > 0 && (
-          <p className="text-xs text-ink-dim">
-            Artist{card.artists.length > 1 ? 's' : ''}: {card.artists.join(', ')}
-          </p>
+          <p className="text-xs text-ink-dim">{ui.artistsLabel(card.artists.length, card.artists.join(', '))}</p>
         )}
       </section>
 
@@ -175,7 +174,7 @@ export default function CardPage({ id }: { id: number }) {
 
       {card.rulings.length > 0 && (
         <section className="grid gap-2 text-sm">
-          <h2 className="text-xs uppercase tracking-wide text-ink-dim">Rulings</h2>
+          <h2 className="text-xs uppercase tracking-wide text-ink-dim">{strings.badges.rulingsHeading}</h2>
           <ul className="grid gap-2 text-ink-muted">
             {card.rulings.map((r, i) => (
               <li key={i}>
@@ -189,11 +188,10 @@ export default function CardPage({ id }: { id: number }) {
 
       {card.translations.length > 0 && (
         <section className="flex flex-wrap items-center gap-2 text-xs text-ink-dim">
-          <span>Available card text:</span>
-          <span className="text-ink-muted">
-            {['en', ...card.translations.map((translation) => translation.lang)]
-              .map(languageLabel)
-              .join(', ')}
+          <span>
+            {ui.availableCardText(
+              ['en', ...card.translations.map((translation) => translation.lang)].map(languageLabel).join(', '),
+            )}
           </span>
         </section>
       )}

@@ -1,11 +1,13 @@
 import type { RulingRef } from '../lib/cardDetail'
+import { useUiStrings } from '../lib/i18n'
 
 export default function RulingRefs({ refs }: { refs: RulingRef[] }) {
+  const ui = useUiStrings().badges
   if (refs.length === 0) return null
   return (
     <span className="mt-1 flex flex-wrap gap-1.5">
       {refs.map((ref, index) => {
-        const label = ref.label || ref.text || 'Source'
+        const label = ref.label || ref.text || ui.sourceFallback
         return ref.url ? (
           <a
             key={`${ref.url}-${index}`}

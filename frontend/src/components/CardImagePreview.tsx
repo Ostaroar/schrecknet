@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useUiStrings } from '../lib/i18n'
 
 interface CardImagePreviewProps {
   imageUrl: string | null
@@ -6,6 +7,7 @@ interface CardImagePreviewProps {
 }
 
 export default function CardImagePreview({ imageUrl, name }: CardImagePreviewProps) {
+  const ui = useUiStrings().badges
   const [open, setOpen] = useState(false)
   const previewId = useId()
   const rootRef = useRef<HTMLSpanElement>(null)
@@ -32,10 +34,10 @@ export default function CardImagePreview({ imageUrl, name }: CardImagePreviewPro
     <span ref={rootRef} className="group/image relative flex shrink-0 items-center">
       <button
         type="button"
-        aria-label={`Preview image for ${name}`}
+        aria-label={ui.previewImageFor(name)}
         aria-expanded={open}
         aria-controls={previewId}
-        title="Preview card image"
+        title={ui.previewCardImage}
         onClick={() => setOpen((visible) => !visible)}
         className="grid size-8 place-items-center rounded-lg border border-transparent text-base text-ink-dim hover:border-line hover:bg-raised hover:text-ink focus:border-blood focus:outline-none"
       >
@@ -51,7 +53,7 @@ export default function CardImagePreview({ imageUrl, name }: CardImagePreviewPro
       >
         <img
           src={imageUrl}
-          alt={`${name} card`}
+          alt={ui.cardImageAlt(name)}
           loading="lazy"
           className="w-full rounded-lg"
         />
