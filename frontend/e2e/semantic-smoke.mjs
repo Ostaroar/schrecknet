@@ -476,7 +476,10 @@ try {
   await waitForExactIds([100401])
   await page.locator('main button[data-card-id="100401"]').click()
   await page.locator('[data-card-text-symbol="dom"]').waitFor()
-  await page.getByText('Card text: Español', { exact: true }).waitFor()
+  // "Card text: X" is chrome text, driven by the same persisted language as
+  // the card-text switch itself (see the comment at showKind below) — with
+  // Spanish selected it now renders as its Spanish translation.
+  await page.getByText('Texto de la carta: Español', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'English', exact: true }).click()
 
   // The semantic golden queries intentionally start with no structured
