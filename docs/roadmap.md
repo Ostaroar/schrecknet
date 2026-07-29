@@ -312,6 +312,30 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   regex, filtered, crypt+library) now sit at **2-9ms p95**, under budget.
   Client-perceived latency (add network/browser overhead) isn't measured, but
   the dominant cost — server processing — now has real headroom.
+  **JS-bundle fix (2026-07-29):** the real cause of the 275 KB miss was that
+  `App.tsx` eagerly imported every route (crypt/library/decks/settings/rules/
+  table/legal/precons/…) into one bundle, so visiting `/crypt` paid for
+  `SettingsPage`, `DeckEditor`, `RulesPage`, `TablePage`, and everything else
+  it never renders. Converted every route-gated component to `React.lazy()` +
+  one `<Suspense>` boundary around the route outlet (chrome — header, nav,
+  footer, `CommandPalette`, `KofiButton` — stays eager, it's on every page).
+  Vite now emits one content-hashed chunk per route instead of a single
+  `main.js`; the service worker's fetch handler is already generic
+  (`sw.ts` caches any same-origin static asset via stale-while-revalidate by
+  URL, no static manifest), so the new chunks need no SW changes and still
+  work offline after first visit. Locally measured (`npm run build`):
+  `main.js` gzip **153.6 KB → 108.2 KB** (−45 KB), with the `/crypt` page's
+  own chunk adding back **4.6 KB** — a real ~40 KB net win, but
+  `dbWorker.js`/`userDbWorker.js` (68.0 KB + 69.3 KB, untouched by this
+  change) still keep total first-load JS over the 200 KB line. Verified
+  end-to-end against a real server + browser (not just `tsc`/build) before
+  shipping: `test:card-text`, `test:deck-organization`, `test:deck-timing`,
+  `test:mobile`, `test:backup`, and `test:semantic` (which itself exercises
+  `/cards/{id}`, `/library`, deck-panel, and offline-reload) all pass with
+  route chunks loading on demand. A live `curl -w` remeasurement against
+  schreck-net.com (matching the 2026-07-24 methodology) is the next step to
+  confirm the real-world number; `dbWorker.js`/`userDbWorker.js` are the
+  next lever if the budget still isn't met after that.
 - ◐ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
   4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
   found and fixed two real classes of violation — 4 unlabeled `<select>`s

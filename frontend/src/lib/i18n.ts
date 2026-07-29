@@ -29,6 +29,7 @@ export interface UiStrings {
     cardCounts: (crypt: number, library: number) => string
     v5Only: string
     tagline: string
+    routeLoading: string
   }
   footer: {
     copyright: string
@@ -620,6 +621,7 @@ const en: UiStrings = {
     cardCounts: (crypt, library) => `${crypt} crypt · ${library} library`,
     v5Only: 'V5 only',
     tagline: 'Search fast. Build locally. Keep control.',
+    routeLoading: 'Loading…',
   },
   footer: {
     copyright:
@@ -754,6 +756,7 @@ const es: UiStrings = {
     cardCounts: (crypt, library) => `${crypt} cripta · ${library} biblioteca`,
     v5Only: 'Solo V5',
     tagline: 'Busca rápido. Construye en local. Mantén el control.',
+    routeLoading: 'Cargando…',
   },
   footer: {
     copyright:
@@ -936,6 +939,7 @@ const fr: UiStrings = {
     cardCounts: (crypt, library) => `${crypt} crypte · ${library} bibliothèque`,
     v5Only: 'V5 uniquement',
     tagline: 'Cherchez vite. Construisez en local. Gardez le contrôle.',
+    routeLoading: 'Chargement…',
   },
   footer: {
     copyright:
@@ -1122,6 +1126,7 @@ const de: UiStrings = {
     cardCounts: (crypt, library) => `${crypt} Krypta · ${library} Bibliothek`,
     v5Only: 'Nur V5',
     tagline: 'Schnell suchen. Lokal bauen. Kontrolle behalten.',
+    routeLoading: 'Lädt…',
   },
   footer: {
     copyright:

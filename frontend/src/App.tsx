@@ -1,32 +1,36 @@
-import { useEffect, useState } from 'react'
-import CryptSearch from './components/CryptSearch'
-import LibrarySearch from './components/LibrarySearch'
-import CardPage from './components/CardPage'
-import DeckList from './components/DeckList'
-import DeckEditor from './components/DeckEditor'
-import DeckReview from './components/DeckReview'
-import InventoryPage from './components/InventoryPage'
-import ProxySheet from './components/ProxySheet'
-import SharedDeckPreview from './components/SharedDeckPreview'
-import DeckDiff from './components/DeckDiff'
-import PreconBrowser from './components/PreconBrowser'
-import RulesPage from './components/RulesPage'
-import CommandPalette from './components/CommandPalette'
-import ChangelogPage from './components/ChangelogPage'
-import LimitedFormatPage from './components/LimitedFormatPage'
-import TablePage from './components/TablePage'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import BrandMark from './components/BrandMark'
 import KofiButton from './components/KofiButton'
-import LegalPage from './components/LegalPage'
-import SettingsPage from './components/SettingsPage'
+import CommandPalette from './components/CommandPalette'
 import BackupReminder from './components/BackupReminder'
-import { AboutPage, HelpPage } from './components/InfoPages'
 import { cardDbVersion, getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
 import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
 import { useRoute, navigate } from './lib/route'
 import { useDocumentHead } from './lib/documentHead'
 import { routeDocumentHead } from './lib/seo'
+
+// Route-gated views are code-split (docs/roadmap.md Phase 4 performance budget):
+// visiting one route shouldn't download every other route's JS up front.
+const CryptSearch = lazy(() => import('./components/CryptSearch'))
+const LibrarySearch = lazy(() => import('./components/LibrarySearch'))
+const CardPage = lazy(() => import('./components/CardPage'))
+const DeckList = lazy(() => import('./components/DeckList'))
+const DeckEditor = lazy(() => import('./components/DeckEditor'))
+const DeckReview = lazy(() => import('./components/DeckReview'))
+const InventoryPage = lazy(() => import('./components/InventoryPage'))
+const ProxySheet = lazy(() => import('./components/ProxySheet'))
+const SharedDeckPreview = lazy(() => import('./components/SharedDeckPreview'))
+const DeckDiff = lazy(() => import('./components/DeckDiff'))
+const PreconBrowser = lazy(() => import('./components/PreconBrowser'))
+const RulesPage = lazy(() => import('./components/RulesPage'))
+const ChangelogPage = lazy(() => import('./components/ChangelogPage'))
+const LimitedFormatPage = lazy(() => import('./components/LimitedFormatPage'))
+const TablePage = lazy(() => import('./components/TablePage'))
+const LegalPage = lazy(() => import('./components/LegalPage'))
+const SettingsPage = lazy(() => import('./components/SettingsPage'))
+const AboutPage = lazy(() => import('./components/InfoPages').then((m) => ({ default: m.AboutPage })))
+const HelpPage = lazy(() => import('./components/InfoPages').then((m) => ({ default: m.HelpPage })))
 
 const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'table', 'precons', 'rules', 'changelog', 'help', 'about'] as const
 const LANGUAGE_FLAGS: Record<string, string> = { en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪' }
@@ -146,6 +150,7 @@ export default function App() {
       )}
 
       <main className="min-w-0 flex-1 pb-10">
+        <Suspense fallback={<p className="py-16 text-center text-sm text-ink-muted">{ui.header.routeLoading}</p>}>
         {route.page === 'card' ? (
           <CardPage id={route.id} />
         ) : route.page === 'deck' ? (
@@ -191,6 +196,7 @@ export default function App() {
         ) : (
           <CryptSearch />
         )}
+        </Suspense>
       </main>
 
       <CommandPalette />
