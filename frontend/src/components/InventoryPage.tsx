@@ -24,11 +24,12 @@ import AddCardBox from './AddCardBox'
 import { CardTypeSummary, ClanSymbol } from './VtesSymbol'
 
 function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
+  const ui = useUiStrings().inventory
   return (
     <span className="flex items-center gap-1.5">
       <button
         onClick={() => onChange(qty - 1)}
-        aria-label="Decrease quantity"
+        aria-label={ui.decreaseQty}
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         −
@@ -36,7 +37,7 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
       <span className="w-4 text-center font-mono text-xs text-ink">{qty}</span>
       <button
         onClick={() => onChange(qty + 1)}
-        aria-label="Increase quantity"
+        aria-label={ui.increaseQty}
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         +

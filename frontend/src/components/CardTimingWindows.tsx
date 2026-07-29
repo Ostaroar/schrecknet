@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import { describeHook, getTimingWindowsForCard } from '../lib/cardTiming'
 import { loadGameLoop, type GameLoop, type GameLoopHook } from '../lib/gameLoop'
 import { navigate } from '../lib/route'
+import { useUiStrings } from '../lib/i18n'
 
 export default function CardTimingWindows({ types }: { types: string[] }) {
+  const strings = useUiStrings()
+  const ui = strings.cardTiming
   const [gameLoop, setGameLoop] = useState<GameLoop | null>(null)
 
   useEffect(() => {
@@ -27,11 +30,11 @@ export default function CardTimingWindows({ types }: { types: string[] }) {
 
   return (
     <section className="grid gap-2 text-sm">
-      <h2 className="text-xs uppercase tracking-wide text-ink-dim">When can I play this?</h2>
+      <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.heading}</h2>
       <ul className="grid gap-1.5 text-ink-muted">
         {windows.map((hook) => (
           <li key={hook.id} className="rounded-lg border border-line bg-surface px-3 py-2">
-            {describeHook(hook)}
+            {describeHook(hook, strings.gameLoopHooks)}
           </li>
         ))}
       </ul>
@@ -40,7 +43,7 @@ export default function CardTimingWindows({ types }: { types: string[] }) {
         onClick={() => navigate({ page: 'rules' })}
         className="justify-self-start text-xs text-blood-hi underline"
       >
-        See the full rules reference →
+        {ui.fullReference}
       </button>
     </section>
   )

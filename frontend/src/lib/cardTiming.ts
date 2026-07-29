@@ -26,28 +26,9 @@ export function getTimingWindowsForCard(gameLoop: GameLoop, types: string[]): Ga
   return gameLoop.hooks.filter((hook) => hookIds.has(hook.id))
 }
 
-const HOOK_DESCRIPTIONS: Record<string, string> = {
-  HK_UNLOCK: 'During the unlock phase.',
-  HK_MASTER: 'During your master phase, once per turn.',
-  HK_INFLUENCE: 'During your influence phase.',
-  HK_DISCARD: 'During your discard phase.',
-  HK_ASANN: 'As you announce an action.',
-  HK_AMOD: 'After an action is declared, before it resolves.',
-  HK_REACT: 'In reaction to an action directed at you or your allies.',
-  HK_BLOCK: 'When declaring or contesting a block attempt.',
-  HK_REF: 'While a referendum or vote is open.',
-  HK_BLEED: 'Specifically while bleed damage is being determined.',
-  HK_CMB_RANGE: 'At the start of a combat round, when range is set.',
-  HK_CMB_STRIKE: 'During the strike step of a combat round.',
-  HK_CMB_PRESS: 'During the press step, when continuing combat.',
-  HK_CMB_END: 'As combat ends.',
-  HK_OOT: "Out of turn, as though it were a master card during someone else's turn.",
-  HK_INPLAY: 'Continuously, once in play.',
-  HK_ASPLAYED: 'Immediately, as it is played.',
-}
-
-export function describeHook(hook: GameLoopHook): string {
-  return HOOK_DESCRIPTIONS[hook.id] ?? hook.label.replace(/_/g, ' ').toLowerCase()
+/** Translated hook descriptions, keyed by hook id — sourced from i18n.ts's `gameLoopHooks` section by the caller. Kept as a plain parameter rather than an i18n.ts import so this module stays frontend-only/presentational per the doc comment above. */
+export function describeHook(hook: GameLoopHook, translations: Record<string, string>): string {
+  return translations[hook.id] ?? hook.label.replace(/_/g, ' ').toLowerCase()
 }
 
 /**
@@ -61,13 +42,14 @@ export function describeHook(hook: GameLoopHook): string {
 export function getDeckTimingDistribution(
   gameLoop: GameLoop,
   cards: { types: string[]; qty: number }[],
+  translations: Record<string, string>,
 ): { label: string; qty: number }[] {
   const totals = new Map<string, number>()
   for (const card of cards) {
     const windows = getTimingWindowsForCard(gameLoop, card.types)
     const seen = new Set<string>()
     for (const hook of windows) {
-      const label = describeHook(hook)
+      const label = describeHook(hook, translations)
       if (seen.has(label)) continue
       seen.add(label)
       totals.set(label, (totals.get(label) ?? 0) + card.qty)

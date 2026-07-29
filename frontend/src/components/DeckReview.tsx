@@ -23,13 +23,14 @@ function Distribution({ title, rows }: { title: string; rows: DeckStats['types']
 }
 
 export default function DeckReview({ id }: { id: number }) {
-  const ui = useUiStrings().deckReview
+  const strings = useUiStrings()
+  const ui = strings.deckReview
   const [deck, setDeck] = useState<DeckSummary | null>(null)
   const [stats, setStats] = useState<DeckStats | null>(null)
   const [error, setError] = useState('')
   useEffect(() => {
     Promise.all([getDeck(id), getDeckCardDetails(id)])
-      .then(async ([nextDeck, cards]) => { setDeck(nextDeck); setStats(await computeDeckStats(cards)) })
+      .then(async ([nextDeck, cards]) => { setDeck(nextDeck); setStats(await computeDeckStats(cards, strings.gameLoopHooks)) })
       .catch((reason: Error) => setError(reason.message))
   }, [id])
   if (error) return <p className="text-sm text-blood-hi">{ui.loadError(error)}</p>

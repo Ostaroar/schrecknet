@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { compareDecks, listDecks, type DeckDiff as DiffResult, type DeckDiffEntry, type DeckSummary } from '../lib/deckStore'
 import { navigate } from '../lib/route'
+import { useUiStrings } from '../lib/i18n'
 
 function DiffSection({ title, entries, tone }: { title: string; entries: DeckDiffEntry[]; tone: string }) {
   if (entries.length === 0) return null
@@ -27,6 +28,7 @@ function DiffSection({ title, entries, tone }: { title: string; entries: DeckDif
 }
 
 export default function DeckDiff() {
+  const ui = useUiStrings().deckDiff
   const [decks, setDecks] = useState<DeckSummary[]>([])
   const [deckA, setDeckA] = useState(0)
   const [deckB, setDeckB] = useState(0)
@@ -55,22 +57,20 @@ export default function DeckDiff() {
     <div className="grid gap-4">
       <div className="flex items-center gap-3">
         <button onClick={() => navigate({ page: 'decks' })} className="text-xs text-ink-dim hover:text-ink-muted">
-          ← Decks
+          {ui.backToDecks}
         </button>
-        <h1 className="font-display text-xl">Compare decks</h1>
+        <h1 className="font-display text-xl">{ui.title}</h1>
       </div>
 
       {error && <p className="rounded-lg border border-blood bg-surface p-3 text-sm text-blood-hi">{error}</p>}
       {decks.length < 2 ? (
-        <p className="rounded-lg border border-line bg-surface p-4 text-sm text-ink-muted">
-          Create at least two decks to compare them.
-        </p>
+        <p className="rounded-lg border border-line bg-surface p-4 text-sm text-ink-muted">{ui.needTwoDecks}</p>
       ) : (
         <>
           <div className="grid gap-3 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2">
             {[
-              { label: 'Deck A', value: deckA, set: setDeckA },
-              { label: 'Deck B', value: deckB, set: setDeckB },
+              { label: ui.deckA, value: deckA, set: setDeckA },
+              { label: ui.deckB, value: deckB, set: setDeckB },
             ].map((field) => (
               <label key={field.label} className="grid gap-1 text-xs text-ink-muted">
                 {field.label}
@@ -88,14 +88,14 @@ export default function DeckDiff() {
           {diff && (
             <>
               <div className="grid grid-cols-[1fr_3rem_3rem] px-4 text-xs text-ink-dim">
-                <span>{changedCount === 0 ? 'Decks are identical' : `${changedCount} changed card${changedCount === 1 ? '' : 's'}`}</span>
+                <span>{changedCount === 0 ? ui.identical : ui.changedCount(changedCount)}</span>
                 <span className="text-center">A</span>
                 <span className="text-center">B</span>
               </div>
-              <DiffSection title="Quantity changed" entries={diff.changed} tone="text-gold" />
-              <DiffSection title="Only in deck A" entries={diff.onlyInA} tone="text-blood-hi" />
-              <DiffSection title="Only in deck B" entries={diff.onlyInB} tone="text-ok" />
-              <DiffSection title="Unchanged" entries={diff.same} tone="text-ink-muted" />
+              <DiffSection title={ui.quantityChanged} entries={diff.changed} tone="text-gold" />
+              <DiffSection title={ui.onlyInA} entries={diff.onlyInA} tone="text-blood-hi" />
+              <DiffSection title={ui.onlyInB} entries={diff.onlyInB} tone="text-ok" />
+              <DiffSection title={ui.unchanged} entries={diff.same} tone="text-ink-muted" />
             </>
           )}
         </>

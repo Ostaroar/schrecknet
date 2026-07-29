@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { getProxyCards, type ProxyCard } from '../lib/proxySheet'
 import { navigate } from '../lib/route'
+import { useUiStrings } from '../lib/i18n'
 
 export default function ProxySheet({ deckId }: { deckId: number }) {
+  const strings = useUiStrings()
+  const ui = strings.proxy
   const [cards, setCards] = useState<ProxyCard[] | null>(null)
   const [error, setError] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
@@ -14,8 +17,8 @@ export default function ProxySheet({ deckId }: { deckId: number }) {
       .catch((e: Error) => setError(e.message))
   }, [deckId, onlyMissing])
 
-  if (error) return <p className="text-sm text-blood-hi">Couldn't load deck: {error}</p>
-  if (!cards) return <p className="text-sm text-ink-dim">Loading…</p>
+  if (error) return <p className="text-sm text-blood-hi">{strings.deckEditor.loadError(error)}</p>
+  if (!cards) return <p className="text-sm text-ink-dim">{strings.deckEditor.loadingDeck}</p>
 
   const copies = cards.flatMap((c) => Array.from({ length: c.qty }, () => c))
 
@@ -23,22 +26,19 @@ export default function ProxySheet({ deckId }: { deckId: number }) {
     <div className="proxy-sheet-wrapper">
       <div className="mb-5 flex flex-wrap items-center gap-3 print:hidden">
         <button onClick={() => navigate({ page: 'deck', id: deckId })} className="text-xs text-ink-dim hover:text-ink-muted">
-          ← Back to deck
+          {ui.backToDeck}
         </button>
         <button
           onClick={() => window.print()}
           className="rounded-lg bg-blood px-4 py-2 text-sm font-semibold text-white hover:bg-blood-hi"
         >
-          Print / Save as PDF
+          {ui.print}
         </button>
         <label className="flex items-center gap-1.5 text-xs text-ink-muted">
           <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
-          Only missing copies
+          {ui.onlyMissing}
         </label>
-        <span className="text-xs text-ink-dim">
-          {copies.length} card{copies.length === 1 ? '' : 's'} at 2.5"×3.5" (standard card size) — 9 per
-          US Letter page. For personal proxy use only.
-        </span>
+        <span className="text-xs text-ink-dim">{ui.caption(copies.length)}</span>
       </div>
       <div className="proxy-grid">
         {copies.map((c, i) => (
@@ -50,9 +50,7 @@ export default function ProxySheet({ deckId }: { deckId: number }) {
             )}
           </div>
         ))}
-        {copies.length === 0 && (
-          <p className="text-sm text-ink-dim">This deck has no cards to print yet.</p>
-        )}
+        {copies.length === 0 && <p className="text-sm text-ink-dim">{ui.empty}</p>}
       </div>
     </div>
   )

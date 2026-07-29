@@ -12,17 +12,19 @@ import {
 import GameLoopDrilldown from './GameLoopDrilldown'
 import ImpulseOrderWidget from './ImpulseOrderWidget'
 import RuleDetailList from './RuleDetailList'
+import { useUiStrings } from '../lib/i18n'
 
 function phaseName(label: string): string {
   return label.replace(/^\d+\)\s*/, '')
 }
 
 function EntryPreview({ state, onClose }: { state: GameLoopState; onClose: () => void }) {
+  const ui = useUiStrings().rules
   return (
     <section className="rounded-2xl border border-gold/30 bg-ground/60 p-4 sm:p-5" aria-live="polite">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gold">Sub-loop entry</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gold">{ui.subLoopEntry}</p>
           <h3 className="mt-1 font-display text-lg text-ink">{state.label}</h3>
         </div>
         <button
@@ -30,16 +32,17 @@ function EntryPreview({ state, onClose }: { state: GameLoopState; onClose: () =>
           onClick={onClose}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:border-line-soft hover:text-ink"
         >
-          Close
+          {ui.close}
         </button>
       </div>
       <RuleDetailList detail={state.detail} />
-      <p className="mt-4 text-xs text-ink-dim">This branch is summarized here because it sits outside the four core drill-downs.</p>
+      <p className="mt-4 text-xs text-ink-dim">{ui.summarizedNote}</p>
     </section>
   )
 }
 
 export default function RulesPage() {
+  const ui = useUiStrings().rules
   const [gameLoop, setGameLoop] = useState<GameLoop | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -95,38 +98,35 @@ export default function RulesPage() {
   if (error) {
     return (
       <div className="rounded-2xl border border-blood/50 bg-surface p-6">
-        <h1 className="font-display text-2xl">Rules reference unavailable</h1>
+        <h1 className="font-display text-2xl">{ui.unavailable}</h1>
         <p className="mt-2 text-sm text-ink-muted">{error}</p>
       </div>
     )
   }
 
   if (!gameLoop || !selected) {
-    return <p className="py-16 text-center text-sm text-ink-muted">Opening the V5 rules reference…</p>
+    return <p className="py-16 text-center text-sm text-ink-muted">{ui.opening}</p>
   }
 
   return (
     <div className="grid min-w-0 gap-6 pb-8">
       <header className="overflow-hidden rounded-3xl border border-line bg-surface px-5 py-7 sm:px-8 sm:py-9">
         <div className="max-w-2xl">
-          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-blood-hi">VTES V5 rules reference</p>
-          <h1 className="mt-3 font-display text-3xl leading-tight sm:text-5xl">A turn, in five clear phases.</h1>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-muted sm:text-base">
-            Follow one Methuselah’s turn from unlock to discard. Choose a phase to see what happens and where its
-            deeper rules loop begins.
-          </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-blood-hi">{ui.eyebrow}</p>
+          <h1 className="mt-3 font-display text-3xl leading-tight sm:text-5xl">{ui.heading}</h1>
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-ink-muted sm:text-base">{ui.intro}</p>
         </div>
       </header>
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-raised px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-ink">Rules complexity</p>
+          <p className="text-sm font-medium text-ink">{ui.complexityLabel}</p>
           <p className="text-xs text-ink-dim">
-            {complexity === 'basic' ? 'Core flow for learning and play.' : 'Full timing detail for experienced players and judges.'}
+            {complexity === 'basic' ? ui.complexityBasicHint : ui.complexityAdvancedHint}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-xl border border-line bg-ground p-1" role="group" aria-label="Rules complexity">
+          <div className="flex rounded-xl border border-line bg-ground p-1" role="group" aria-label={ui.complexityLabel}>
             {(['basic', 'advanced'] as const).map((level) => (
               <button
                 type="button"
@@ -138,7 +138,7 @@ export default function RulesPage() {
                   (complexity === level ? 'bg-blood text-white' : 'text-ink-muted hover:text-ink')
                 }
               >
-                {level === 'basic' ? 'Basic' : 'Advanced / Judge'}
+                {level === 'basic' ? ui.basic : ui.advancedJudge}
               </button>
             ))}
           </div>
@@ -150,7 +150,7 @@ export default function RulesPage() {
             }}
             className="rounded-lg border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm text-gold hover:border-gold"
           >
-            Impulse &amp; priority order →
+            {ui.impulseOrder}
           </button>
         </div>
       </section>
@@ -168,7 +168,7 @@ export default function RulesPage() {
       ) : (
         <>
 
-      <section className="min-w-0 rounded-3xl border border-line bg-surface p-4 sm:p-6" aria-label="Turn phases">
+      <section className="min-w-0 rounded-3xl border border-line bg-surface p-4 sm:p-6" aria-label={ui.turnPhasesAria}>
         <div className="max-w-full overflow-x-auto pb-2">
           <ol className="relative grid min-w-[44rem] grid-cols-5 gap-2 before:absolute before:left-[10%] before:right-[10%] before:top-5 before:h-px before:bg-line">
             {phases.map((phase, index) => {
@@ -209,7 +209,7 @@ export default function RulesPage() {
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-dim">
-              Phase {selectedIndex + 1} of {phases.length}
+              {ui.phaseOf(selectedIndex + 1, phases.length)}
             </p>
             <h2 className="mt-1 font-display text-2xl text-ink sm:text-3xl">{phaseName(selected.label)}</h2>
           </div>
@@ -220,7 +220,7 @@ export default function RulesPage() {
               onClick={() => selectPhase(phases[selectedIndex - 1].id)}
               className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
             >
-              ← Previous
+              {ui.previous}
             </button>
             <button
               type="button"
@@ -228,7 +228,7 @@ export default function RulesPage() {
               onClick={() => selectPhase(phases[selectedIndex + 1].id)}
               className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Next →
+              {ui.next}
             </button>
           </div>
         </div>
@@ -237,7 +237,7 @@ export default function RulesPage() {
 
         {entries.length > 0 && (
           <div className="border-t border-line-soft pt-4">
-            <p className="mb-2 text-xs uppercase tracking-wider text-ink-dim">Continue into this phase</p>
+            <p className="mb-2 text-xs uppercase tracking-wider text-ink-dim">{ui.continueInto}</p>
             <div className="flex flex-wrap gap-2">
               {entries.map((candidate) => (
                 <button
@@ -263,9 +263,7 @@ export default function RulesPage() {
         </>
       )}
 
-      <p className="text-center text-xs text-ink-dim">
-        Source: the canonical SchreckNet V5 game-loop statechart · available offline
-      </p>
+      <p className="text-center text-xs text-ink-dim">{ui.source}</p>
     </div>
   )
 }

@@ -522,7 +522,8 @@ function LibraryCardGroups({
 }
 
 export default function DeckEditor({ id }: { id: number }) {
-  const ui = useUiStrings().deckEditor
+  const strings = useUiStrings()
+  const ui = strings.deckEditor
   const [deck, setDeck] = useState<DeckSummary | null>(null)
   const [cards, setCards] = useState<DeckCardDetail[]>([])
   const [stats, setStats] = useState<DeckStats | null>(null)
@@ -552,7 +553,7 @@ export default function DeckEditor({ id }: { id: number }) {
       setAuthorDraft(d.author ?? '')
       setDescriptionDraft(d.description ?? '')
       setCards(c)
-      setStats(await computeDeckStats(c))
+      setStats(await computeDeckStats(c, strings.gameLoopHooks))
       setOverrides(await listDeckCardOverrides(id))
       setMissingByCard(d.inventory_mode === 'excluded' ? new Map() : await computeDeckMissing(c.map((card) => card.id)))
       setCardSets(await getCardSetsMap(c.map((card) => card.id)))

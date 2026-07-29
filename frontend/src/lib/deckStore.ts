@@ -274,7 +274,10 @@ export interface DeckStats {
   timingWindows: DistributionEntry[]
 }
 
-export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckStats> {
+export async function computeDeckStats(
+  cards: DeckCardDetail[],
+  hookTranslations: Record<string, string>,
+): Promise<DeckStats> {
   const cryptCards = cards.filter((c) => c.kind === 'crypt')
   const cryptCount = cryptCards.reduce((sum, c) => sum + c.qty, 0)
   const libraryCount = cards.filter((c) => c.kind === 'library').reduce((sum, c) => sum + c.qty, 0)
@@ -300,7 +303,7 @@ export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckSta
       libraryCards.filter((card) => card.poolCost !== null).map((card) => ({ label: card.poolCost ?? '', qty: card.qty })),
     ),
     computeDistribution(
-      gameLoop ? getDeckTimingDistribution(gameLoop, libraryCards) : [],
+      gameLoop ? getDeckTimingDistribution(gameLoop, libraryCards, hookTranslations) : [],
     ),
   ])
   return { cryptCount, libraryCount, violations, capacity, types, disciplines, bloodCosts, poolCosts, timingWindows }

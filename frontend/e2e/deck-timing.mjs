@@ -19,6 +19,15 @@ function hook(id, label) {
   return { id, label, window: '', anchor: '', cardTypes: [] }
 }
 
+// Stands in for i18n.ts's `gameLoopHooks` section, which callers now supply —
+// cardTiming.ts stays free of a direct i18n.ts import (see its doc comment).
+const translations = {
+  HK_MASTER: 'During your master phase, once per turn.',
+  HK_CMB_STRIKE: 'During the strike step of a combat round.',
+  HK_CMB_PRESS: 'During the press step, when continuing combat.',
+  HK_REACT: 'In reaction to an action directed at you or your allies.',
+}
+
 const gameLoop = {
   version: '1',
   source: 'test',
@@ -52,21 +61,21 @@ const cards = [
   { types: ['Ally'], qty: 4 }, // no hook mapping in this fixture -> ignored
 ]
 
-const distribution = getDeckTimingDistribution(gameLoop, cards)
+const distribution = getDeckTimingDistribution(gameLoop, cards, translations)
 const byLabel = Object.fromEntries(distribution.map((d) => [d.label, d.qty]))
 
-assert.equal(byLabel[describeHook(hook('HK_MASTER', 'Master'))], 3, 'Master count')
+assert.equal(byLabel[describeHook(hook('HK_MASTER', 'Master'), translations)], 3, 'Master count')
 assert.equal(
-  byLabel[describeHook(hook('HK_CMB_STRIKE', 'Combat strike'))],
+  byLabel[describeHook(hook('HK_CMB_STRIKE', 'Combat strike'), translations)],
   2,
   'the 2 Combat copies must count once each toward the strike window, not double',
 )
 assert.equal(
-  byLabel[describeHook(hook('HK_CMB_PRESS', 'Combat press'))],
+  byLabel[describeHook(hook('HK_CMB_PRESS', 'Combat press'), translations)],
   2,
   'and once each toward the press window too (two distinct hooks, same card)',
 )
-assert.equal(byLabel[describeHook(hook('HK_REACT', 'Reaction'))], 1, 'Reaction count')
+assert.equal(byLabel[describeHook(hook('HK_REACT', 'Reaction'), translations)], 1, 'Reaction count')
 // Master, Combat-strike, Combat-press, Reaction — Combat legitimately produces
 // two entries (it has two distinct timing windows); Ally has none in this
 // fixture and must not add a fifth.

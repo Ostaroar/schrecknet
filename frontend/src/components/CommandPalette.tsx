@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { quickSearch, type QuickHit } from '../lib/quickSearch'
 import { navigate } from '../lib/route'
+import { useUiStrings } from '../lib/i18n'
 
 export default function CommandPalette() {
+  const strings = useUiStrings()
+  const ui = strings.commandPalette
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [hits, setHits] = useState<QuickHit[]>([])
@@ -64,7 +67,7 @@ export default function CommandPalette() {
         <input
           ref={inputRef}
           className="w-full border-b border-line-soft bg-transparent px-4 py-3 text-sm text-ink placeholder:text-ink-dim focus:outline-none"
-          placeholder="Search any card by name…"
+          placeholder={ui.searchPlaceholder}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -92,13 +95,15 @@ export default function CommandPalette() {
               >
                 <span className="truncate">{h.name}</span>
                 <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-ink-dim">
-                  {h.kind === 'crypt' ? `${h.clan ?? ''} · cap ${h.capacity ?? '?'}` : 'library'}
+                  {h.kind === 'crypt'
+                    ? `${h.clan ?? ''} · ${strings.cryptSearch.capacity} ${h.capacity ?? '?'}`
+                    : strings.inventory.library}
                 </span>
               </button>
             </li>
           ))}
           {text.trim() && hits.length === 0 && (
-            <li className="px-4 py-3 text-sm text-ink-dim">No cards named “{text.trim()}”.</li>
+            <li className="px-4 py-3 text-sm text-ink-dim">{ui.noResults(text.trim())}</li>
           )}
         </ul>
       </div>
