@@ -11,7 +11,8 @@
     "test:deck-organization": "node e2e/deck-organization.mjs",
     "test:mobile": "node e2e/mobile-smoke.mjs",
     "test:semantic": "node e2e/semantic-smoke.mjs",
-    "test:backup": "node --experimental-sqlite e2e/backup-roundtrip.mjs"
+    "test:backup": "node --experimental-sqlite e2e/backup-roundtrip.mjs",
+    "test:deck-timing": "node e2e/deck-timing.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

@@ -340,7 +340,13 @@ design, decisions, and visualization options in
   directed-at-set / undirected), sourced from `gameloop.json`'s `impulseOrders`
 - ☑ Card-DB integration (the differentiator): card pages show "when can I play this?"
   from a hand-distilled card-type → hook mapping (frontend-only, `lib/cardTiming.ts`).
-  Deck-aware view (scan an open deck, not just one card) is still open.
+  ☑ Deck-aware view (2026-07-29): `getDeckTimingDistribution` aggregates a whole
+  deck's library cards into a qty-weighted "Timing windows" panel on
+  `#/decks/{id}/review`, reusing the existing `Distribution` component and
+  `computeDistribution` WASM aggregation — no new UI pattern. Deduplicates
+  per-card so a Combat card with two matching hooks doesn't double-count
+  either window past its own quantity. Localized (en/es/fr/de); covered by
+  `npm run test:deck-timing` (pure-TS contract, no browser needed).
 - ☐ (Optional, own ADR) executable statechart (e.g. XState) as one source of truth for
   the diagram, the trainer's step engine, and rules-consistency tests
 

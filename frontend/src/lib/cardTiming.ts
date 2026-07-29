@@ -49,3 +49,29 @@ const HOOK_DESCRIPTIONS: Record<string, string> = {
 export function describeHook(hook: GameLoopHook): string {
   return HOOK_DESCRIPTIONS[hook.id] ?? hook.label.replace(/_/g, ' ').toLowerCase()
 }
+
+/**
+ * Deck-wide version of `getTimingWindowsForCard`: buckets a whole library by
+ * when its cards can be played, weighted by quantity. A card contributes to
+ * each of its timing windows once per copy — never twice for the same card
+ * even when two of its types map to the same hook (e.g. a Combat card with
+ * both HK_CMB_STRIKE and HK_CMB_PRESS eligibility still counts once per
+ * window, not once per matching type).
+ */
+export function getDeckTimingDistribution(
+  gameLoop: GameLoop,
+  cards: { types: string[]; qty: number }[],
+): { label: string; qty: number }[] {
+  const totals = new Map<string, number>()
+  for (const card of cards) {
+    const windows = getTimingWindowsForCard(gameLoop, card.types)
+    const seen = new Set<string>()
+    for (const hook of windows) {
+      const label = describeHook(hook)
+      if (seen.has(label)) continue
+      seen.add(label)
+      totals.set(label, (totals.get(label) ?? 0) + card.qty)
+    }
+  }
+  return [...totals.entries()].map(([label, qty]) => ({ label, qty }))
+}

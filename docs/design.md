@@ -61,6 +61,33 @@ ships as re-stepped tokens; dark is the definitive reading.
   sticky right rail on wide screens and an order-first collapsible panel on
   narrow screens; card quantities remain in OPFS.
 
+## Keyboard map
+
+Every keybinding that actually exists in the codebase, as of this writing
+(Phase 4 non-functional-parity item; docs/feature-parity.md's "keyboard-first"
+line pointed at this gap — audited by grepping `frontend/src` for `onKeyDown`/
+`onKeyUp`/`.key ===` rather than assumed, so this table stays honest as the app
+grows). Ordinary text-input editing (typing into a search box, arrow-key
+cursor movement, copy/paste) isn't listed — only bindings the app itself
+attaches meaning to.
+
+| Shortcut | Scope | Effect |
+| --- | --- | --- |
+| `⌘K` / `Ctrl K` | Global | Opens the command palette (quick card search) |
+| `Esc` | Command palette, while open | Closes the palette |
+| `↓` / `↑` | Command palette, while open | Moves the highlighted result |
+| `Enter` | Command palette, while open | Opens the highlighted card |
+| `Esc` | A card image preview, while open | Closes the preview |
+| `Enter` | "New deck" name field | Creates the deck |
+| `Enter` | Deck tag input | Adds the tag |
+| `Enter` | Game-group write-passphrase field | Attempts to unlock editing |
+
+The `⌘K` palette is the one global, discoverable shortcut and the closest
+analogue to vdb's lightning search; the `Enter`-submits-a-field bindings are
+ordinary form convenience rather than shortcuts a user needs to learn. There is
+currently no shortcut to jump focus into the Crypt/Library search box (e.g. a
+`/`-to-focus binding) — worth adding if that's ever felt as a gap in practice.
+
 ## Screens covered by R1 mockups
 
 01 Crypt search · 02 Deck builder (+ draw simulator, stats rail) · 03 Mobile/PWA.

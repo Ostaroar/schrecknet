@@ -19,6 +19,8 @@ import {
 } from './core'
 import { routeTo } from './route'
 import type { InventoryMode } from './inventoryStore'
+import { getDeckTimingDistribution } from './cardTiming'
+import { loadGameLoop } from './gameLoop'
 
 export interface DeckSummary {
   id: number
@@ -269,6 +271,7 @@ export interface DeckStats {
   disciplines: DistributionEntry[]
   bloodCosts: DistributionEntry[]
   poolCosts: DistributionEntry[]
+  timingWindows: DistributionEntry[]
 }
 
 export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckStats> {
@@ -277,7 +280,11 @@ export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckSta
   const libraryCount = cards.filter((c) => c.kind === 'library').reduce((sum, c) => sum + c.qty, 0)
   const groups = [...new Set(cryptCards.map((c) => c.group ?? 0))]
   const libraryCards = cards.filter((c) => c.kind === 'library')
-  const [violations, capacity, types, disciplines, bloodCosts, poolCosts] = await Promise.all([
+  // The game-loop hook table that HK_* ids resolve against — additive
+  // reference data, so a load failure (offline first visit, say) shouldn't
+  // block the rest of the review; timing just comes back empty.
+  const gameLoop = await loadGameLoop().catch(() => null)
+  const [violations, capacity, types, disciplines, bloodCosts, poolCosts, timingWindows] = await Promise.all([
     validateDeck(groups, cryptCount, libraryCount),
     computeCapacityStats(
       cryptCards
@@ -292,8 +299,11 @@ export async function computeDeckStats(cards: DeckCardDetail[]): Promise<DeckSta
     computeDistribution(
       libraryCards.filter((card) => card.poolCost !== null).map((card) => ({ label: card.poolCost ?? '', qty: card.qty })),
     ),
+    computeDistribution(
+      gameLoop ? getDeckTimingDistribution(gameLoop, libraryCards) : [],
+    ),
   ])
-  return { cryptCount, libraryCount, violations, capacity, types, disciplines, bloodCosts, poolCosts }
+  return { cryptCount, libraryCount, violations, capacity, types, disciplines, bloodCosts, poolCosts, timingWindows }
 }
 
 /** Formats a deck as a plain-text (Lackey/JOL-style) card list for export. */

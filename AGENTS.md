@@ -131,6 +131,11 @@ npm run test:semantic
 # (a no-op on newer Node, required on the 22 line CI pins).
 npm run test:backup
 
+# deck-wide "when can I play this?" distribution contract (cardTiming.ts) —
+# pure TS, no wasm/server/browser needed; runs via esbuild's transform (already
+# a Vite devDependency) directly against the source file.
+npm run test:deck-timing
+
 # full container
 docker build -t schrecknet . && docker run -p 8000:8000 schrecknet
 ```

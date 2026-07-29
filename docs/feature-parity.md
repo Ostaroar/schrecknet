@@ -311,8 +311,11 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
 - ☐ Card images served efficiently (original: pre-generated per-language images)
 - 🌓 Keyboard-first UX on desktop, touch-first on mobile — command palette and
       search keyboard flows are live; mobile layout, coarse-pointer form
-      controls, and icon-button targets are CI-verified at 320/360px. A full
-      keyboard map and WCAG audit remain Phase 4 work
+      controls, and icon-button targets are CI-verified at 320/360px. ☑ Keyboard
+      map (docs/design.md § Keyboard map, audited against actual `onKeyDown`
+      usage, not assumed) and ☑ WCAG audit (docs/roadmap.md Phase 4, 2026-07-24)
+      are both done; no `/`-to-focus-search binding exists yet if that's ever
+      wanted
 - ☑ Dark Pack legal notice on every page footer ✎ — required elements per the
       [Dark Pack Agreement](https://www.paradoxinteractive.com/games/world-of-darkness/community/dark-pack-agreement):
       logo, copyright/trademark notice, and a "not official World of Darkness
