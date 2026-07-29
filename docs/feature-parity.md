@@ -32,19 +32,23 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       full card pages and inline details with per-card English fallback; options
       are derived from the V5 data at build time (currently EN/ES/FR, with
       PT-BR appearing automatically when the source provides it) ✎
-- 🌓 Interface localization — navigation, shell, Help/About, primary Crypt/
-      Library search controls and result status, the inventory page, the
-      shared `AddCardBox` placeholder, the precons browser, the deck list,
-      and the limited-format editor are translated in EN/ES/FR/**DE** via
-      one typed catalog; a flag-button switcher (🇬🇧🇪🇸🇫🇷🇩🇪) sits next to the
-      header's card-count/"V5 only" badge. German is UI-only — the card
-      database has no German card-text translations, so card pages fall
-      back to English per card (existing graceful fallback, unaffected);
-      the language switcher itself no longer resets to English when a UI
-      language lacks card-data coverage. Browser smoke coverage switches
-      languages on both search routes. The deck editor (largest remaining
-      surface), rules pages, and secondary tooltips/accessibility labels
-      remain English-only follow-up work.
+- ☑ Interface localization — navigation, shell, Help/About/Changelog, both
+      Crypt/Library search surfaces (controls, results, active-deck sidebar),
+      the deck editor, deck review, inventory, precons, the limited-format
+      editor, deck diff, shared-deck preview, the proxy sheet, the command
+      palette, the full rules reference (turn stepper, drill-downs, impulse-
+      order widget, deck-aware timing windows), the card detail page, and
+      shared badges/tooltips are all translated in EN/ES/FR/**DE** via one
+      typed catalog (`tsc` fails the build if any language is missing a key);
+      a flag-button switcher (🇬🇧🇪🇸🇫🇷🇩🇪) sits next to the header's card-count/
+      "V5 only" badge. German is UI-only — the card database has no German
+      card-text translations, so card pages fall back to English per card
+      (existing graceful fallback, unaffected); the language switcher itself
+      no longer resets to English when a UI language lacks card-data
+      coverage. Browser smoke coverage switches languages on both search
+      routes. Deliberately English-only by design: `LegalPage.tsx` (binding
+      German legal text) and gameloop.json-sourced rules content (state/
+      branch/transition labels are data, not UI chrome).
 - ☑ Responsive mobile layout — measured at 320px and 360px across Crypt,
       Library, Decks (including a populated editor), Inventory, Precons,
       Rules, Changelog, Help, About, and Card Detail; CI rejects viewport overflow and

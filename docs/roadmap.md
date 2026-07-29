@@ -115,12 +115,22 @@ docs/feature-parity.md's scope note).
   controls and icon buttons have CI-enforced 40px targets
 - ☑ Offline changelog route: curated product milestones at `#/changelog`,
   localized in EN/ES/FR and covered by the responsive browser contract
-- 🌓 UI localization: nav, header, footer, Help/About, and the primary Crypt +
-  Library search controls/results are localized in en/es/fr through the typed
-  `frontend/src/lib/i18n.ts` contract, reusing the existing card-text language
+- ☑ UI localization: nav, header, footer, Help/About/Changelog, Crypt + Library
+  search (controls, results, active-deck sidebar), deck builder, deck review,
+  inventory, precons, limited format, deck diff, shared-deck preview, proxy
+  sheet, command palette, the rules reference (turn stepper, drill-downs,
+  impulse-order widget, deck-aware timing windows), the card detail page, and
+  small shared badges (out-of-format, rulings/printings headings, image
+  previews) are all localized in en/es/fr/de through the typed
+  `frontend/src/lib/i18n.ts` contract (`tsc` fails the build if any of the
+  four languages is missing a key), reusing the existing card-text language
   selector (no new UI control). A browser smoke contract exercises both search
-  surfaces in Spanish and French. Deck builder, inventory, precons, rules, and
-  secondary accessibility/tool-tip text remain follow-up work.
+  surfaces in Spanish and French. Deliberately untranslated by design:
+  `LegalPage.tsx` (binding German legal text, see its own doc comment) and
+  gameloop.json-sourced rules content (state/branch/transition labels — data,
+  not chrome). `frontend/src/lib/cardTiming.ts`'s `describeHook` takes a
+  translations map from its caller rather than importing i18n.ts directly, to
+  stay a frontend-only presentational module.
   Card-text translation selection is complete separately using the pipeline's
   `translations` table
 - ☑ MCP `search_crypt` + `search_library` tools live (rmcp, Streamable HTTP at
