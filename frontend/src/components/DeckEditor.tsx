@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useUiStrings } from '../lib/i18n'
 import {
   getDeck,
   getDeckCardDetails,
@@ -61,11 +62,12 @@ function StatsDistribution({
 }
 
 function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
+  const ui = useUiStrings().deckEditor
   return (
     <span className="flex items-center gap-1.5">
       <button
         onClick={() => onChange(qty - 1)}
-        aria-label="Decrease quantity"
+        aria-label={ui.decreaseQty}
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         −
@@ -73,7 +75,7 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
       <span className="w-4 text-center font-mono text-xs text-ink">{qty}</span>
       <button
         onClick={() => onChange(qty + 1)}
-        aria-label="Increase quantity"
+        aria-label={ui.increaseQty}
         className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
       >
         +
@@ -82,22 +84,18 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) =
   )
 }
 
-const INVENTORY_MODE_OPTIONS: { value: InventoryMode; label: string; hint: string }[] = [
-  { value: 'excluded', label: 'Not in inventory', hint: "This deck's cards don't affect missing-copy counts." },
-  {
-    value: 'flexible',
-    label: 'Shares copies',
-    hint: 'Claims copies from a shared pool — other flexible decks can use the same copies.',
-  },
-  { value: 'fixed', label: 'Owns copies', hint: 'Claims copies exclusively — no other deck can count on them.' },
-]
-
 function InventoryModeSelector({ mode, onChange }: { mode: InventoryMode; onChange: (mode: InventoryMode) => void }) {
+  const ui = useUiStrings().deckEditor
+  const options: { value: InventoryMode; label: string; hint: string }[] = [
+    { value: 'excluded', label: ui.modeExcluded, hint: ui.modeExcludedHint },
+    { value: 'flexible', label: ui.modeFlexible, hint: ui.modeFlexibleHint },
+    { value: 'fixed', label: ui.modeFixed, hint: ui.modeFixedHint },
+  ]
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs">
-      <span className="text-ink-dim">Inventory</span>
-      <div className="flex rounded-lg border border-line bg-ground p-0.5" role="group" aria-label="Inventory mode">
-        {INVENTORY_MODE_OPTIONS.map((option) => (
+      <span className="text-ink-dim">{ui.inventoryModeLabel}</span>
+      <div className="flex rounded-lg border border-line bg-ground p-0.5" role="group" aria-label={ui.inventoryModeAria}>
+        {options.map((option) => (
           <button
             key={option.value}
             type="button"
@@ -128,35 +126,33 @@ function InventoryBadge({
   missing: number
   onToggleOverride: () => void
 }) {
+  const ui = useUiStrings().deckEditor
   if (deckMode === 'excluded') return null
   const effective = override ?? deckMode
   return (
     <span className="flex items-center gap-1.5">
       {missing > 0 && (
         <span className="rounded-full bg-blood/20 px-1.5 py-0.5 text-[10px] font-semibold text-blood-hi">
-          {missing} missing
+          {ui.missingBadge(missing)}
         </span>
       )}
       <button
         type="button"
         onClick={onToggleOverride}
-        title={
-          effective === 'fixed'
-            ? 'Fixed here — claims these copies exclusively. Click to share instead.'
-            : 'Flexible here — shares copies with other decks. Click to claim exclusively.'
-        }
+        title={effective === 'fixed' ? ui.fixedHint : ui.flexibleHint}
         className={
           'rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-wide ' +
           (override ? 'border-gold/50 bg-gold/10 text-gold' : 'border-line-soft text-ink-dim hover:text-ink-muted')
         }
       >
-        {effective === 'fixed' ? 'Fixed' : 'Flexible'}
+        {effective === 'fixed' ? ui.fixedLabel : ui.flexibleLabel}
       </button>
     </span>
   )
 }
 
 function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported: () => void }) {
+  const ui = useUiStrings().deckEditor
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -202,21 +198,21 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
   return (
     <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xs uppercase tracking-wide text-ink-dim">Text import / export</h2>
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.importExportTitle}</h2>
         <button
           onClick={doExport}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
         >
-          Export .txt
+          {ui.exportTxt}
         </button>
         <button
           onClick={doCopy}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
         >
-          {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? "Couldn't copy" : 'Copy text'}
+          {copyStatus === 'copied' ? ui.copied : copyStatus === 'error' ? ui.couldNotCopy : ui.copyText}
         </button>
         <label className="cursor-pointer rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink">
-          Load .txt
+          {ui.loadTxt}
           <input
             type="file"
             accept=".txt,text/plain"
@@ -232,14 +228,14 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
           onClick={() => setOpen((o) => !o)}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink"
         >
-          {open ? 'Hide import' : 'Import text…'}
+          {open ? ui.hideImport : ui.importText}
         </button>
       </div>
       {open && (
         <div className="grid gap-2">
           <textarea
             className="h-32 w-full rounded-lg border border-line bg-ground p-2 font-mono text-xs text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-            placeholder={'Paste a deck list, e.g.\n4x Deflection\n1x Aaradhya, The Callous Tyrant'}
+            placeholder={ui.importPlaceholder}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -248,12 +244,12 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
             disabled={!text.trim() || importing}
             className="justify-self-start rounded-lg bg-blood px-3 py-1.5 text-xs font-semibold text-white hover:bg-blood-hi disabled:opacity-50"
           >
-            {importing ? 'Importing…' : 'Import into this deck'}
+            {importing ? ui.importing : ui.importIntoDeck}
           </button>
           {result && (
             <p className="text-xs text-ink-dim">
-              Added {result.added} card{result.added === 1 ? '' : 's'}.
-              {result.unresolved.length > 0 && <> Couldn't match: {result.unresolved.join(', ')}.</>}
+              {ui.addedCards(result.added)}
+              {result.unresolved.length > 0 && <> {ui.couldNotMatch(result.unresolved.join(', '))}</>}
             </p>
           )}
         </div>
@@ -263,6 +259,7 @@ function ImportExportPanel({ deckId, onImported }: { deckId: number; onImported:
 }
 
 function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetail[]; libraryCards: DeckCardDetail[] }) {
+  const ui = useUiStrings().deckEditor
   const [cryptHand, setCryptHand] = useState<DeckCardDetail[] | null>(null)
   const [libraryHand, setLibraryHand] = useState<DeckCardDetail[] | null>(null)
   const [drawError, setDrawError] = useState('')
@@ -275,27 +272,27 @@ function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetai
       if (section === 'crypt') setCryptHand(hand)
       else setLibraryHand(hand)
     } catch (error) {
-      setDrawError(error instanceof Error ? error.message : 'Could not draw a test hand')
+      setDrawError(error instanceof Error ? error.message : ui.drawErrorFallback)
     }
   }
 
   return (
     <div className="grid gap-3 rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xs uppercase tracking-wide text-ink-dim">Test hand</h2>
+        <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.testHand}</h2>
         <button
           onClick={() => void draw('crypt')}
           disabled={cryptCards.length === 0}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
         >
-          Draw crypt
+          {ui.drawCrypt}
         </button>
         <button
           onClick={() => void draw('library')}
           disabled={libraryCards.length === 0}
           className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
         >
-          Draw library
+          {ui.drawLibrary}
         </button>
       </div>
       {drawError && <p className="text-xs text-blood-hi">{drawError}</p>}
@@ -305,7 +302,7 @@ function TestHandPanel({ cryptCards, libraryCards }: { cryptCards: DeckCardDetai
             <ul className="grid gap-1 text-xs text-ink-muted">
               {cryptHand.map((c, i) => (
                 <li key={i}>
-                  {c.name} <span className="text-ink-dim">· cap {c.capacity}</span>
+                  {c.name} <span className="text-ink-dim">· {ui.capAbbrev(c.capacity)}</span>
                 </li>
               ))}
             </ul>
@@ -336,6 +333,7 @@ function ArchetypeScanPanel({
   existingTags: string[]
   onTagged: () => void
 }) {
+  const ui = useUiStrings().deckEditor
   const [matches, setMatches] = useState<ArchetypeMatch[]>([])
 
   useEffect(() => {
@@ -353,7 +351,7 @@ function ArchetypeScanPanel({
 
   return (
     <div className="grid gap-2 rounded-lg border border-line bg-surface p-4">
-      <h2 className="text-xs uppercase tracking-wide text-ink-dim">Archetype scan</h2>
+      <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.archetypeScan}</h2>
       <div className="grid gap-2 sm:grid-cols-2">
         {matches.map((match) => {
           const alreadyTagged = existingTags.some((t) => t.toLowerCase() === match.label.toLowerCase())
@@ -374,7 +372,7 @@ function ArchetypeScanPanel({
                 disabled={alreadyTagged}
                 className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[10px] text-ink-dim hover:border-gold/50 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {alreadyTagged ? 'Tagged' : '+ tag'}
+                {alreadyTagged ? ui.tagged : ui.addTagButton}
               </button>
             </div>
           )
@@ -385,6 +383,7 @@ function ArchetypeScanPanel({
 }
 
 function TagChips({ deckId, refreshSignal }: { deckId: number; refreshSignal?: number }) {
+  const ui = useUiStrings().deckEditor
   const [tags, setTags] = useState<string[]>([])
   const [draft, setDraft] = useState('')
 
@@ -415,7 +414,7 @@ function TagChips({ deckId, refreshSignal }: { deckId: number; refreshSignal?: n
               await removeTag(deckId, t)
               refresh()
             }}
-            aria-label={`Remove tag ${t}`}
+            aria-label={ui.removeTagAria(t)}
             className="text-ink-dim hover:text-blood-hi"
           >
             ×
@@ -424,7 +423,7 @@ function TagChips({ deckId, refreshSignal }: { deckId: number; refreshSignal?: n
       ))}
       <input
         className="w-24 rounded-full border border-line-soft bg-transparent px-2 py-0.5 text-[11px] text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-        placeholder="Add tag…"
+        placeholder={ui.addTagPlaceholder}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -434,7 +433,7 @@ function TagChips({ deckId, refreshSignal }: { deckId: number; refreshSignal?: n
         disabled={!draft.trim()}
         className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-dim hover:text-ink disabled:opacity-40"
       >
-        Add
+        {ui.addButton}
       </button>
     </div>
   )
@@ -455,6 +454,7 @@ function CardRow({
   missing: number
   onToggleOverride: () => void
 }) {
+  const ui = useUiStrings().deckEditor
   return (
     <div className="flex min-w-0 items-center gap-3 px-3 py-1.5 text-sm">
       <button
@@ -464,7 +464,7 @@ function CardRow({
         {card.name}
       </button>
       <span className="hidden shrink-0 text-xs text-ink-dim sm:inline">
-        {card.kind === 'crypt' ? `${card.clan} · cap ${card.capacity}` : ''}
+        {card.kind === 'crypt' ? `${card.clan} · ${ui.capAbbrev(card.capacity)}` : ''}
       </span>
       <InventoryBadge deckMode={deckMode} override={override} missing={missing} onToggleOverride={onToggleOverride} />
       <QtyStepper qty={card.qty} onChange={onQty} />
@@ -522,6 +522,7 @@ function LibraryCardGroups({
 }
 
 export default function DeckEditor({ id }: { id: number }) {
+  const ui = useUiStrings().deckEditor
   const [deck, setDeck] = useState<DeckSummary | null>(null)
   const [cards, setCards] = useState<DeckCardDetail[]>([])
   const [stats, setStats] = useState<DeckStats | null>(null)
@@ -634,14 +635,14 @@ export default function DeckEditor({ id }: { id: number }) {
     [cards, cardSets, limitedFormat, limitedFormatActive],
   )
 
-  if (status === 'loading') return <p className="text-sm text-ink-dim">Loading deck…</p>
-  if (status === 'error') return <p className="text-sm text-blood-hi">Couldn't load deck: {error}</p>
+  if (status === 'loading') return <p className="text-sm text-ink-dim">{ui.loadingDeck}</p>
+  if (status === 'error') return <p className="text-sm text-blood-hi">{ui.loadError(error)}</p>
   if (status === 'missing' || !deck)
     return (
       <div className="grid gap-2 text-sm">
-        <p className="text-ink-muted">No deck with id {id}.</p>
+        <p className="text-ink-muted">{ui.noDeckWithId(id)}</p>
         <button onClick={() => navigate({ page: 'decks' })} className="justify-self-start text-blood-hi underline">
-          Back to decks
+          {ui.backToDecks}
         </button>
       </div>
     )
@@ -650,7 +651,7 @@ export default function DeckEditor({ id }: { id: number }) {
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex">
         <button onClick={() => navigate({ page: 'decks' })} className="text-xs text-ink-dim hover:text-ink-muted">
-          ← decks
+          {ui.backArrow}
         </button>
         <input
           className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1 font-display text-2xl text-ink hover:border-line-soft focus:border-blood focus:outline-none"
@@ -672,36 +673,36 @@ export default function DeckEditor({ id }: { id: number }) {
             }}
             className="text-xs text-ink-dim hover:text-ink-muted"
           >
-            {shareStatus === 'copied' ? 'Link copied!' : shareStatus === 'error' ? "Couldn't copy" : 'Share'}
+            {shareStatus === 'copied' ? ui.linkCopied : shareStatus === 'error' ? ui.couldNotCopy : ui.share}
           </button>
           <button
             onClick={async () => navigate({ page: 'deck', id: await cloneDeck(id) })}
             className="text-xs text-ink-dim hover:text-ink-muted"
           >
-            Clone
+            {ui.clone}
           </button>
           <button
             onClick={() => navigate({ page: 'review', deckId: id })}
             className="text-xs text-ink-dim hover:text-ink-muted"
           >
-            Review
+            {ui.review}
           </button>
           <button
             onClick={() => navigate({ page: 'proxy', deckId: id })}
             className="text-xs text-ink-dim hover:text-ink-muted"
           >
-            Print proxies
+            {ui.printProxies}
           </button>
           <button
             onClick={async () => {
-              if (confirm(`Delete "${deck.name}"? This can't be undone.`)) {
+              if (confirm(ui.confirmDeleteDeck(deck.name))) {
                 await deleteDeck(id)
                 navigate({ page: 'decks' })
               }
             }}
             className="text-xs text-ink-dim hover:text-blood-hi"
           >
-            Delete deck
+            {ui.deleteDeck}
           </button>
         </div>
       </div>
@@ -709,14 +710,14 @@ export default function DeckEditor({ id }: { id: number }) {
       <div className="grid gap-2 sm:grid-cols-[minmax(12rem,0.35fr)_1fr]">
         <input
           className="min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder="Author"
+          placeholder={ui.authorPlaceholder}
           value={authorDraft}
           onChange={(event) => setAuthorDraft(event.target.value)}
           onBlur={saveMetadata}
         />
         <textarea
           className="min-h-10 min-w-0 resize-y rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-dim focus:border-blood focus:outline-none"
-          placeholder="Deck description, strategy, or notes…"
+          placeholder={ui.descriptionPlaceholder}
           value={descriptionDraft}
           onChange={(event) => setDescriptionDraft(event.target.value)}
           onBlur={saveMetadata}
@@ -742,18 +743,18 @@ export default function DeckEditor({ id }: { id: number }) {
         <div className="grid gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-xs">
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-ink-muted">
-              <span className="font-mono text-ink">{stats.cryptCount}</span> crypt ·{' '}
-              <span className="font-mono text-ink">{stats.libraryCount}</span> library
+              <span className="font-mono text-ink">{stats.cryptCount}</span> {ui.cryptWord} ·{' '}
+              <span className="font-mono text-ink">{stats.libraryCount}</span> {ui.libraryWord}
             </span>
             {stats.capacity && (
               <span className="text-ink-muted">
-                capacity <span className="font-mono text-ink">{stats.capacity.min}</span>–
-                <span className="font-mono text-ink">{stats.capacity.max}</span> · avg{' '}
+                {ui.capacityWord} <span className="font-mono text-ink">{stats.capacity.min}</span>–
+                <span className="font-mono text-ink">{stats.capacity.max}</span> · {ui.avgWord}{' '}
                 <span className="font-mono text-ink">{stats.capacity.average.toFixed(2)}</span>
               </span>
             )}
             {stats.violations.length === 0 ? (
-              <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">V5 Legal</span>
+              <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">{ui.v5Legal}</span>
             ) : (
               <ul className="grid gap-0.5 text-blood-hi">
                 {stats.violations.map((v, i) => <li key={i}>{v}</li>)}
@@ -761,20 +762,19 @@ export default function DeckEditor({ id }: { id: number }) {
             )}
             {limitedFormatActive && (
               limitedViolations.length === 0 ? (
-                <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">Limited Format Legal</span>
+                <span className="rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-gold">{ui.limitedFormatLegal}</span>
               ) : (
                 <span className="text-blood-hi">
-                  {limitedViolations.length} card{limitedViolations.length === 1 ? '' : 's'} not in the active
-                  limited format: {limitedViolations.map((c) => c.name).join(', ')}
+                  {ui.limitedViolationsText(limitedViolations.length, limitedViolations.map((c) => c.name).join(', '))}
                 </span>
               )
             )}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <StatsDistribution label="Library types" entries={stats.types} symbols="card-type" />
-            <StatsDistribution label="Disciplines" entries={stats.disciplines} symbols="discipline" />
-            <StatsDistribution label="Blood cost curve" entries={stats.bloodCosts} />
-            <StatsDistribution label="Pool cost curve" entries={stats.poolCosts} />
+            <StatsDistribution label={ui.libraryTypes} entries={stats.types} symbols="card-type" />
+            <StatsDistribution label={ui.disciplinesLabel} entries={stats.disciplines} symbols="discipline" />
+            <StatsDistribution label={ui.bloodCostCurve} entries={stats.bloodCosts} />
+            <StatsDistribution label={ui.poolCostCurve} entries={stats.poolCosts} />
           </div>
         </div>
       )}
@@ -790,10 +790,10 @@ export default function DeckEditor({ id }: { id: number }) {
                   onClick={() => setMissingExpanded((v) => !v)}
                   className="text-blood-hi underline decoration-blood/40 underline-offset-2"
                 >
-                  {deckMissingTotal} copies missing {missingExpanded ? '▴' : '▾'}
+                  {ui.copiesMissing(deckMissingTotal)} {missingExpanded ? '▴' : '▾'}
                 </button>
               ) : (
-                'All copies covered by inventory'
+                ui.allCopiesCovered
               )}
             </span>
           )}
@@ -816,25 +816,25 @@ export default function DeckEditor({ id }: { id: number }) {
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
         <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
           <div className="flex min-w-0 items-center justify-between gap-3">
-            <h2 className="text-xs uppercase tracking-wide text-ink-dim">Crypt</h2>
+            <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.cryptHeader}</h2>
             <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ink-dim">
-              Sort
+              {ui.sortLabel}
               <select
                 value={cryptSort}
                 onChange={(event) => setCryptSort(event.target.value as DeckCryptSort)}
                 className="rounded border border-line bg-surface px-1.5 py-1 text-xs normal-case tracking-normal text-ink-muted"
               >
-                <option value="capacity">Capacity</option>
-                <option value="clan">Clan</option>
-                <option value="group">Group</option>
-                <option value="name">Name</option>
-                <option value="quantity">Quantity</option>
+                <option value="capacity">{ui.sortOptionCapacity}</option>
+                <option value="clan">{ui.sortOptionClan}</option>
+                <option value="group">{ui.sortOptionGroup}</option>
+                <option value="name">{ui.sortOptionName}</option>
+                <option value="quantity">{ui.sortOptionQuantity}</option>
               </select>
             </label>
           </div>
           <AddCardBox kind="crypt" onAdd={addCard} />
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
-            {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">No crypt cards yet.</p>}
+            {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">{ui.noCryptCards}</p>}
             {organization.crypt.map((c) => (
               <CardRow
                 key={c.id}
@@ -850,11 +850,11 @@ export default function DeckEditor({ id }: { id: number }) {
         </section>
 
         <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
-          <h2 className="text-xs uppercase tracking-wide text-ink-dim">Library</h2>
+          <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.libraryHeader}</h2>
           <AddCardBox kind="library" onAdd={addCard} />
           {libraryCards.length === 0 ? (
             <p className="rounded-lg border border-line bg-surface px-3 py-4 text-center text-xs text-ink-dim">
-              No library cards yet.
+              {ui.noLibraryCards}
             </p>
           ) : (
             <LibraryCardGroups
