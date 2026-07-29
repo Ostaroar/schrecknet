@@ -369,7 +369,7 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   reproducing the fix in an environment that matches production (HTTPS +
   CDN, not just `localhost`), and ideally without two independent workers
   racing to instantiate the shared chunk simultaneously.
-- ◐ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
+- ☑ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
   4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
   found and fixed two real classes of violation — 4 unlabeled `<select>`s
   (crypt clan/title, library clan-requirement, inventory precon-picker; the
