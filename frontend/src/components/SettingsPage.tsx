@@ -47,11 +47,17 @@ export default function SettingsPage({
   const [persisted, setPersisted] = useState<boolean | null>(null)
   const [usage, setUsage] = useState<{ used: number; quota: number } | null>(null)
 
-  const reloadCounts = useCallback(() => {
-    summarizeLocalData().then(setCounts).catch(() => setCounts(null))
+  const reloadCounts = useCallback(async () => {
+    try {
+      setCounts(await summarizeLocalData())
+    } catch {
+      setCounts(null)
+    }
   }, [])
 
-  useEffect(reloadCounts, [reloadCounts])
+  useEffect(() => {
+    void reloadCounts()
+  }, [reloadCounts])
 
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null))
@@ -109,7 +115,7 @@ export default function SettingsPage({
 
       await restoreBackup(env)
       markBackedUp()
-      reloadCounts()
+      await reloadCounts()
       setStatus(ui.restoreDone)
     } catch (e) {
       setStatus(ui.restoreFailed(e instanceof Error ? e.message : String(e)))
