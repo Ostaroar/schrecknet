@@ -98,13 +98,26 @@ CREATE TABLE card_requirements(
 CREATE TABLE card_traits(card_id INT, trait TEXT);         -- precomputed trait flags
 CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT,
                        first_print BOOLEAN,
-                       precon_copies INT);  -- schema v7; how many copies of
+                       precon_copies INT,  -- schema v7; how many copies of
                        -- this card one physical copy of `precon` contains
                        -- (KRCG's own per-printing "copies" field; NULL when
                        -- `precon` is NULL, defaults to 1 when precon is set
                        -- but "copies" was omitted from the source; anniversary
                        -- products are normalized to their official 100-card
                        -- deck, excluding separately packaged bonus cards)
+                       scan_url TEXT);     -- schema v10; KRCG-hosted scan for
+                       -- this (card, set) printing, hotlinked (Dark Pack: URLs
+                       -- only, never image files), from the `scans` object
+                       -- sibling to `sets` in KRCG's export. Looked up per set
+                       -- name, not per printing row: a set with more than one
+                       -- printing entry (e.g. a precon reprint alongside the
+                       -- base release) shares that set's single scan — KRCG's
+                       -- URL slug encodes the set and the card, not the precon
+                       -- variant. NULL when KRCG has no scan on file for that
+                       -- (card, set) pair (rare; every current V5-pool
+                       -- printing has one as of this writing). Distinct from
+                       -- `cards.image_url`, the one canonical scan shown by
+                       -- default; this is the per-printing alternate.
 CREATE INDEX printings_card_idx ON printings(card_id); -- schema v9; same
                        -- correlated-subquery reasoning as card_disciplines above
 CREATE TABLE card_artists(card_id INT, artist_id INT);

@@ -30,6 +30,10 @@ pub struct Printing {
     pub precon: Option<String>,
     pub rarity: Option<String>,
     pub first_print: bool,
+    /// KRCG-hosted set-specific scan for this (card, set) pair (hotlinked,
+    /// never stored — Dark Pack rule, same as `CardDetail::image_url`). NULL
+    /// when KRCG has no scan on file for this printing.
+    pub scan_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -184,7 +188,7 @@ fn disciplines_for(conn: &Connection, id: i64) -> rusqlite::Result<Vec<Disciplin
 
 fn printings_for(conn: &Connection, id: i64) -> rusqlite::Result<Vec<Printing>> {
     let mut stmt = conn.prepare(
-        "SELECT s.name, p.precon, p.rarity, p.first_print
+        "SELECT s.name, p.precon, p.rarity, p.first_print, p.scan_url
          FROM printings p JOIN sets s ON s.id = p.set_id
          WHERE p.card_id = ?1 ORDER BY s.release_date",
     )?;
@@ -194,6 +198,7 @@ fn printings_for(conn: &Connection, id: i64) -> rusqlite::Result<Vec<Printing>> 
             precon: row.get(1)?,
             rarity: row.get(2)?,
             first_print: row.get::<_, i64>(3)? != 0,
+            scan_url: row.get(4)?,
         })
     })?;
     rows.collect()
@@ -243,7 +248,7 @@ mod tests {
                types TEXT, blood_cost TEXT, pool_cost TEXT, image_url TEXT, path TEXT);
              CREATE TABLE card_disciplines(card_id INT, discipline TEXT, superior INT);
              CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
-             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, scan_url TEXT);
              CREATE TABLE artists(id INTEGER PRIMARY KEY, name TEXT);
              CREATE TABLE card_artists(card_id INT, artist_id INT);
              CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
@@ -255,7 +260,7 @@ mod tests {
                (3,'library','Arcane Library','arcane library','','Tremere',NULL,NULL,NULL,'[\"Master\"]',NULL,'2',NULL,'Caine');
              INSERT INTO card_disciplines VALUES (1,'dom',1),(1,'for',0);
              INSERT INTO sets VALUES (1,'SV5','Sabbat V5','2025-10-26');
-             INSERT INTO printings VALUES (1,1,'Path of Power',NULL,1);
+             INSERT INTO printings VALUES (1,1,'Path of Power',NULL,1,'https://static.krcg.org/card/set/sabbat-v5/aaradhyag6.jpg');
              INSERT INTO artists VALUES (1,'Some Artist');
              INSERT INTO card_artists VALUES (1,1);
              INSERT INTO rulings VALUES (1,'Torpor ruling.','[{\"label\":\"X\"}]');
@@ -347,6 +352,10 @@ mod tests {
         assert_eq!(card.printings.len(), 1);
         assert_eq!(card.printings[0].set, "Sabbat V5");
         assert_eq!(card.printings[0].precon.as_deref(), Some("Path of Power"));
+        assert_eq!(
+            card.printings[0].scan_url.as_deref(),
+            Some("https://static.krcg.org/card/set/sabbat-v5/aaradhyag6.jpg")
+        );
         assert_eq!(card.artists, vec!["Some Artist".to_string()]);
         assert_eq!(card.rulings.len(), 1);
         assert_eq!(card.translations.len(), 1);

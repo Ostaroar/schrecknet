@@ -6,6 +6,7 @@ import CardTimingWindows from './CardTimingWindows'
 import InventoryOwnedControl from './InventoryOwnedControl'
 import { navigate } from '../lib/route'
 import CardText from './CardText'
+import CardImagePreview from './CardImagePreview'
 import { CardTypeSummary, ClanSymbol, DisciplineBadge, PathSymbol } from './VtesSymbol'
 import { useDocumentHead } from '../lib/documentHead'
 import { DEFAULT_HEAD } from '../lib/seo'
@@ -151,12 +152,15 @@ export default function CardPage({ id }: { id: number }) {
 
       <section className="grid gap-1 text-sm">
         <h2 className="text-xs uppercase tracking-wide text-ink-dim">Printings</h2>
-        <ul className="text-ink-muted">
+        <ul className="grid gap-1 text-ink-muted">
           {card.printings.map((p, i) => (
-            <li key={i}>
-              {p.set}
-              {p.precon ? ` — ${p.precon}` : ''}
-              {p.rarity ? ` (${p.rarity})` : ''}
+            <li key={i} className="flex items-center gap-1.5">
+              <span>
+                {p.set}
+                {p.precon ? ` — ${p.precon}` : ''}
+                {p.rarity ? ` (${p.rarity})` : ''}
+              </span>
+              {p.scan_url && <CardImagePreview imageUrl={p.scan_url} name={`${localized.name} (${p.set})`} />}
             </li>
           ))}
         </ul>

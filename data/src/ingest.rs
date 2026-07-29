@@ -291,6 +291,17 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
     let Some(sets) = card.get("sets").and_then(|v| v.as_object()) else {
         return Ok(());
     };
+    // KRCG's `scans` object is keyed by set name (sibling to `sets`), one
+    // scan photo per (card, set) pair — the URL slug encodes both the set
+    // and the card, e.g. .../card/set/final-nights/aabbtkindredg2.jpg.
+    // Confirmed against a full snapshot of KRCG's real export: every
+    // (card, set) pair present in `sets` also has a `scans` entry, and a
+    // set with multiple printing entries (e.g. a precon reprint alongside
+    // the base release) shares that one scan — so it's looked up per set
+    // name, not per printing row. Still handled as optional (NULL when
+    // absent) rather than assumed, since that's a property of today's data,
+    // not a schema guarantee.
+    let scans = card.get("scans").and_then(|v| v.as_object());
     // Cards legalised individually by Black Chantry (the Promo Pack 3/4
     // list — see v5pool.rs) have NO printing in any V5 set: their only
     // printings are in promo/classic products. Filtering those away would
@@ -313,6 +324,9 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
         let Some(printings) = printings.as_array() else {
             continue;
         };
+        let scan_url = scans
+            .and_then(|scans| scans.get(set_name))
+            .and_then(|v| v.as_str());
         for (i, p) in printings.iter().enumerate() {
             let precon = precon_name(
                 set_name,
@@ -327,9 +341,9 @@ fn insert_printings(conn: &Connection, card: &Value) -> rusqlite::Result<()> {
             let precon_copies =
                 precon.map(|_| p.get("copies").and_then(|v| v.as_i64()).unwrap_or(1));
             conn.execute(
-                "INSERT INTO printings (card_id, set_id, precon, rarity, first_print, precon_copies) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![id, set_id, precon, rarity, (i == 0) as i64, precon_copies],
+                "INSERT INTO printings (card_id, set_id, precon, rarity, first_print, precon_copies, scan_url) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![id, set_id, precon, rarity, (i == 0) as i64, precon_copies, scan_url],
             )?;
         }
     }
@@ -666,7 +680,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
-             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);",
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT, scan_url TEXT);",
         )
         .unwrap();
         insert_printings(&conn, &card).unwrap();
@@ -699,7 +713,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
-             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);",
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT, scan_url TEXT);",
         )
         .unwrap();
         insert_printings(&conn, &card).unwrap();
@@ -729,7 +743,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
-             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);",
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT, scan_url TEXT);",
         )
         .unwrap();
         for card in [
@@ -766,6 +780,61 @@ mod tests {
                 (2, None, None),
                 (3, Some("Reign of Stanislava".into()), Some(4)),
                 (4, None, None),
+            ]
+        );
+    }
+
+    #[test]
+    fn insert_printings_reads_scan_url_per_card_and_set_and_leaves_it_null_when_absent() {
+        // scan_url is looked up per (card, set) — not per precon variant
+        // within a set — since KRCG's `scans` object is keyed by set name
+        // alone and a precon reprint inside the same named set shares its
+        // one scan entry. A set with no `scans` entry for this card leaves
+        // scan_url NULL rather than guessed.
+        let card = json!({
+            "id": 1,
+            "sets": {
+                "Fifth Edition": [
+                    {"release_date": "2020-11-30"},
+                    {"release_date": "2020-11-30", "precon": "Ventrue", "copies": 1},
+                ],
+                "New Blood": [{"release_date": "2022-04-17", "precon": "Ventrue"}],
+            },
+            "scans": {
+                "Fifth Edition": "https://static.krcg.org/card/set/fifth-edition/example.jpg",
+                // "New Blood" deliberately omitted to exercise the NULL path.
+            },
+        });
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE sets(id INTEGER PRIMARY KEY, abbrev TEXT, name TEXT, release_date TEXT);
+             CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT, scan_url TEXT);",
+        )
+        .unwrap();
+        insert_printings(&conn, &card).unwrap();
+
+        let mut rows: Vec<(String, Option<String>)> = conn
+            .prepare(
+                "SELECT s.name, p.scan_url FROM printings p JOIN sets s ON s.id = p.set_id ORDER BY s.name, p.precon",
+            )
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        rows.sort();
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    "Fifth Edition".to_string(),
+                    Some("https://static.krcg.org/card/set/fifth-edition/example.jpg".to_string())
+                ),
+                (
+                    "Fifth Edition".to_string(),
+                    Some("https://static.krcg.org/card/set/fifth-edition/example.jpg".to_string())
+                ),
+                ("New Blood".to_string(), None),
             ]
         );
     }

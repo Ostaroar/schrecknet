@@ -46,7 +46,7 @@ CREATE TABLE card_requirements(
 ) WITHOUT ROWID;
 CREATE TABLE card_traits(card_id INT, trait TEXT);
 CREATE INDEX card_traits_card_trait_idx ON card_traits(card_id, trait);
-CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT);
+CREATE TABLE printings(card_id INT, set_id INT, precon TEXT, rarity TEXT, first_print INT, precon_copies INT, scan_url TEXT);
 CREATE INDEX printings_card_idx ON printings(card_id);
 CREATE TABLE card_artists(card_id INT, artist_id INT);
 CREATE TABLE rulings(card_id INT, text TEXT, refs TEXT);
@@ -210,7 +210,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '9'), ('data_version', '14'), ('scope', 'v5'),
+         ('schema_version', '10'), ('data_version', '15'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -234,8 +234,13 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // card_disciplines/printings card_id indexes — discipline_logic=only
         // and precon-filtered search were doing a correlated-subquery table
         // scan per candidate row, ~50ms server-side for the slowest query;
-        // indexed, ~2ms).
-        // data_version changes whenever emitted content changes (v14 swaps
+        // indexed, ~2ms; v10: added printings.scan_url — KRCG's per-card `scans`
+        // object is keyed by set name, i.e. one scan photo per (card, set) pair,
+        // not per card overall (cards.image_url stays the single canonical scan;
+        // this is the per-printing alternate).
+        // data_version changes whenever emitted content changes (v15 fills
+        // printings.scan_url from KRCG's `scans` field, keyed by set name, see
+        // schema_version v10 above; v14 swaps
         // Tegyrius, Vizier (G2) for the group-6 promo printing: KRCG's
         // `formats` field marks the wrong one, see docs/adr/0014's follow-up;
         // v13 removes
@@ -253,8 +258,8 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // from KRCG's per-printing "copies" field; v8 fills card_traits plus
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
-        "schema_version": 9,
-        "data_version": 14,
+        "schema_version": 10,
+        "data_version": 15,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
