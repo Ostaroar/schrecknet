@@ -328,36 +328,14 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   sizes): `main.js` 107.0 KB + `dbWorker.js` 66.6 KB + `userDbWorker.js`
   67.9 KB + the `/crypt` route's own chunk 4.6 KB ≈ **246 KB gzipped/br JS
   on first load** — down from 275 KB (−29 KB, ~10%) but still over the
-  200 KB budget.
-  **`dbWorker.js`/`userDbWorker.js` fix (2026-07-29, same day):** the two
-  were the dominant remaining cost, and both bundle the exact same
-  `@sqlite.org/sqlite-wasm` Emscripten glue in full — each is an
-  independent `new Worker(url, {type:'module'})` entry, so a static
-  `import sqlite3InitModule from '@sqlite.org/sqlite-wasm'` in the shared
-  `lib/sqlite.ts` wrapper got duplicated into *both* worker bundles by
-  Rollup rather than shared. Confirmed by diffing the two built files: both
-  started with the same minified `sqlite3Worker1Promiser` glue, just
-  different local variable names from two independent bundling passes.
-  Fixed by making that import dynamic (`await import('@sqlite.org/sqlite-wasm')`)
-  and setting `worker: { format: 'es' }` in `vite.config.ts` (the previous
-  default, `'iife'`, doesn't support code-split chunks — Rollup errors
-  outright if a worker entry dynamically imports something under it).
-  `dbWorker.js` 218 KB → 2.7 KB raw, `userDbWorker.js` 222 KB → 6.3 KB raw;
-  the glue is now one shared chunk (`index-*.js`, 65.6 KB gzip) both
-  workers reference. Confirmed the dedup is real, not just theoretical, via
-  the server's own access log against a real production build: the shared
-  chunk was fetched **exactly once** even though both workers (and both
-  needed it) loaded in the same session. New total ≈ **182 KB — under the
-  200 KB budget** for the first time (main.js 108.2 + shared sqlite glue
-  65.6 + dbWorker.js 1.3 + userDbWorker.js 2.5 + crypt-route chunk 4.6).
-  Verified end-to-end before shipping — this touches the load path for
-  *both* SQLite databases, so a break here would break search, decks, and
-  inventory outright: `tsc`, all six e2e suites (`test:card-text`,
-  `test:deck-organization`, `test:deck-timing`, `test:mobile`,
-  `test:backup`, `test:semantic` — including its offline-reload check) all
-  pass against a real server + browser, plus a manual check against the
-  actual built `dist/` (not dev mode, which doesn't chunk) confirming
-  correct rendering and the single shared fetch.
+  200 KB budget. `dbWorker.js`/`userDbWorker.js` were untouched by this
+  change and are now the dominant remaining cost; they're the next lever if
+  the budget still needs closing. Verified end-to-end against a real server
+  + browser (not just `tsc`/build) before shipping: `test:card-text`,
+  `test:deck-organization`, `test:deck-timing`,
+  `test:mobile`, `test:backup`, and `test:semantic` (which itself exercises
+  `/cards/{id}`, `/library`, deck-panel, and offline-reload) all pass with
+  route chunks loading on demand.
 - ◐ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
   4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
   found and fixed two real classes of violation — 4 unlabeled `<select>`s

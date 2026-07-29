@@ -5,13 +5,6 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // 'es' (not the default 'iife') so dbWorker.ts/userDbWorker.ts's dynamic
-  // import('@sqlite.org/sqlite-wasm') in lib/sqlite.ts can code-split into one
-  // chunk shared by both worker bundles, instead of each duplicating the full
-  // Emscripten glue — see the comment in lib/sqlite.ts.
-  worker: {
-    format: 'es',
-  },
   server: {
     proxy: {
       '/api': 'http://localhost:8000',
