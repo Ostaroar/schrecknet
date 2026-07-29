@@ -14,6 +14,8 @@ export interface Printing {
   precon: string | null
   rarity: string | null
   first_print: boolean
+  /** KRCG-hosted scan for this specific (card, set) printing; null when KRCG has no scan on file. */
+  scan_url: string | null
 }
 
 export interface Ruling {
@@ -108,8 +110,14 @@ export async function getCard(id: number): Promise<CardDetail | null> {
       `SELECT discipline, superior FROM card_disciplines WHERE card_id = ?1 ORDER BY superior DESC, discipline`,
       [id],
     ),
-    query<{ set_name: string; precon: string | null; rarity: string | null; first_print: number }>(
-      `SELECT s.name AS set_name, p.precon, p.rarity, p.first_print
+    query<{
+      set_name: string
+      precon: string | null
+      rarity: string | null
+      first_print: number
+      scan_url: string | null
+    }>(
+      `SELECT s.name AS set_name, p.precon, p.rarity, p.first_print, p.scan_url
        FROM printings p JOIN sets s ON s.id = p.set_id
        WHERE p.card_id = ?1 ORDER BY s.release_date`,
       [id],
@@ -142,6 +150,7 @@ export async function getCard(id: number): Promise<CardDetail | null> {
       precon: p.precon,
       rarity: p.rarity,
       first_print: p.first_print === 1,
+      scan_url: p.scan_url,
     })),
     artists: artists.map((a) => a.name),
     rulings: rulings.map((r) => ({ text: r.text, refs: JSON.parse(r.refs) as RulingRef[] })),

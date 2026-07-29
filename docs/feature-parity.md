@@ -157,8 +157,12 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
 - ☑ Full card text — inline expand panel on search results AND a routed page
       (frontend/src/components/CardPage.tsx) with selectable translations
 - ☑ Card image — MVP: single primary KRCG scan (`image_url`, hotlinked per Dark
-      Pack rule) on the card page; ☐ legacy/alternate printings with set-specific
-      scans still pending ✎
+      Pack rule) on the card page; ☑ legacy/alternate printings with set-specific
+      scans (`printings.scan_url`, schema v10): one scan per (card, set) pair, not
+      per precon variant within a set — a precon reprint sharing a named set with
+      its base release shares that set's single scan entry, confirmed against live
+      KRCG data. The card page's printings list shows a preview affordance
+      (reusing `CardImagePreview`) on every printing that has one.
 - ☑ Icon inline rendering within card text — every bracket token present in
       the current V5 pool renders on both the full page and inline detail panel:
       all 18 disciplines present in the V5 pool at basic/superior level plus
