@@ -303,6 +303,84 @@ export interface UiStrings {
     delete: string
     confirmDelete: (name: string) => string
   }
+  deckEditor: {
+    decreaseQty: string
+    increaseQty: string
+    inventoryModeLabel: string
+    inventoryModeAria: string
+    modeExcluded: string
+    modeExcludedHint: string
+    modeFlexible: string
+    modeFlexibleHint: string
+    modeFixed: string
+    modeFixedHint: string
+    missingBadge: (count: number) => string
+    fixedHint: string
+    flexibleHint: string
+    fixedLabel: string
+    flexibleLabel: string
+    importExportTitle: string
+    exportTxt: string
+    copied: string
+    couldNotCopy: string
+    copyText: string
+    loadTxt: string
+    hideImport: string
+    importText: string
+    importPlaceholder: string
+    importing: string
+    importIntoDeck: string
+    addedCards: (count: number) => string
+    couldNotMatch: (names: string) => string
+    drawErrorFallback: string
+    testHand: string
+    drawCrypt: string
+    drawLibrary: string
+    capAbbrev: (capacity: number | null) => string
+    archetypeScan: string
+    tagged: string
+    addTagButton: string
+    removeTagAria: (name: string) => string
+    addTagPlaceholder: string
+    addButton: string
+    loadingDeck: string
+    loadError: (error: string) => string
+    noDeckWithId: (id: number) => string
+    backToDecks: string
+    backArrow: string
+    linkCopied: string
+    share: string
+    clone: string
+    review: string
+    printProxies: string
+    confirmDeleteDeck: (name: string) => string
+    deleteDeck: string
+    authorPlaceholder: string
+    descriptionPlaceholder: string
+    cryptWord: string
+    libraryWord: string
+    capacityWord: string
+    avgWord: string
+    v5Legal: string
+    limitedFormatLegal: string
+    limitedViolationsText: (count: number, names: string) => string
+    libraryTypes: string
+    disciplinesLabel: string
+    bloodCostCurve: string
+    poolCostCurve: string
+    copiesMissing: (count: number) => string
+    allCopiesCovered: string
+    cryptHeader: string
+    sortLabel: string
+    sortOptionCapacity: string
+    sortOptionClan: string
+    sortOptionGroup: string
+    sortOptionName: string
+    sortOptionQuantity: string
+    noCryptCards: string
+    libraryHeader: string
+    noLibraryCards: string
+  }
   deckReview: {
     loadError: (error: string) => string
     loading: string
@@ -433,6 +511,9 @@ const en: UiStrings = {
   },
   decks: {
     newDeckPlaceholder: 'New deck name', createDeck: 'Create deck', compareTwoDecks: 'Compare two decks →', loading: 'Loading decks…', loadError: (error) => `Couldn't load your decks: ${error}`, noDecks: 'No decks yet — decks are stored locally in this browser (no account needed).', ownsCopies: 'Owns copies', sharesCopies: 'Shares copies', missingSuffix: (count) => `${count} missing`, byAuthor: (author) => `by ${author}`, clone: 'Clone', delete: 'Delete', confirmDelete: (name) => `Delete "${name}"? This can't be undone.`,
+  },
+  deckEditor: {
+    decreaseQty: 'Decrease quantity', increaseQty: 'Increase quantity', inventoryModeLabel: 'Inventory', inventoryModeAria: 'Inventory mode', modeExcluded: 'Not in inventory', modeExcludedHint: "This deck's cards don't affect missing-copy counts.", modeFlexible: 'Shares copies', modeFlexibleHint: 'Claims copies from a shared pool — other flexible decks can use the same copies.', modeFixed: 'Owns copies', modeFixedHint: 'Claims copies exclusively — no other deck can count on them.', missingBadge: (count) => `${count} missing`, fixedHint: 'Fixed here — claims these copies exclusively. Click to share instead.', flexibleHint: 'Flexible here — shares copies with other decks. Click to claim exclusively.', fixedLabel: 'Fixed', flexibleLabel: 'Flexible', importExportTitle: 'Text import / export', exportTxt: 'Export .txt', copied: 'Copied!', couldNotCopy: "Couldn't copy", copyText: 'Copy text', loadTxt: 'Load .txt', hideImport: 'Hide import', importText: 'Import text…', importPlaceholder: 'Paste a deck list, e.g.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', importing: 'Importing…', importIntoDeck: 'Import into this deck', addedCards: (count) => `Added ${count} card${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `Couldn't match: ${names}.`, drawErrorFallback: 'Could not draw a test hand', testHand: 'Test hand', drawCrypt: 'Draw crypt', drawLibrary: 'Draw library', capAbbrev: (capacity) => `cap ${capacity}`, archetypeScan: 'Archetype scan', tagged: 'Tagged', addTagButton: '+ tag', removeTagAria: (name) => `Remove tag ${name}`, addTagPlaceholder: 'Add tag…', addButton: 'Add', loadingDeck: 'Loading deck…', loadError: (error) => `Couldn't load deck: ${error}`, noDeckWithId: (id) => `No deck with id ${id}.`, backToDecks: 'Back to decks', backArrow: '← decks', linkCopied: 'Link copied!', share: 'Share', clone: 'Clone', review: 'Review', printProxies: 'Print proxies', confirmDeleteDeck: (name) => `Delete "${name}"? This can't be undone.`, deleteDeck: 'Delete deck', authorPlaceholder: 'Author', descriptionPlaceholder: 'Deck description, strategy, or notes…', cryptWord: 'crypt', libraryWord: 'library', capacityWord: 'capacity', avgWord: 'avg', v5Legal: 'V5 Legal', limitedFormatLegal: 'Limited Format Legal', limitedViolationsText: (count, names) => `${count} card${count === 1 ? '' : 's'} not in the active limited format: ${names}`, libraryTypes: 'Library types', disciplinesLabel: 'Disciplines', bloodCostCurve: 'Blood cost curve', poolCostCurve: 'Pool cost curve', copiesMissing: (count) => `${count} copies missing`, allCopiesCovered: 'All copies covered by inventory', cryptHeader: 'Crypt', sortLabel: 'Sort', sortOptionCapacity: 'Capacity', sortOptionClan: 'Clan', sortOptionGroup: 'Group', sortOptionName: 'Name', sortOptionQuantity: 'Quantity', noCryptCards: 'No crypt cards yet.', libraryHeader: 'Library', noLibraryCards: 'No library cards yet.',
   },
   deckReview: {
     loadError: (error) => `Couldn't review deck: ${error}`, loading: 'Loading deck review…', backToEdit: '← edit deck', title: 'Deck review', byAuthor: (author) => `by ${author}`, crypt: 'Crypt', library: 'Library', capacity: 'Capacity', average: (value) => `average ${value}`, legality: 'V5 legality', noViolations: 'No base-format violations found.', libraryComposition: 'Library composition', disciplineFootprint: 'Discipline footprint', bloodCostCurve: 'Blood-cost curve', poolCostCurve: 'Pool-cost curve', timingWindows: 'Timing windows',
@@ -580,6 +661,9 @@ const es: UiStrings = {
   decks: {
     newDeckPlaceholder: 'Nombre del mazo nuevo', createDeck: 'Crear mazo', compareTwoDecks: 'Comparar dos mazos →', loading: 'Cargando mazos…', loadError: (error) => `No se pudieron cargar tus mazos: ${error}`, noDecks: 'Aún no hay mazos — los mazos se guardan localmente en este navegador (sin necesidad de cuenta).', ownsCopies: 'Posee copias', sharesCopies: 'Comparte copias', missingSuffix: (count) => `${count} faltantes`, byAuthor: (author) => `por ${author}`, clone: 'Clonar', delete: 'Eliminar', confirmDelete: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`,
   },
+  deckEditor: {
+    decreaseQty: 'Disminuir cantidad', increaseQty: 'Aumentar cantidad', inventoryModeLabel: 'Inventario', inventoryModeAria: 'Modo de inventario', modeExcluded: 'No en inventario', modeExcludedHint: 'Las cartas de este mazo no afectan al recuento de copias faltantes.', modeFlexible: 'Comparte copias', modeFlexibleHint: 'Reclama copias de un fondo compartido — otros mazos flexibles pueden usar las mismas copias.', modeFixed: 'Posee copias', modeFixedHint: 'Reclama copias en exclusiva — ningún otro mazo puede contar con ellas.', missingBadge: (count) => `${count} faltantes`, fixedHint: 'Fijo aquí — reclama estas copias en exclusiva. Haz clic para compartir en su lugar.', flexibleHint: 'Flexible aquí — comparte copias con otros mazos. Haz clic para reclamarlas en exclusiva.', fixedLabel: 'Fijo', flexibleLabel: 'Flexible', importExportTitle: 'Importar / exportar texto', exportTxt: 'Exportar .txt', copied: '¡Copiado!', couldNotCopy: 'No se pudo copiar', copyText: 'Copiar texto', loadTxt: 'Cargar .txt', hideImport: 'Ocultar importación', importText: 'Importar texto…', importPlaceholder: 'Pega una lista de mazo, p. ej.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', importing: 'Importando…', importIntoDeck: 'Importar a este mazo', addedCards: (count) => `${count} carta${count === 1 ? '' : 's'} añadida${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `No se pudo encontrar: ${names}.`, drawErrorFallback: 'No se pudo robar una mano de prueba', testHand: 'Mano de prueba', drawCrypt: 'Robar cripta', drawLibrary: 'Robar biblioteca', capAbbrev: (capacity) => `cap ${capacity}`, archetypeScan: 'Análisis de arquetipos', tagged: 'Etiquetado', addTagButton: '+ etiqueta', removeTagAria: (name) => `Quitar etiqueta ${name}`, addTagPlaceholder: 'Añadir etiqueta…', addButton: 'Añadir', loadingDeck: 'Cargando mazo…', loadError: (error) => `No se pudo cargar el mazo: ${error}`, noDeckWithId: (id) => `No hay ningún mazo con id ${id}.`, backToDecks: 'Volver a mazos', backArrow: '← mazos', linkCopied: '¡Enlace copiado!', share: 'Compartir', clone: 'Clonar', review: 'Revisión', printProxies: 'Imprimir proxies', confirmDeleteDeck: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`, deleteDeck: 'Eliminar mazo', authorPlaceholder: 'Autor', descriptionPlaceholder: 'Descripción del mazo, estrategia o notas…', cryptWord: 'cripta', libraryWord: 'biblioteca', capacityWord: 'capacidad', avgWord: 'prom', v5Legal: 'V5 legal', limitedFormatLegal: 'Formato limitado legal', limitedViolationsText: (count, names) => `${count} carta${count === 1 ? '' : 's'} fuera del formato limitado activo: ${names}`, libraryTypes: 'Tipos de biblioteca', disciplinesLabel: 'Disciplinas', bloodCostCurve: 'Curva de coste de sangre', poolCostCurve: 'Curva de coste de pool', copiesMissing: (count) => `${count} copias faltantes`, allCopiesCovered: 'Todas las copias cubiertas por el inventario', cryptHeader: 'Cripta', sortLabel: 'Ordenar', sortOptionCapacity: 'Capacidad', sortOptionClan: 'Clan', sortOptionGroup: 'Grupo', sortOptionName: 'Nombre', sortOptionQuantity: 'Cantidad', noCryptCards: 'Aún no hay cartas de cripta.', libraryHeader: 'Biblioteca', noLibraryCards: 'Aún no hay cartas de biblioteca.',
+  },
   deckReview: {
     loadError: (error) => `No se pudo revisar el mazo: ${error}`, loading: 'Cargando revisión del mazo…', backToEdit: '← editar mazo', title: 'Revisión del mazo', byAuthor: (author) => `por ${author}`, crypt: 'Cripta', library: 'Biblioteca', capacity: 'Capacidad', average: (value) => `promedio ${value}`, legality: 'Legalidad V5', noViolations: 'No se encontraron infracciones del formato base.', libraryComposition: 'Composición de la biblioteca', disciplineFootprint: 'Distribución de disciplinas', bloodCostCurve: 'Curva de coste de sangre', poolCostCurve: 'Curva de coste de pool', timingWindows: 'Ventanas de juego',
   },
@@ -726,6 +810,9 @@ const fr: UiStrings = {
   decks: {
     newDeckPlaceholder: 'Nom du nouveau deck', createDeck: 'Créer un deck', compareTwoDecks: 'Comparer deux decks →', loading: 'Chargement des decks…', loadError: (error) => `Impossible de charger vos decks : ${error}`, noDecks: "Pas encore de decks — les decks sont stockés localement dans ce navigateur (aucun compte requis).", ownsCopies: 'Possède des copies', sharesCopies: 'Partage des copies', missingSuffix: (count) => `${count} manquante${count === 1 ? '' : 's'}`, byAuthor: (author) => `par ${author}`, clone: 'Cloner', delete: 'Supprimer', confirmDelete: (name) => `Supprimer « ${name} » ? Cette action est irréversible.`,
   },
+  deckEditor: {
+    decreaseQty: 'Diminuer la quantité', increaseQty: 'Augmenter la quantité', inventoryModeLabel: 'Inventaire', inventoryModeAria: "Mode d'inventaire", modeExcluded: "Pas dans l'inventaire", modeExcludedHint: "Les cartes de ce deck n'affectent pas le décompte des copies manquantes.", modeFlexible: 'Partage des copies', modeFlexibleHint: "Réclame des copies dans un pool partagé — d'autres decks flexibles peuvent utiliser les mêmes copies.", modeFixed: 'Possède des copies', modeFixedHint: 'Réclame des copies en exclusivité — aucun autre deck ne peut compter dessus.', missingBadge: (count) => `${count} manquante${count === 1 ? '' : 's'}`, fixedHint: 'Fixe ici — réclame ces copies en exclusivité. Cliquez pour partager à la place.', flexibleHint: "Flexible ici — partage des copies avec d'autres decks. Cliquez pour réclamer en exclusivité.", fixedLabel: 'Fixe', flexibleLabel: 'Flexible', importExportTitle: 'Import / export texte', exportTxt: 'Exporter .txt', copied: 'Copié !', couldNotCopy: 'Impossible de copier', copyText: 'Copier le texte', loadTxt: 'Charger .txt', hideImport: "Masquer l'import", importText: 'Importer texte…', importPlaceholder: 'Collez une liste de deck, p. ex.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', importing: 'Importation…', importIntoDeck: 'Importer dans ce deck', addedCards: (count) => `${count} carte${count === 1 ? '' : 's'} ajoutée${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `Introuvable : ${names}.`, drawErrorFallback: 'Impossible de tirer une main de test', testHand: 'Main de test', drawCrypt: 'Tirer la crypte', drawLibrary: 'Tirer la bibliothèque', capAbbrev: (capacity) => `cap ${capacity}`, archetypeScan: "Analyse d'archétypes", tagged: 'Étiqueté', addTagButton: '+ étiquette', removeTagAria: (name) => `Retirer l'étiquette ${name}`, addTagPlaceholder: 'Ajouter une étiquette…', addButton: 'Ajouter', loadingDeck: 'Chargement du deck…', loadError: (error) => `Impossible de charger le deck : ${error}`, noDeckWithId: (id) => `Aucun deck avec l'id ${id}.`, backToDecks: 'Retour aux decks', backArrow: '← decks', linkCopied: 'Lien copié !', share: 'Partager', clone: 'Cloner', review: 'Revue', printProxies: 'Imprimer les proxies', confirmDeleteDeck: (name) => `Supprimer « ${name} » ? Cette action est irréversible.`, deleteDeck: 'Supprimer le deck', authorPlaceholder: 'Auteur', descriptionPlaceholder: 'Description du deck, stratégie ou notes…', cryptWord: 'crypte', libraryWord: 'bibliothèque', capacityWord: 'capacité', avgWord: 'moy', v5Legal: 'V5 légal', limitedFormatLegal: 'Format limité légal', limitedViolationsText: (count, names) => `${count} carte${count === 1 ? '' : 's'} hors du format limité actif : ${names}`, libraryTypes: 'Types de bibliothèque', disciplinesLabel: 'Disciplines', bloodCostCurve: 'Courbe de coût en sang', poolCostCurve: 'Courbe de coût en pool', copiesMissing: (count) => `${count} copie${count === 1 ? '' : 's'} manquante${count === 1 ? '' : 's'}`, allCopiesCovered: "Toutes les copies sont couvertes par l'inventaire", cryptHeader: 'Crypte', sortLabel: 'Trier', sortOptionCapacity: 'Capacité', sortOptionClan: 'Clan', sortOptionGroup: 'Groupe', sortOptionName: 'Nom', sortOptionQuantity: 'Quantité', noCryptCards: 'Aucune carte de crypte pour le moment.', libraryHeader: 'Bibliothèque', noLibraryCards: 'Aucune carte de bibliothèque pour le moment.',
+  },
   deckReview: {
     loadError: (error) => `Impossible de revoir le deck : ${error}`, loading: 'Chargement de la revue du deck…', backToEdit: '← modifier le deck', title: 'Revue du deck', byAuthor: (author) => `par ${author}`, crypt: 'Crypte', library: 'Bibliothèque', capacity: 'Capacité', average: (value) => `moyenne ${value}`, legality: 'Légalité V5', noViolations: 'Aucune infraction au format de base trouvée.', libraryComposition: 'Composition de la bibliothèque', disciplineFootprint: 'Répartition des disciplines', bloodCostCurve: 'Courbe de coût en sang', poolCostCurve: 'Courbe de coût en pool', timingWindows: 'Fenêtres de jeu',
   },
@@ -871,6 +958,9 @@ const de: UiStrings = {
   },
   decks: {
     newDeckPlaceholder: 'Name des neuen Decks', createDeck: 'Deck erstellen', compareTwoDecks: 'Zwei Decks vergleichen →', loading: 'Lade Decks…', loadError: (error) => `Deine Decks konnten nicht geladen werden: ${error}`, noDecks: 'Noch keine Decks — Decks werden lokal in diesem Browser gespeichert (kein Konto nötig).', ownsCopies: 'Besitzt Exemplare', sharesCopies: 'Teilt Exemplare', missingSuffix: (count) => `${count} fehlend`, byAuthor: (author) => `von ${author}`, clone: 'Klonen', delete: 'Löschen', confirmDelete: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`,
+  },
+  deckEditor: {
+    decreaseQty: 'Menge verringern', increaseQty: 'Menge erhöhen', inventoryModeLabel: 'Inventar', inventoryModeAria: 'Inventarmodus', modeExcluded: 'Nicht im Inventar', modeExcludedHint: 'Die Karten dieses Decks wirken sich nicht auf die Zählung fehlender Exemplare aus.', modeFlexible: 'Teilt Exemplare', modeFlexibleHint: 'Beansprucht Exemplare aus einem gemeinsamen Pool — andere flexible Decks können dieselben Exemplare nutzen.', modeFixed: 'Besitzt Exemplare', modeFixedHint: 'Beansprucht Exemplare exklusiv — kein anderes Deck kann darauf zählen.', missingBadge: (count) => `${count} fehlend`, fixedHint: 'Hier fest — beansprucht diese Exemplare exklusiv. Klicken, um stattdessen zu teilen.', flexibleHint: 'Hier flexibel — teilt Exemplare mit anderen Decks. Klicken, um exklusiv zu beanspruchen.', fixedLabel: 'Fest', flexibleLabel: 'Flexibel', importExportTitle: 'Text importieren / exportieren', exportTxt: 'Exportieren .txt', copied: 'Kopiert!', couldNotCopy: 'Kopieren fehlgeschlagen', copyText: 'Text kopieren', loadTxt: 'Laden .txt', hideImport: 'Import ausblenden', importText: 'Text importieren…', importPlaceholder: 'Füge eine Deckliste ein, z. B.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', importing: 'Importiere…', importIntoDeck: 'In dieses Deck importieren', addedCards: (count) => `${count} Karte${count === 1 ? '' : 'n'} hinzugefügt.`, couldNotMatch: (names) => `Konnte nicht gefunden werden: ${names}.`, drawErrorFallback: 'Testhand konnte nicht gezogen werden', testHand: 'Testhand', drawCrypt: 'Krypta ziehen', drawLibrary: 'Bibliothek ziehen', capAbbrev: (capacity) => `Kap ${capacity}`, archetypeScan: 'Archetyp-Scan', tagged: 'Getaggt', addTagButton: '+ Tag', removeTagAria: (name) => `Tag ${name} entfernen`, addTagPlaceholder: 'Tag hinzufügen…', addButton: 'Hinzufügen', loadingDeck: 'Lade Deck…', loadError: (error) => `Deck konnte nicht geladen werden: ${error}`, noDeckWithId: (id) => `Kein Deck mit der ID ${id}.`, backToDecks: 'Zurück zu den Decks', backArrow: '← Decks', linkCopied: 'Link kopiert!', share: 'Teilen', clone: 'Klonen', review: 'Überprüfung', printProxies: 'Proxys drucken', confirmDeleteDeck: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`, deleteDeck: 'Deck löschen', authorPlaceholder: 'Autor', descriptionPlaceholder: 'Deckbeschreibung, Strategie oder Notizen…', cryptWord: 'Krypta', libraryWord: 'Bibliothek', capacityWord: 'Kapazität', avgWord: 'Ø', v5Legal: 'V5 legal', limitedFormatLegal: 'Limitiertes Format legal', limitedViolationsText: (count, names) => `${count} Karte${count === 1 ? '' : 'n'} nicht im aktiven limitierten Format: ${names}`, libraryTypes: 'Bibliothekstypen', disciplinesLabel: 'Disziplinen', bloodCostCurve: 'Blutkosten-Kurve', poolCostCurve: 'Pool-Kosten-Kurve', copiesMissing: (count) => `${count} fehlende Exemplare`, allCopiesCovered: 'Alle Exemplare durch das Inventar gedeckt', cryptHeader: 'Krypta', sortLabel: 'Sortieren', sortOptionCapacity: 'Kapazität', sortOptionClan: 'Klan', sortOptionGroup: 'Gruppe', sortOptionName: 'Name', sortOptionQuantity: 'Menge', noCryptCards: 'Noch keine Kryptakarten.', libraryHeader: 'Bibliothek', noLibraryCards: 'Noch keine Bibliothekskarten.',
   },
   deckReview: {
     loadError: (error) => `Deck konnte nicht überprüft werden: ${error}`, loading: 'Lade Deck-Überprüfung…', backToEdit: '← Deck bearbeiten', title: 'Deck-Überprüfung', byAuthor: (author) => `von ${author}`, crypt: 'Krypta', library: 'Bibliothek', capacity: 'Kapazität', average: (value) => `Durchschnitt ${value}`, legality: 'V5-Legalität', noViolations: 'Keine Verstöße gegen das Basisformat gefunden.', libraryComposition: 'Bibliothekszusammensetzung', disciplineFootprint: 'Disziplin-Verteilung', bloodCostCurve: 'Blutkosten-Kurve', poolCostCurve: 'Pool-Kosten-Kurve', timingWindows: 'Spielfenster',
