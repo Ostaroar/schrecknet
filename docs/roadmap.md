@@ -322,7 +322,9 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   4.5:1 against the surface/raised/blood-badge backgrounds they actually
   render on. Both tokens brightened same-hue to clear 4.5:1 with margin
   (docs/design.md's tokens are the values in frontend/src/index.css). All 12
-  routes now audit clean. Keyboard map and remaining WCAG docs still open.
+  routes now audit clean. ☑ Keyboard map documented (docs/design.md §
+  Keyboard map, audited against actual `onKeyDown` usage, not assumed); no
+  `/`-to-focus-search binding exists yet if that's ever wanted.
 
 ## Phase 5 — VTES v5 game-loop / rules reference (additive, beyond vdb parity)
 _Independent of Phases 3–4; could be pulled earlier. Additive reference tooling in the
