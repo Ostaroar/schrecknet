@@ -7,7 +7,9 @@ use axum::response::{Html, IntoResponse, Json};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams, PreconCardCountsParams};
-use crate::deck_tools::{self, DiffDecksParams, ExportDeckParams, ImportDeckParams, ValidateDeckParams};
+use crate::deck_tools::{
+    self, DiffDecksParams, ExportDeckParams, ImportDeckParams, ValidateDeckParams,
+};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::game_groups::{
     self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,

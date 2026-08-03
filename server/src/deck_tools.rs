@@ -30,10 +30,7 @@ fn crypt_groups(conn: &Connection, ids: &[u32]) -> rusqlite::Result<Vec<u8>> {
     let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
     let sql = format!("SELECT grp FROM cards WHERE kind = 'crypt' AND id IN ({placeholders})");
     let mut stmt = conn.prepare(&sql)?;
-    let params = ids
-        .iter()
-        .map(|id| *id as i64)
-        .collect::<Vec<_>>();
+    let params = ids.iter().map(|id| *id as i64).collect::<Vec<_>>();
     let rows = stmt.query_map(rusqlite::params_from_iter(params), |row| {
         row.get::<_, Option<i64>>(0)
     })?;
@@ -97,7 +94,10 @@ pub struct DiffDecksResult {
 /// Pure card-id comparison, no DB lookup needed.
 pub fn diff_decks(params: &DiffDecksParams) -> DiffDecksResult {
     DiffDecksResult {
-        crypt: diff::compare(&to_card_qtys(&params.crypt_a), &to_card_qtys(&params.crypt_b)),
+        crypt: diff::compare(
+            &to_card_qtys(&params.crypt_a),
+            &to_card_qtys(&params.crypt_b),
+        ),
         library: diff::compare(
             &to_card_qtys(&params.library_a),
             &to_card_qtys(&params.library_b),
@@ -132,7 +132,10 @@ pub struct ImportDeckResult {
     pub unresolved: Vec<String>,
 }
 
-pub fn import_deck(conn: &Connection, params: &ImportDeckParams) -> rusqlite::Result<ImportDeckResult> {
+pub fn import_deck(
+    conn: &Connection,
+    params: &ImportDeckParams,
+) -> rusqlite::Result<ImportDeckResult> {
     let mut crypt = Vec::new();
     let mut library = Vec::new();
     let mut unresolved = Vec::new();
@@ -210,7 +213,10 @@ fn names_for(conn: &Connection, cards: &[DeckCard]) -> rusqlite::Result<Vec<Name
         .collect()
 }
 
-pub fn export_deck(conn: &Connection, params: &ExportDeckParams) -> rusqlite::Result<ExportDeckResult> {
+pub fn export_deck(
+    conn: &Connection,
+    params: &ExportDeckParams,
+) -> rusqlite::Result<ExportDeckResult> {
     let crypt = names_for(conn, &params.crypt)?;
     let library = names_for(conn, &params.library)?;
     Ok(ExportDeckResult {
