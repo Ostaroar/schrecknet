@@ -3,9 +3,12 @@
 
 use std::collections::BTreeMap;
 
+use serde::Serialize;
+
 pub type CardQtys = Vec<(u32, u16)>;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Change {
     OnlyA,
     OnlyB,
@@ -13,7 +16,7 @@ pub enum Change {
     Same,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub struct Entry {
     pub card_id: u32,
     pub qty_a: u16,

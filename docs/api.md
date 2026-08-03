@@ -20,9 +20,9 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | `list_precons` | **Live.** All 43 modern BCP/V5 precons grouped by (set, precon) with a distinct-card count; REST mirror: `GET /api/v1/precons`. `get_precon_card_counts` returns each product's real per-card quantities. |
 | `list_decks` / `get_deck` | Authenticated user's decks (or a deck shared via deck-in-URL) |
 | `create_deck` / `update_deck` | Create/modify a deck (add/remove cards, metadata, branch ops) |
-| `validate_deck` | Legality report for V5 (site default) / custom limited formats within the V5 pool |
-| `import_deck` / `export_deck` | Formats: plain text, Lackey, JOL, XLSX |
-| `diff_decks` | Structured diff of two decks/revisions |
+| `validate_deck` | **Live.** V5 deck-construction legality: crypt/library size bounds + the group rule, from card ids/quantities and groups looked up by id. Stateless — no deck storage needed. REST mirror: `POST /api/v1/decks/validate` |
+| `import_deck` / `export_deck` | **Live** for plain-text/Lackey/JOL-style ("`<qty>x <name>`" per line); names that don't resolve are returned separately rather than dropped. XLSX and the JOL-specific variant/Amaranth link import are still pending. REST mirrors: `POST /api/v1/decks/import`, `POST /api/v1/decks/export` |
+| `diff_decks` | **Live.** Structured card-by-card diff of two decks (crypt/library compared separately) by id/quantity — stateless, no deck storage. REST mirror: `POST /api/v1/decks/diff` |
 | `draw_hand` | **Live.** Deterministic opening crypt (4) or library (7) hand from card-id/quantity rows. An optional unsigned 64-bit decimal `seed` reproduces a draw; REST mirror: `POST /api/v1/decks/draw-hand` |
 | `get_inventory` / `update_inventory` | Collection management |
 

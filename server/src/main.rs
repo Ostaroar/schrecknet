@@ -5,6 +5,7 @@
 mod api;
 mod card_detail;
 mod cards_db;
+mod deck_tools;
 mod draw_hand;
 mod game_groups;
 mod mcp;
@@ -151,6 +152,10 @@ async fn main() {
         .route("/api/v1/precons", get(api::list_precons))
         .route("/api/v1/precons/cards", get(api::get_precon_card_counts))
         .route("/api/v1/decks/draw-hand", post(api::draw_hand))
+        .route("/api/v1/decks/validate", post(api::validate_deck))
+        .route("/api/v1/decks/diff", post(api::diff_decks))
+        .route("/api/v1/decks/import", post(api::import_deck))
+        .route("/api/v1/decks/export", post(api::export_deck))
         .route("/api/v1/groups", post(api::create_game_group))
         .route("/api/v1/groups/{code}", get(api::get_game_group))
         .route(

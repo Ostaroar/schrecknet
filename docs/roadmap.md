@@ -233,8 +233,11 @@ docs/feature-parity.md's scope note).
 - ☑ Search-to-deck bridge: crypt/library results add directly to a selected
   anonymous OPFS deck, serialize fast quantity changes, remember only the active
   deck id in localStorage, and expose the live deck in a responsive split panel
-- ◐ MCP deck tools — `draw_hand` is live without requiring server-side deck
-  storage; authenticated create/update/import/export tools remain Phase 3 work
+- ◐ MCP deck tools — `draw_hand`, `validate_deck`, `diff_decks`, `import_deck`,
+  `export_deck` are all live without requiring server-side deck storage (they're
+  stateless computations over card ids the caller already has); `list_decks` /
+  `create_deck` / `update_deck` / `get_inventory` / `update_inventory` need
+  server-side storage tied to an account and remain Phase 3 work
 
 ## Phase 3 — Accounts & sync
 _Direction confirmed by the project owner (2026-07-23): "Search fast. Build locally.

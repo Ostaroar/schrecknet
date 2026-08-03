@@ -15,6 +15,7 @@ use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
+use crate::deck_tools::{self, DiffDecksParams, ExportDeckParams, ImportDeckParams, ValidateDeckParams};
 use crate::draw_hand::{self, DrawHandError, DrawHandParams};
 use crate::game_groups::{
     self, CreateGroupParams, DeleteGameParams, GameGroupError, GroupCodeParams, LogGameParams,
@@ -168,6 +169,55 @@ impl SchreckNetMcp {
             )),
             Err(error) => Err(rmcp::ErrorData::invalid_params(error.to_string(), None)),
         }
+    }
+
+    #[tool(
+        description = "Validate a deck's V5 construction legality: crypt/library size bounds and \
+        the group rule (crypt vampires must span at most 2 consecutive groups). Card-pool legality \
+        is not checked here — only counts and groups."
+    )]
+    async fn validate_deck(
+        &self,
+        Parameters(params): Parameters<ValidateDeckParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(deck_tools::validate_deck(&conn, &params))
+    }
+
+    #[tool(
+        description = "Compare two decks card-by-card (crypt and library separately) and classify \
+        each card id as only-in-A, only-in-B, changed quantity, or unchanged."
+    )]
+    async fn diff_decks(
+        &self,
+        Parameters(params): Parameters<DiffDecksParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        json_value(&deck_tools::diff_decks(&params))
+    }
+
+    #[tool(
+        description = "Parse a Lackey/JOL-style plain-text deck list (\"<qty>x <name>\" per line) \
+        into resolved card ids, split into crypt/library. Names that don't match any card are \
+        returned separately as `unresolved` rather than dropped."
+    )]
+    async fn import_deck(
+        &self,
+        Parameters(params): Parameters<ImportDeckParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(deck_tools::import_deck(&conn, &params))
+    }
+
+    #[tool(
+        description = "Format a deck's card ids and quantities as a Lackey/JOL-style plain-text \
+        deck list with Crypt/Library section headers."
+    )]
+    async fn export_deck(
+        &self,
+        Parameters(params): Parameters<ExportDeckParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(deck_tools::export_deck(&conn, &params))
     }
 
     #[tool(
