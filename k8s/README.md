@@ -96,3 +96,41 @@ kubectl -n schrecknet rollout restart deployment/schrecknet-server
 ```
 
 Or pin an explicit tag (e.g. a `v*` release tag) in `deployment.yaml` instead of `:main` for reproducible deploys.
+
+## 6. Emergency rollback
+
+**Use the `rollback` workflow** (Actions → rollback → Run workflow), giving it an
+immutable `sha-<short>` tag. It verifies the tag exists, points the deployment at
+it, waits for the rollout, and smoke-checks the live site — roughly a minute,
+versus ~10 minutes for `git revert` → full image rebuild → deploy.
+
+Find a tag to roll back to:
+
+```bash
+gh api "/users/Ostaroar/packages/container/schrecknet/versions" \
+  --jq '.[].metadata.container.tags[]?' | grep '^sha-'
+```
+
+Two traps worth knowing before you need them:
+
+- **`kubectl rollout undo` does not roll back.** The pod template always names
+  the mutable tag `:main` (`deployment.yaml`) with `imagePullPolicy: Always`, so
+  every revision points at the same reference and undoing just re-pulls the same
+  bad image. A rollback has to change the image reference.
+- **A pinned deployment makes later deploys silent no-ops.** After a rollback the
+  deployment names `…:sha-<short>`, so `docker.yml`'s push-to-main
+  `rollout restart` restarts the pod but keeps serving the pinned image — the
+  deploy job goes green while changing nothing. Un-pin once the fix has landed:
+
+```bash
+kubectl -n schrecknet set image deployment/schrecknet-server \
+  server=ghcr.io/ostaroar/schrecknet:main
+```
+
+**Rollback depth is only ~5 builds.** `docker.yml`'s `cleanup-ghcr` job keeps 15
+GHCR versions (~3 per build). That cap exists because package storage counts
+against the account's shared quota, which this project has exhausted before. The
+repo is public but **the GHCR package itself is still private**, and private
+package storage is what the quota bills — making the package public would make
+its storage free and let the buffer be deepened safely. Until someone decides
+that, leave `min-versions-to-keep` alone.

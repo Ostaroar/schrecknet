@@ -8,6 +8,13 @@ on:
 permissions:
   contents: read
 
+# Supersede in-flight runs for the same branch/PR: the later commit is the one
+# whose result matters, and these jobs are long enough that stacking them up
+# wastes a runner on an answer nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 # Deliberately artifact-free. These jobs used to hand ~77 MB per run
 # (dist/ with the semantic model + cards.sqlite, the debug server binary, and
 # frontend/dist) from `rust`/`frontend` to `semantic-e2e` via upload-artifact.
@@ -76,6 +83,13 @@ jobs:
         working-directory: frontend
       - name: full local backup round-trips every user table
         run: npm run test:backup
+        working-directory: frontend
+      # Guards the 2026-07-29 outage class: a build that works from a fresh
+      # profile but wedges for returning users, whose old service worker is
+      # already installed and controlling the page. Every other suite starts
+      # from a clean newContext(), so this is the only one that exercises it.
+      - name: new build survives an already-installed service worker
+        run: npm run test:sw-upgrade
         working-directory: frontend
       - name: exact composition + browser/native semantic parity + offline smoke
         run: npm run test:semantic

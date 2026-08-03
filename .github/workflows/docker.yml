@@ -25,6 +25,15 @@ permissions:
   contents: read
   packages: write
 
+# Never run two of these against the deployment at once. `k8s/deployment.yaml`
+# is a single replica with `strategy: Recreate`, so two overlapping
+# `rollout restart`s race each other over one pod. Deliberately NOT
+# cancel-in-progress: a half-finished deploy is worse than a queued one, so let
+# the in-flight run land and queue the next behind it.
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -124,3 +133,41 @@ jobs:
         run: |
           kubectl -n schrecknet rollout restart deployment/schrecknet-server
           kubectl -n schrecknet rollout status deployment/schrecknet-server --timeout=120s
+
+      # `rollout status` only proves the pod passed its readiness probe, and
+      # that probe is `httpGet /` (k8s/deployment.yaml) -- which happily returns
+      # index.html while the app is completely dead. During the 2026-07-29
+      # outage both SQLite workers hung and this job still reported green.
+      # These checks assert the things that were actually broken then:
+      # the served HTML, the card database, and a prerendered card page.
+      - name: Smoke-check the live site
+        run: |
+          set -euo pipefail
+          base=https://schreck-net.com
+
+          # 1. The shell is served and is really our app.
+          curl -fsS --retry 5 --retry-delay 3 --retry-all-errors "$base/crypt" \
+            | grep -q 'id="root"' || { echo "::error::/crypt did not return the app shell"; exit 1; }
+
+          # 2. The card database the workers load is present and non-trivial.
+          #    A hung worker can't be seen from curl, but a missing/broken
+          #    /data payload is the other half of that failure mode.
+          meta=$(curl -fsS "$base/data/cards.meta.json")
+          echo "$meta" | grep -q '"schema_version"' || { echo "::error::cards.meta.json malformed"; exit 1; }
+          bytes=$(curl -fsS -o /dev/null -w '%{size_download}' "$base/data/cards.sqlite")
+          [ "$bytes" -gt 1000000 ] || { echo "::error::cards.sqlite too small ($bytes bytes)"; exit 1; }
+
+          # 3. A card page is really prerendered, not just the SPA shell.
+          #    (Dockerfile's prerender-build stage; 829 of these ship per build
+          #    and nothing else tests them.) The JSON-LD block is the marker:
+          #    a prerendered page has one, the SPA fallback has none -- so
+          #    grepping for <title> alone would pass even when prerendering is
+          #    completely broken. Card 100401 is Conditioning, a base-set V5
+          #    card; if it ever leaves the pool this failing is correct.
+          card=$(curl -fsS "$base/cards/100401")
+          echo "$card" | grep -q 'application/ld+json' \
+            || { echo "::error::/cards/100401 is not prerendered (no JSON-LD -- SPA fallback?)"; exit 1; }
+          echo "$card" | grep -q '<title>Conditioning' \
+            || { echo "::error::/cards/100401 prerendered with the wrong title"; exit 1; }
+
+          echo "live smoke check passed ($bytes bytes of card data)"

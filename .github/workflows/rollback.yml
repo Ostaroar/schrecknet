@@ -1,0 +1,95 @@
+name: rollback
+
+# Emergency rollback to a previously built image, without waiting for a revert
+# to travel through the full pipeline.
+#
+# Why this exists: on 2026-07-29 a bad frontend build reached production and the
+# only way back was `git revert` -> full multi-stage image rebuild (Rust +
+# wasm-pack + data pipeline + prerender) -> rollout. That took ~10 minutes with
+# the site broken the whole time. Every push to main already leaves an immutable
+# `sha-<short>` tag in GHCR (see the `type=sha` tag in docker.yml), so rolling
+# back is really just pointing the deployment at one of those — seconds, not
+# minutes.
+#
+# NOTE `kubectl rollout undo` does NOT work here and is a trap: the pod template
+# always names the mutable tag `:main` (k8s/deployment.yaml) with
+# `imagePullPolicy: Always`, so undoing to a previous revision re-pulls the very
+# same bad image. Rolling back requires changing the image reference, which is
+# what this does.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to roll back to, e.g. sha-4f5abd2 (see GHCR; ~5 builds are retained)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Share the deploy lane so a rollback can never race a normal deploy over the
+# single-replica, `Recreate`-strategy deployment.
+concurrency:
+  group: docker-refs/heads/main
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Save kubeconfig
+        run: doctl kubernetes cluster kubeconfig save k8s-1-36-0-do-3-fra1-1784797648512
+
+      - name: Verify the tag exists before touching the cluster
+        run: |
+          set -euo pipefail
+          tag='${{ inputs.tag }}'
+          case "$tag" in
+            main)
+              echo "::error::'main' is the mutable tag the deployment normally tracks."
+              echo "::error::Rolling back to it is a no-op. Pick an immutable sha-<short> tag."
+              exit 1
+              ;;
+            sha-*) ;;
+            *)
+              echo "::error::Expected an immutable 'sha-<short>' tag, got '$tag'."
+              exit 1
+              ;;
+          esac
+          # Fail here rather than leaving the deployment pointed at a tag that
+          # cannot be pulled (which would ImagePullBackOff a live rollback).
+          docker manifest inspect "ghcr.io/ostaroar/schrecknet:$tag" > /dev/null \
+            || { echo "::error::ghcr.io/ostaroar/schrecknet:$tag not found in GHCR"; exit 1; }
+          echo "found ghcr.io/ostaroar/schrecknet:$tag"
+
+      - name: Point the deployment at that image
+        run: |
+          set -euo pipefail
+          kubectl -n schrecknet set image deployment/schrecknet-server \
+            server=ghcr.io/ostaroar/schrecknet:${{ inputs.tag }}
+          kubectl -n schrecknet rollout status deployment/schrecknet-server --timeout=180s
+
+      - name: Smoke-check the live site
+        run: |
+          set -euo pipefail
+          base=https://schreck-net.com
+          curl -fsS --retry 5 --retry-delay 3 --retry-all-errors "$base/crypt" \
+            | grep -q 'id="root"' || { echo "::error::/crypt did not return the app shell"; exit 1; }
+          bytes=$(curl -fsS -o /dev/null -w '%{size_download}' "$base/data/cards.sqlite")
+          [ "$bytes" -gt 1000000 ] || { echo "::error::cards.sqlite too small ($bytes bytes)"; exit 1; }
+          echo "rolled back to ${{ inputs.tag }} and the live site answers"
+
+      - name: Remind how to get back onto main
+        run: |
+          echo "::warning::The deployment is now PINNED to ${{ inputs.tag }}."
+          echo "::warning::Until it is un-pinned, docker.yml's 'rollout restart' on push-to-main"
+          echo "::warning::will restart the pod but keep serving this pinned image — deploys will"
+          echo "::warning::appear to succeed while changing nothing."
+          echo "::warning::Un-pin with:"
+          echo "::warning::  kubectl -n schrecknet set image deployment/schrecknet-server \\"
+          echo "::warning::    server=ghcr.io/ostaroar/schrecknet:main"
