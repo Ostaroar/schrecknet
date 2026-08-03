@@ -214,10 +214,12 @@ async fn main() {
         .route("/help", get(api::get_prerendered_help))
         .route("/about", get(api::get_prerendered_about))
         .route("/changelog", get(api::get_prerendered_changelog))
-        .with_state(state)
-        // Swagger UI needs no AppState, so it's merged after `with_state`
-        // collapses the router to `Router<()>` — `SwaggerUi` only implements
-        // `Into<Router<()>>`, not a generic `Into<Router<S>>`.
+        .with_state::<()>(state)
+        // Swagger UI needs no AppState, so it's merged after `with_state::<()>`
+        // pins the router to `Router<()>` — `SwaggerUi` only implements
+        // `Into<Router<()>>`, not a generic `Into<Router<S>>`, and without the
+        // turbofish `S2` in `with_state<S2>` stays an unresolved inference
+        // variable that this merge can't unify on its own.
         .merge(SwaggerUi::new("/api/v1/docs").url("/api/v1/openapi.json", ApiDoc::openapi()))
         // Vite's hashed build output — safe to cache forever (see
         // cache_control_for_mount's doc comment).
