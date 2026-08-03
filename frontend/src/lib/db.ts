@@ -1,5 +1,5 @@
-// Browser card-database access. The official SQLite WASM build runs in a
-// dedicated worker (dbWorker.ts) with the opfs-sahpool VFS: the database
+// Browser card-database access. The official SQLite WASM build runs in the
+// shared data worker (dataWorker.ts) with the opfs-sahpool VFS: the database
 // persists in OPFS, so after the first visit searches work offline and
 // reloads skip the ~900KB download (re-fetched only when the server's
 // schema_version/data_version changes). This replaces the interim sql.js
@@ -7,14 +7,8 @@
 // section. Every call site goes through query(), which is the seam that
 // made this swap a drop-in.
 
-interface Pending {
-  resolve: (value: never) => void
-  reject: (err: Error) => void
-}
+import { send } from './dataWorkerClient'
 
-let worker: Worker | null = null
-let nextId = 1
-const pending = new Map<number, Pending>()
 let openPromise: Promise<void> | null = null
 let loadedVersion: string | null = null
 
@@ -23,29 +17,14 @@ export function cardDbVersion(): string | null {
   return loadedVersion
 }
 
-function send<T>(msg: Record<string, unknown>): Promise<T> {
-  const id = nextId++
-  return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (value: never) => void, reject })
-    worker!.postMessage({ ...msg, id })
-  })
-}
-
 function ensureOpen(): Promise<void> {
   if (!openPromise) {
-    worker = new Worker(new URL('./dbWorker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (event) => {
-      const { id, ok, rows, meta, error } = event.data
-      const p = pending.get(id)
-      if (!p) return
-      pending.delete(id)
-      if (ok) p.resolve((rows ?? meta) as never)
-      else p.reject(new Error(error))
-    }
-    openPromise = send<Record<string, unknown>>({ kind: 'open' }).then((meta) => {
-      loadedVersion = typeof meta?.version === 'string' ? meta.version : null
-      console.info('[schrecknet] card db ready:', meta)
-    })
+    openPromise = send<{ meta: Record<string, unknown> }>('cards', { kind: 'open' }).then(
+      ({ meta }) => {
+        loadedVersion = typeof meta?.version === 'string' ? meta.version : null
+        console.info('[schrecknet] card db ready:', meta)
+      },
+    )
   }
   return openPromise
 }
@@ -56,14 +35,14 @@ function ensureOpen(): Promise<void> {
  * The user-facing escape hatch that exists so nobody ever reaches for "clear
  * site data" to fix stale cards again — that wipes decks and inventory too
  * (docs/adr/0015). Only ever touches cards.sqlite; user.sqlite is a separate
- * database in a separate pool owned by userDbWorker.ts.
+ * database in the same worker process but its own OPFS pool (dataWorker.ts).
  */
 export async function refreshCardDb(): Promise<void> {
   await ensureOpen()
   // The worker discards and reopens in place. Deliberately NOT by recreating
   // the worker: the OPFS pool lease is exclusive, so a second worker would
   // block on the first one's handles instead of taking over.
-  const meta = await send<Record<string, unknown>>({ kind: 'refresh' })
+  const { meta } = await send<{ meta: Record<string, unknown> }>('cards', { kind: 'refresh' })
   loadedVersion = typeof meta?.version === 'string' ? meta.version : null
   console.info('[schrecknet] card db refreshed:', meta)
 }
@@ -74,7 +53,8 @@ export async function query<T = Record<string, unknown>>(
   params: (string | number | null)[] = [],
 ): Promise<T[]> {
   await ensureOpen()
-  return send<T[]>({ kind: 'query', sql, params })
+  const { rows } = await send<{ rows: T[] }>('cards', { kind: 'query', sql, params })
+  return rows
 }
 
 export interface CardMeta {
@@ -89,7 +69,7 @@ export interface CardMeta {
 
 export async function getCardsMeta(): Promise<CardMeta> {
   // Always revalidate: this file is the version oracle for the card database,
-  // so a cached copy defeats the point of asking (see dbWorker.ts).
+  // so a cached copy defeats the point of asking (see dataWorker.ts).
   const res = await fetch('/data/cards.meta.json', { cache: 'no-cache' })
   if (!res.ok) throw new Error(`failed to fetch cards.meta.json: ${res.status}`)
   return res.json()

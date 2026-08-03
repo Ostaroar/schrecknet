@@ -8,7 +8,7 @@
 // as they are used. The worker deliberately does NOT
 // touch /api/*, /data/*, or /models/* — the first two are dynamic/live, and
 // /data/cards.sqlite specifically already has its own offline story via the
-// OPFS-backed dbWorker.ts; caching it here too would be redundant and could
+// OPFS-backed dataWorker.ts; caching it here too would be redundant and could
 // race with that mechanism. Transformers.js owns a separate lazy model cache
 // for /models/*, avoiding a second ~24 MB copy in this shell cache. Its local,
 // content-hashed ONNX Runtime assets are normal static assets here.
@@ -27,7 +27,7 @@ declare const self: ServiceWorkerGlobalScope
 
 // Bumped to v4 to drop the stale-while-revalidate shell cache when the card
 // database cache fix shipped: SWR would otherwise hand one more load the OLD
-// bundle, i.e. the very dbWorker.ts that got stuck on stale card data.
+// bundle, i.e. the very dataWorker.ts that got stuck on stale card data.
 const CACHE_NAME = 'schrecknet-shell-v4'
 // Owned by Transformers.js (see semanticSearch.ts). Keep it across shell SW
 // upgrades; otherwise installing a new app build would silently force users

@@ -1,38 +1,18 @@
 // Local, writable user data (decks, inventory) — a separate OPFS database
-// from cards.sqlite, owned by userDbWorker.ts. Same worker-per-DB pattern as
-// db.ts; kept as a distinct file/worker/pool because this data is locally
-// created and mutated, never fetched from the server.
+// from cards.sqlite, owned by the shared dataWorker.ts. Kept as a distinct
+// pool because this data is locally created and mutated, never fetched.
 
-interface Pending {
-  resolve: (value: never) => void
-  reject: (err: Error) => void
-}
+import { send as sendTo } from './dataWorkerClient'
 
-let worker: Worker | null = null
-let nextId = 1
-const pending = new Map<number, Pending>()
 let openPromise: Promise<void> | null = null
 let askedToPersist = false
 
 function send<T>(msg: Record<string, unknown>): Promise<T> {
-  const id = nextId++
-  return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (value: never) => void, reject })
-    worker!.postMessage({ ...msg, id })
-  })
+  return sendTo<T>('user', msg)
 }
 
 function ensureOpen(): Promise<void> {
   if (!openPromise) {
-    worker = new Worker(new URL('./userDbWorker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (event) => {
-      const { id, ok, ...rest } = event.data
-      const p = pending.get(id)
-      if (!p) return
-      pending.delete(id)
-      if (ok) p.resolve(rest as never)
-      else p.reject(new Error(rest.error))
-    }
     openPromise = send<Record<string, unknown>>({ kind: 'open' }).then(() => undefined)
   }
   return openPromise

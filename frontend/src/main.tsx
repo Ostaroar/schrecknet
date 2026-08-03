@@ -33,7 +33,7 @@ void Promise.all([initializeCore(), loadUiLanguage(initialLanguage())])
 
 // Register the app-shell service worker (src/sw.ts) so the PWA loads
 // offline after a first successful visit. Card data offline support is
-// handled separately by the OPFS-backed dbWorker; this only covers the
+// handled separately by the OPFS-backed dataWorker; this only covers the
 // static JS/CSS/wasm/HTML shell.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
