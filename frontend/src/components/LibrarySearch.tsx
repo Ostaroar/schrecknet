@@ -46,6 +46,19 @@ import { CardTypeSummary, CardTypeSymbol, DisciplineSymbol, PathSymbol } from '.
 import OwnedBadge from './OwnedBadge'
 import OutOfFormatBadge from './OutOfFormatBadge'
 import { useUiStrings } from '../lib/i18n'
+import {
+  isArray,
+  isBool,
+  isNumOrNull,
+  isObject,
+  isOneOf,
+  isStr,
+  isStrArray,
+  isStrOrNull,
+  readSearchSnapshot,
+  restore,
+  writeSearchSnapshot,
+} from '../lib/searchState'
 
 type DisciplineMode = 'off' | 'selected'
 
@@ -168,38 +181,44 @@ function CostPill({ blood, pool }: { blood: string | null; pool: string | null }
   )
 }
 
+/** Namespaces this page's filter snapshot on the history entry. */
+const SEARCH_KEY = 'library'
+
 export default function LibrarySearch() {
   const ui = useUiStrings()
-  const [text, setText] = useState('')
-  const [textMode, setTextMode] = useState<TextMode>('any')
-  const [textRegex, setTextRegex] = useState(false)
-  const [semanticMode, setSemanticMode] = useState(false)
+  // Filters this history entry was last left with (see lib/searchState.ts).
+  const saved = useMemo(() => readSearchSnapshot(SEARCH_KEY), [])
+  const [text, setText] = useState(() => restore(saved, 'text', '', isStr))
+  const [textMode, setTextMode] = useState<TextMode>(() => restore(saved, 'textMode', 'any', isOneOf('any', 'name', 'text')))
+  const [textRegex, setTextRegex] = useState(() => restore(saved, 'textRegex', false, isBool))
+  const [semanticMode, setSemanticMode] = useState(() => restore(saved, 'semanticMode', false, isBool))
   const [semanticProgress, setSemanticProgress] = useState<SemanticProgress>({ phase: 'idle' })
   const [semanticRetry, setSemanticRetry] = useState(0)
-  const [cardType, setCardType] = useState<string | null>(null)
-  const [clan, setClan] = useState<string | null>(null)
-  const [sectRequirements, setSectRequirements] = useState<Record<string, boolean>>({})
-  const [sectRequirementLogic, setSectRequirementLogic] = useState<RequirementLogic>('all')
-  const [includeNoSectRequirement, setIncludeNoSectRequirement] = useState(false)
-  const [titleRequirements, setTitleRequirements] = useState<Record<string, boolean>>({})
-  const [titleRequirementLogic, setTitleRequirementLogic] = useState<RequirementLogic>('all')
-  const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
-  const [disciplineLogic, setDisciplineLogic] = useState<LibraryDisciplineLogic>('all')
-  const [includeNoDiscipline, setIncludeNoDiscipline] = useState(false)
-  const [capacityRequirement, setCapacityRequirement] = useState<number | null>(null)
-  const [capacityRequirementMode, setCapacityRequirementMode] =
-    useState<CapacityRequirementMode>('at_most')
-  const [bloodCost, setBloodCost] = useState<number | null>(null)
-  const [bloodCostMode, setBloodCostMode] = useState<CostMode>('at_most')
-  const [poolCost, setPoolCost] = useState<number | null>(null)
-  const [poolCostMode, setPoolCostMode] = useState<CostMode>('at_most')
-  const [selectedTraits, setSelectedTraits] = useState<string[]>([])
-  const [set, setSet] = useState<string | null>(null)
-  const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
-  const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
-  const [selectedPrecons, setSelectedPrecons] = useState<PreconSelection[]>([])
-  const [preconPrint, setPreconPrint] = useState<SetPrintMode>(defaultSetPrint)
-  const [artist, setArtist] = useState<string | null>(null)
+  const [cardType, setCardType] = useState<string | null>(() => restore(saved, 'cardType', null, isStrOrNull))
+  const [clan, setClan] = useState<string | null>(() => restore(saved, 'clan', null, isStrOrNull))
+  const [sectRequirements, setSectRequirements] = useState<Record<string, boolean>>(() => restore(saved, 'sectRequirements', {}, isObject))
+  const [sectRequirementLogic, setSectRequirementLogic] = useState<RequirementLogic>(() => restore(saved, 'sectRequirementLogic', 'all', isOneOf('all', 'any', 'not')))
+  const [includeNoSectRequirement, setIncludeNoSectRequirement] = useState(() => restore(saved, 'includeNoSectRequirement', false, isBool))
+  const [titleRequirements, setTitleRequirements] = useState<Record<string, boolean>>(() => restore(saved, 'titleRequirements', {}, isObject))
+  const [titleRequirementLogic, setTitleRequirementLogic] = useState<RequirementLogic>(() => restore(saved, 'titleRequirementLogic', 'all', isOneOf('all', 'any', 'not')))
+  const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>(() => restore(saved, 'discModes', {}, isObject))
+  const [disciplineLogic, setDisciplineLogic] = useState<LibraryDisciplineLogic>(() => restore(saved, 'disciplineLogic', 'all', isStr))
+  const [includeNoDiscipline, setIncludeNoDiscipline] = useState(() => restore(saved, 'includeNoDiscipline', false, isBool))
+  const [capacityRequirement, setCapacityRequirement] = useState<number | null>(() => restore(saved, 'capacityRequirement', null, isNumOrNull))
+  const [capacityRequirementMode, setCapacityRequirementMode] = useState<CapacityRequirementMode>(
+    () => restore(saved, 'capacityRequirementMode', 'at_most', isStr),
+  )
+  const [bloodCost, setBloodCost] = useState<number | null>(() => restore(saved, 'bloodCost', null, isNumOrNull))
+  const [bloodCostMode, setBloodCostMode] = useState<CostMode>(() => restore(saved, 'bloodCostMode', 'at_most', isStr))
+  const [poolCost, setPoolCost] = useState<number | null>(() => restore(saved, 'poolCost', null, isNumOrNull))
+  const [poolCostMode, setPoolCostMode] = useState<CostMode>(() => restore(saved, 'poolCostMode', 'at_most', isStr))
+  const [selectedTraits, setSelectedTraits] = useState<string[]>(() => restore(saved, 'selectedTraits', [], isStrArray))
+  const [set, setSet] = useState<string | null>(() => restore(saved, 'set', null, isStrOrNull))
+  const [setAge, setSetAge] = useState<SetAgeMode>(() => restore(saved, 'setAge', defaultSetAge, isStr))
+  const [setPrint, setSetPrint] = useState<SetPrintMode>(() => restore(saved, 'setPrint', defaultSetPrint, isStr))
+  const [selectedPrecons, setSelectedPrecons] = useState<PreconSelection[]>(() => restore(saved, 'selectedPrecons', [], isArray))
+  const [preconPrint, setPreconPrint] = useState<SetPrintMode>(() => restore(saved, 'preconPrint', defaultSetPrint, isStr))
+  const [artist, setArtist] = useState<string | null>(() => restore(saved, 'artist', null, isStrOrNull))
   const [types, setTypes] = useState<string[]>([])
   const [clans, setClans] = useState<string[]>([])
   const [sets, setSets] = useState<string[]>([])
@@ -214,9 +233,9 @@ export default function LibrarySearch() {
   // See CryptSearch: a live invalid regex is a soft, recoverable state.
   const [searchError, setSearchError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
-  const [sort, setSort] = useState<LibrarySort | 'relevance'>('name')
-  const [onlyOwned, setOnlyOwned] = useState(false)
-  const [onlyInFormat, setOnlyInFormat] = useState(false)
+  const [sort, setSort] = useState<LibrarySort | 'relevance'>(() => restore(saved, 'sort', 'name', isStr))
+  const [onlyOwned, setOnlyOwned] = useState(() => restore(saved, 'onlyOwned', false, isBool))
+  const [onlyInFormat, setOnlyInFormat] = useState(() => restore(saved, 'onlyInFormat', false, isBool))
   const [cardSets, setCardSets] = useState<Map<number, string[]>>(new Map())
   const deck = useSearchDeck()
   const owned = useInventoryOwnedMap()
@@ -328,6 +347,76 @@ export default function LibrarySearch() {
     if (!limitedFormatActive) return
     getCardSetsMap(results.map((c) => c.id)).then(setCardSets)
   }, [results, limitedFormatActive])
+
+  // Keep this history entry's filter snapshot current, so opening a card and
+  // pressing Back restores the search instead of a blank form. Only the
+  // filters — never results, loaded option lists or transient UI state, which
+  // are all re-derived on mount and would just bloat the entry.
+  useEffect(() => {
+    writeSearchSnapshot(SEARCH_KEY, {
+      text,
+      textMode,
+      textRegex,
+      semanticMode,
+      cardType,
+      clan,
+      sectRequirements,
+      sectRequirementLogic,
+      includeNoSectRequirement,
+      titleRequirements,
+      titleRequirementLogic,
+      discModes,
+      disciplineLogic,
+      includeNoDiscipline,
+      capacityRequirement,
+      capacityRequirementMode,
+      bloodCost,
+      bloodCostMode,
+      poolCost,
+      poolCostMode,
+      selectedTraits,
+      set,
+      setAge,
+      setPrint,
+      selectedPrecons,
+      preconPrint,
+      artist,
+      sort,
+      onlyOwned,
+      onlyInFormat,
+    })
+  }, [
+    text,
+    textMode,
+    textRegex,
+    semanticMode,
+    cardType,
+    clan,
+    sectRequirements,
+    sectRequirementLogic,
+    includeNoSectRequirement,
+    titleRequirements,
+    titleRequirementLogic,
+    discModes,
+    disciplineLogic,
+    includeNoDiscipline,
+    capacityRequirement,
+    capacityRequirementMode,
+    bloodCost,
+    bloodCostMode,
+    poolCost,
+    poolCostMode,
+    selectedTraits,
+    set,
+    setAge,
+    setPrint,
+    selectedPrecons,
+    preconPrint,
+    artist,
+    sort,
+    onlyOwned,
+    onlyInFormat,
+  ])
 
   const cycle = (code: string) => {
     setDiscModes((m) => {

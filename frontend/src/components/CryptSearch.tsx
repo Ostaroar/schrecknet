@@ -44,36 +44,91 @@ import { ClanSymbol, DisciplineSymbol, PathSymbol } from './VtesSymbol'
 import OwnedBadge from './OwnedBadge'
 import OutOfFormatBadge from './OutOfFormatBadge'
 import { useUiStrings } from '../lib/i18n'
+import {
+  isArray,
+  isBool,
+  isNumArray,
+  isNumOrNull,
+  isObject,
+  isOneOf,
+  isStr,
+  isStrArray,
+  isStrOrNull,
+  readSearchSnapshot,
+  restore,
+  writeSearchSnapshot,
+} from '../lib/searchState'
 
 /** Per-discipline filter state, cycling off → required (any level) → superior. */
 type DisciplineMode = 'off' | 'any' | 'superior'
 type OrDisciplineGroup = Array<DisciplineRequirement | null>
 
+/** Namespaces this page's filter snapshot on the history entry. */
+const SEARCH_KEY = 'crypt'
+
 export default function CryptSearch() {
   const ui = useUiStrings()
-  const [text, setText] = useState('')
-  const [textMode, setTextMode] = useState<TextMode>('any')
-  const [textRegex, setTextRegex] = useState(false)
-  const [semanticMode, setSemanticMode] = useState(false)
+  // Filters this history entry was last left with (see lib/searchState.ts).
+  // Read once, at mount: navigating to a card unmounts this component, so
+  // coming back re-runs these initialisers with the snapshot in hand.
+  const saved = useMemo(() => readSearchSnapshot(SEARCH_KEY), [])
+  const [text, setText] = useState(() => restore(saved, 'text', '', isStr))
+  const [textMode, setTextMode] = useState<TextMode>(() =>
+    restore(saved, 'textMode', 'any', isOneOf('any', 'name', 'text')),
+  )
+  const [textRegex, setTextRegex] = useState(() => restore(saved, 'textRegex', false, isBool))
+  const [semanticMode, setSemanticMode] = useState(() =>
+    restore(saved, 'semanticMode', false, isBool),
+  )
   const [semanticProgress, setSemanticProgress] = useState<SemanticProgress>({ phase: 'idle' })
   const [semanticRetry, setSemanticRetry] = useState(0)
-  const [clan, setClan] = useState<string | null>(null)
-  const [title, setTitle] = useState<string | null>(null)
-  const [selectedSects, setSelectedSects] = useState<string[]>([])
-  const [sectLogic, setSectLogic] = useState<RequirementLogic>('all')
-  const [votes, setVotes] = useState<number | null>(null)
-  const [selectedTraits, setSelectedTraits] = useState<string[]>([])
-  const [selectedGroups, setSelectedGroups] = useState<number[]>([])
-  const [capacityMin, setCapacityMin] = useState<number | null>(null)
-  const [capacityMax, setCapacityMax] = useState<number | null>(null)
-  const [set, setSet] = useState<string | null>(null)
-  const [setAge, setSetAge] = useState<SetAgeMode>(defaultSetAge)
-  const [setPrint, setSetPrint] = useState<SetPrintMode>(defaultSetPrint)
-  const [selectedPrecons, setSelectedPrecons] = useState<PreconSelection[]>([])
-  const [preconPrint, setPreconPrint] = useState<SetPrintMode>(defaultSetPrint)
-  const [artist, setArtist] = useState<string | null>(null)
-  const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>({})
-  const [orDisciplineGroups, setOrDisciplineGroups] = useState<OrDisciplineGroup[]>([])
+  const [clan, setClan] = useState<string | null>(() => restore(saved, 'clan', null, isStrOrNull))
+  const [title, setTitle] = useState<string | null>(() =>
+    restore(saved, 'title', null, isStrOrNull),
+  )
+  const [selectedSects, setSelectedSects] = useState<string[]>(() =>
+    restore(saved, 'selectedSects', [], isStrArray),
+  )
+  const [sectLogic, setSectLogic] = useState<RequirementLogic>(() =>
+    restore(saved, 'sectLogic', 'all', isOneOf('all', 'any', 'not')),
+  )
+  const [votes, setVotes] = useState<number | null>(() =>
+    restore(saved, 'votes', null, isNumOrNull),
+  )
+  const [selectedTraits, setSelectedTraits] = useState<string[]>(() =>
+    restore(saved, 'selectedTraits', [], isStrArray),
+  )
+  const [selectedGroups, setSelectedGroups] = useState<number[]>(() =>
+    restore(saved, 'selectedGroups', [], isNumArray),
+  )
+  const [capacityMin, setCapacityMin] = useState<number | null>(() =>
+    restore(saved, 'capacityMin', null, isNumOrNull),
+  )
+  const [capacityMax, setCapacityMax] = useState<number | null>(() =>
+    restore(saved, 'capacityMax', null, isNumOrNull),
+  )
+  const [set, setSet] = useState<string | null>(() => restore(saved, 'set', null, isStrOrNull))
+  const [setAge, setSetAge] = useState<SetAgeMode>(() =>
+    restore(saved, 'setAge', defaultSetAge, isStr),
+  )
+  const [setPrint, setSetPrint] = useState<SetPrintMode>(() =>
+    restore(saved, 'setPrint', defaultSetPrint, isStr),
+  )
+  const [selectedPrecons, setSelectedPrecons] = useState<PreconSelection[]>(() =>
+    restore(saved, 'selectedPrecons', [], isArray),
+  )
+  const [preconPrint, setPreconPrint] = useState<SetPrintMode>(() =>
+    restore(saved, 'preconPrint', defaultSetPrint, isStr),
+  )
+  const [artist, setArtist] = useState<string | null>(() =>
+    restore(saved, 'artist', null, isStrOrNull),
+  )
+  const [discModes, setDiscModes] = useState<Record<string, DisciplineMode>>(() =>
+    restore(saved, 'discModes', {}, isObject),
+  )
+  const [orDisciplineGroups, setOrDisciplineGroups] = useState<OrDisciplineGroup[]>(() =>
+    restore(saved, 'orDisciplineGroups', [], isArray),
+  )
   const [clans, setClans] = useState<string[]>([])
   const [titles, setTitles] = useState<string[]>([])
   const [sects, setSects] = useState<string[]>([])
@@ -90,9 +145,13 @@ export default function CryptSearch() {
   // + a hint), not the fatal "couldn't load the DB" error path.
   const [searchError, setSearchError] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
-  const [sort, setSort] = useState<CryptSort | 'relevance'>('capacity_desc')
-  const [onlyOwned, setOnlyOwned] = useState(false)
-  const [onlyInFormat, setOnlyInFormat] = useState(false)
+  const [sort, setSort] = useState<CryptSort | 'relevance'>(() =>
+    restore(saved, 'sort', 'capacity_desc', isStr),
+  )
+  const [onlyOwned, setOnlyOwned] = useState(() => restore(saved, 'onlyOwned', false, isBool))
+  const [onlyInFormat, setOnlyInFormat] = useState(() =>
+    restore(saved, 'onlyInFormat', false, isBool),
+  )
   const [cardSets, setCardSets] = useState<Map<number, string[]>>(new Map())
   const deck = useSearchDeck()
   const owned = useInventoryOwnedMap()
@@ -194,6 +253,64 @@ export default function CryptSearch() {
     if (!limitedFormatActive) return
     getCardSetsMap(results.map((c) => c.id)).then(setCardSets)
   }, [results, limitedFormatActive])
+
+  // Keep this history entry's filter snapshot current, so opening a card and
+  // pressing Back restores the search instead of a blank form. Only the
+  // filters — never results, loaded option lists or transient UI state, which
+  // are all re-derived on mount and would just bloat the entry.
+  useEffect(() => {
+    writeSearchSnapshot(SEARCH_KEY, {
+      text,
+      textMode,
+      textRegex,
+      semanticMode,
+      clan,
+      title,
+      selectedSects,
+      sectLogic,
+      votes,
+      selectedTraits,
+      selectedGroups,
+      capacityMin,
+      capacityMax,
+      set,
+      setAge,
+      setPrint,
+      selectedPrecons,
+      preconPrint,
+      artist,
+      discModes,
+      orDisciplineGroups,
+      sort,
+      onlyOwned,
+      onlyInFormat,
+    })
+  }, [
+    text,
+    textMode,
+    textRegex,
+    semanticMode,
+    clan,
+    title,
+    selectedSects,
+    sectLogic,
+    votes,
+    selectedTraits,
+    selectedGroups,
+    capacityMin,
+    capacityMax,
+    set,
+    setAge,
+    setPrint,
+    selectedPrecons,
+    preconPrint,
+    artist,
+    discModes,
+    orDisciplineGroups,
+    sort,
+    onlyOwned,
+    onlyInFormat,
+  ])
 
   useEffect(() => {
     if (status !== 'ready') return
