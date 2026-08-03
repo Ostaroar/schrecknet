@@ -101,8 +101,18 @@ Or pin an explicit tag (e.g. a `v*` release tag) in `deployment.yaml` instead of
 
 **Use the `rollback` workflow** (Actions → rollback → Run workflow), giving it an
 immutable `sha-<short>` tag. It verifies the tag exists, points the deployment at
-it, waits for the rollout, and smoke-checks the live site — roughly a minute,
-versus ~10 minutes for `git revert` → full image rebuild → deploy.
+it, waits for the rollout, and smoke-checks the live site.
+
+**Verified end-to-end on 2026-08-03**: rolling production back to `sha-4f5abd2`
+took **61 s** from job start to a green smoke check (the live bundle really did
+change to the older build's hash), and un-pinning back to `:main` took a further
+43 s. Compare ~10 minutes for `git revert` → full image rebuild → deploy.
+
+One flake to expect: `digitalocean/action-doctl` intermittently fails with
+`401 mTLS verification failed` even with a valid token — it happened once during
+that verification and a plain re-run succeeded, with `docker.yml`'s deploy job
+having used the same secret minutes earlier. If a rollback fails on the very
+first step, re-run it before assuming the token is broken.
 
 Find a tag to roll back to:
 
