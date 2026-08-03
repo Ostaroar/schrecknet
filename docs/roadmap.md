@@ -336,6 +336,24 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   `test:mobile`, `test:backup`, and `test:semantic` (which itself exercises
   `/cards/{id}`, `/library`, deck-panel, and offline-reload) all pass with
   route chunks loading on demand.
+  **Locale code-splitting (2026-07-30):** `i18n.ts` held all four UI language
+  packs in one module, so every visitor downloaded en+es+fr+de to use one.
+  Split es/fr/de into `i18n.es.ts`/`i18n.fr.ts`/`i18n.de.ts`, dynamically
+  imported by `loadUiLanguage()`. `en` stays statically bundled as the
+  synchronous fallback, so **`getUiStrings`/`useUiStrings` remain synchronous
+  and not one component changed** — the pack is awaited in `main.tsx`'s
+  existing bootstrap gate (alongside `initializeCore`) and in App.tsx's
+  language-switch handler, so the strings are always present before anything
+  renders with them. `cardLanguage.tsx` deliberately does not import i18n.ts
+  (i18n.ts imports it) — `initialLanguage()` is exported instead, keeping the
+  cycle type-only. Measured: `main.js` **108.2 → 83.05 KB gzip (−25 KB)**;
+  English visitors now fetch **zero** locale bytes, non-English fetch one
+  ~10.6–10.9 KB chunk. Verified against a real server + browser on the built
+  dist, not just tsc: all six e2e suites pass (semantic-smoke and mobile-smoke
+  both switch languages and assert translated strings, so they cover this
+  directly), plus a manual check that a fresh English visitor triggers no
+  locale request, a persisted `de` visitor renders German on first paint with
+  no English flash, and switching to French fetches only then.
   **Attempted and reverted (2026-07-29, same day): deduplicating the
   `dbWorker.js`/`userDbWorker.js` glue.** Both workers statically import the
   same `@sqlite.org/sqlite-wasm` Emscripten glue via `lib/sqlite.ts`, and
@@ -364,11 +382,44 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   spending more time live-debugging a third-party package's Emscripten
   build on production. Net effect: current first-load total is still the
   246 KB from the route-split alone, not the 182 KB this attempt would
-  have reached. Do not retry this exact approach (dynamic-importing
-  `@sqlite.org/sqlite-wasm`'s glue from inside a worker) without first
-  reproducing the fix in an environment that matches production (HTTPS +
-  CDN, not just `localhost`), and ideally without two independent workers
-  racing to instantiate the shared chunk simultaneously.
+  have reached.
+  **CORRECTION (2026-07-30) — the root cause recorded above is WRONG.** A
+  follow-up investigation disproved it. That "Invalid URL" came from a
+  synthetic reproduction that used a `blob:` URL worker; a blob worker has an
+  opaque base URL, which by itself breaks the sync-XHR fallback in
+  `index.mjs`'s `readBinary` — so the error was an **artifact of the test
+  method**, not the production failure (whose symptom was a silent hang, not
+  an error). In the real build `sqliteWasmUrl` minifies to the root-absolute
+  literal `/assets/sqlite3-<hash>.wasm` in both workers, and worker
+  sub-chunks are imported by a relative specifier that resolves correctly
+  against `/assets/` — there is no mechanism there for an invalid URL.
+  **The true cause is still unknown.** The strongest untested hypothesis is
+  the *service worker*: `sw.ts` mediates every same-origin GET outside
+  `/api`,`/data`,`/models`, the bad commit introduced a brand-new request
+  class (a module worker's runtime subresource imports) without bumping
+  `CACHE_NAME`, every production user already had `schrecknet-shell-v4`
+  active and `clients.claim()`ed, and an `event.respondWith` that never
+  settles produces exactly the observed symptom — infinite hang, nothing on
+  `Worker.onerror`. Local e2e always starts from a fresh profile, so no
+  suite ever exercises the "old SW already controlling the page" path.
+  Note also that `index.mjs`'s `getWasmBinary` swallows the real fetch error
+  in a bare `catch {}`, which is why the post-mortem had nothing to work from.
+  **Consequences for any future attempt.** (a) Do not retry any variant that
+  makes a worker fetch a second script at runtime — that is a blind retry
+  against an unknown failure. (b) Vite cannot share a chunk between the two
+  worker entries at `worker.format:'iife'` *at all*: `bundleWorkerEntry()`
+  runs a separate Rollup build per worker file, and Rollup rejects
+  code-splitting for iife/umd outputs — so the sharing only works at
+  `format:'es'`, i.e. exactly the setting implicated in the outage. (c) The
+  one dedupe path needing **no** build-config change is merging dbWorker and
+  userDbWorker into a single worker (two SAH pools can coexist — `initPromises`
+  is keyed by vfsName), worth ~65 KB gzip. That is deliberately **not** being
+  done right now: it is a substantial rewrite of the load path for
+  `user.sqlite`, which holds the user's irreplaceable decks and inventory, and
+  this environment has no way to validate it pre-deploy (no local container
+  runtime, no HTTPS/CDN harness, no staging target — only production). Revisit
+  only with a real staging deploy or a local run of the actual production
+  image.
 - ☑ Accessibility pass (WCAG AA). **First real audit** (2026-07-24, axe-core
   4.9 against every route with `runOnly: wcag2a/wcag2aa/wcag21a/wcag21aa`):
   found and fixed two real classes of violation — 4 unlabeled `<select>`s

@@ -9,7 +9,14 @@ interface CardLanguageContextValue {
 
 const CardLanguageContext = createContext<CardLanguageContextValue | null>(null)
 
-function initialLanguage(): string {
+/**
+ * The persisted choice, read before React mounts so main.tsx can preload that
+ * language's UI strings (see i18n.ts's `loadUiLanguage`) and avoid a first paint
+ * in English. Deliberately does NOT import from i18n.ts — i18n.ts imports this
+ * module, and taking the reverse dependency too would make the cycle a runtime
+ * one.
+ */
+export function initialLanguage(): string {
   try {
     return window.localStorage.getItem(STORAGE_KEY) || 'en'
   } catch {

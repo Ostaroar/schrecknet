@@ -1,0 +1,192 @@
+// Split out of i18n.ts so the three non-English UI packs are code-split: every
+// visitor used to download all four languages (~33 KB gzip of it unused) to use
+// one. i18n.ts keeps `en` statically imported as the synchronous fallback and
+// registers this pack via `loadUiLanguage()` before first paint, which is why
+// `getUiStrings()` can stay synchronous and no component needed to change.
+// The `UiStrings` import is type-only, so there is no runtime import cycle.
+import type { UiStrings } from './i18n'
+
+// German UI strings ship with no card-text data (KRCG/VEKN don't provide German
+// card translations), so card text always falls back to English per-card
+// (cardDetail.ts's localizeCardText already handles that gracefully) — but the
+// interface itself is fully translated.
+const de: UiStrings = {
+  nav: {
+    cryptSearch: 'Kryptasuche',
+    librarySearch: 'Bibliothekssuche',
+    decks: 'Decks',
+    inventory: 'Inventar',
+    limited: 'Limitiert',
+    precons: 'Vorkonstruiert',
+    table: 'Tisch',
+    rules: 'Regeln',
+    changelog: 'Änderungen',
+    help: 'Hilfe',
+    about: 'Über',
+  },
+  header: {
+    cardTextLabel: 'Kartentext',
+    cardCounts: (crypt, library) => `${crypt} Krypta · ${library} Bibliothek`,
+    v5Only: 'Nur V5',
+    tagline: 'Schnell suchen. Lokal bauen. Kontrolle behalten.',
+    routeLoading: 'Lädt…',
+  },
+  footer: {
+    copyright:
+      'Teile des Materials sind Copyright und Marken von Paradox Interactive AB und werden mit Genehmigung verwendet. Alle Rechte vorbehalten. Weitere Informationen unter worldofdarkness.com.',
+    disclaimer: 'SchreckNet ist inoffizieller Fan-Inhalt und wird von Paradox Interactive weder unterstützt noch ist es damit verbunden. Es handelt sich nicht um offizielles World-of-Darkness-Material.',
+    help: 'Hilfe',
+    about: 'Über',
+    legal: 'Impressum & Datenschutz',
+    support: 'Dieses Projekt unterstützen',
+    settings: 'Daten & Backup',
+  },
+  settings: {
+    title: 'Daten & Backup',
+    intro: 'Deine Decks und dein Inventar liegen ausschließlich in diesem Browser. Nichts wird hochgeladen — das heißt aber auch, dass niemand sie für dich wiederherstellen kann. Lege also ein Backup an.',
+    yourDataTitle: 'Deine Daten',
+    yourDataNote: 'Ein Backup enthält alles: Decks mit Tags, Beschreibungen und Inventar-Modus, deine einzelnen Kartenmengen und die Vorkonstruktionen, die du besitzt.',
+    counts: (decks, cards, precons) => `${decks} Deck${decks === 1 ? '' : 's'} · ${cards} Inventarkarte${cards === 1 ? '' : 'n'} · ${precons} besessene Vorkonstruktion${precons === 1 ? '' : 'en'}`,
+    downloadBackup: 'Backup herunterladen',
+    creating: 'Backup wird erstellt…',
+    backupCreated: (name) => `${name} gespeichert`,
+    restoreTitle: 'Backup wiederherstellen',
+    restoreNote: 'Beim Wiederherstellen wird alles, was jetzt in diesem Browser liegt, durch den Inhalt der Backup-Datei ersetzt. Das lässt sich nicht rückgängig machen, deshalb wird vorher automatisch ein Backup deines aktuellen Stands heruntergeladen.',
+    chooseFile: 'Backup-Datei wählen…',
+    restoring: 'Wird wiederhergestellt…',
+    restoreConfirm: (currentDecks, currentCards, backupDecks, backupCards) =>
+      `Aktuelle Daten (${currentDecks} Decks, ${currentCards} Inventarkarten) durch das Backup (${backupDecks} Decks, ${backupCards} Inventarkarten) ersetzen? Das lässt sich nicht rückgängig machen.`,
+    restoreDone: 'Backup wiederhergestellt.',
+    restoreFailed: (error) => `Wiederherstellen fehlgeschlagen: ${error}`,
+    sensitiveNote: 'Die Backup-Datei enthält auch die Codes und Passphrasen deiner Spielgruppen — behandle sie wie ein Passwort.',
+    lastBackup: (when) => `Letztes Backup: ${when}`,
+    neverBackedUp: 'Du hast noch kein Backup angelegt.',
+    reminder: 'Deine Decks und dein Inventar existieren nur in diesem Browser. Lade ein Backup herunter, damit das Löschen von Websitedaten sie nicht vernichtet.',
+    storageTitle: 'Browser-Speicher',
+    storagePersisted: 'Der Browser wurde gebeten, deine Daten zu behalten, und hat zugestimmt — sie werden nicht automatisch verworfen.',
+    storageNotPersisted: 'Deine Daten liegen „nach Möglichkeit“ gespeichert: der Browser darf sie bei Speichermangel verwerfen.',
+    enablePersistence: 'Browser bitten, meine Daten zu behalten',
+    storageUsage: (used, quota) => `${used} von etwa ${quota} verfügbar belegt`,
+    cardDataTitle: 'Kartendaten',
+    cardDataNote: 'Die Kartendatenbank wird vom Server geladen und aktualisiert sich selbst, sobald eine neue Version veröffentlicht ist. Ein Neuladen berührt deine Decks und dein Inventar nie.',
+    cardDataVersion: (version) => `Geladene Kartendaten-Version ${version}`,
+    refreshCardData: 'Kartendaten neu laden',
+    refreshing: 'Wird neu geladen…',
+    refreshDone: 'Kartendaten neu geladen.',
+  },
+  help: {
+    eyebrow: 'Hilfe',
+    title: 'Schnell suchen. Lokal bauen. Die Kontrolle behalten.',
+    findCardsTitle: 'Karten finden',
+    findCards1: 'Nutze die Krypta- oder Bibliothekssuche für detaillierte, V5-exklusive Filter. Wähle ein Ergebnis, um die vollständige Kartenseite zu öffnen.',
+    findCards2: 'Drücke ⌘K auf macOS oder Strg+K anderswo, um jede Karte per Namen zu suchen.',
+    buildDecksTitle: 'Decks bauen',
+    buildDecks1: 'Erstelle ein lokales Deck, füge Karten per Namen hinzu und passe Mengen mit den kompakten Reglern an.',
+    buildDecks2: 'Textlisten importieren oder exportieren, eine Deck-URL teilen, Testhände ziehen, Decks vergleichen und die V5-Legalität prüfen.',
+    offlineTitle: 'Offline-Daten',
+    offline1: 'Beim ersten Besuch wird die V5-Kartendatenbank heruntergeladen. Spätere Suchen und Deck-Bearbeitungen nutzen browserlokales SQLite.',
+    offline2: 'Das Löschen des Browser-Speichers dieser Seite entfernt auch anonyme lokale Decks — exportiere daher wichtige Listen.',
+    apiTitle: 'Maschinen-API',
+    api1: 'MCP Streamable HTTP wird unter /mcp bereitgestellt; lokale Clients können schrecknet-server --mcp-stdio verwenden.',
+    api2: 'Gespiegelte Karten-REST-Endpunkte liegen unter /api/v1.',
+  },
+  about: {
+    eyebrow: 'Über SchreckNet',
+    title: 'Die V5-Kartenbibliothek und Deck-Werkstatt.',
+    lead: 'SchreckNet ist eine eigenständige, von Grund auf entwickelte Offline-first-Anwendung für VTES-Fifth-Edition-Kartenrecherche und Deckbau. VDB dient als Referenz für Funktionen und Bedienverhalten; SchreckNet übernimmt dessen Quellcode nicht und ist technisch nicht davon abhängig. Turnierarchive, Community-Ranglisten und Playtest-Programm-Funktionen liegen bewusst außerhalb des Umfangs.',
+    travelTitle: 'Für unterwegs gebaut',
+    travel1: 'Kartensuche und lokale Decks funktionieren weiter, nachdem die App und die V5-Datenbank zwischengespeichert wurden.',
+    travel2: 'Deine anonymen Decks liegen in einer separaten, beschreibbaren SQLite-Datenbank in diesem Browser.',
+    engineTitle: 'Eine Regel-Engine',
+    engine1: 'Die Rust-Domänenlogik läuft nativ auf dem Server und als WebAssembly im Browser.',
+    engine2: 'SQLite ist die Speicherschicht auf beiden Seiten; MCP und REST teilen sich dieselben Kartendienste.',
+    creditsTitle: 'Danksagungen',
+    creditsBuildsOn: 'SchreckNet nutzt',
+    creditsAnd: 'als Funktions- und Verhaltensreferenz; Kartendaten und Regelentscheidungen stammen von',
+    creditsCardData: '. Der Quellcode ist unter der MIT-Lizenz verfügbar.',
+    creditsRights:
+      'Teile des Materials sind Copyright und Marken von Paradox Interactive AB und werden mit Genehmigung verwendet. Alle Rechte vorbehalten. Weitere Informationen unter worldofdarkness.com. SchreckNet ist inoffizieller Fan-Inhalt und wird von Paradox Interactive weder unterstützt noch ist es damit verbunden; es handelt sich nicht um offizielles World-of-Darkness-Material.',
+  },
+  changelog: {
+    eyebrow: 'Änderungen',
+    title: 'Was sich bei SchreckNet geändert hat.',
+    lead: 'Meilensteine für die V5-Kartenrecherche- und Deckbau-Werkstatt.',
+    entries: [
+      { date: '2026-07-23', title: 'Private Spielgruppen & Ranglisten', summary: 'Verfolge lockere Partien mit deiner Stammgruppe und sieh eine gemeinsame Rangliste — ganz ohne Konto.', items: ['Tritt einer Gruppe per teilbarem Code bei, protokolliere Partien und verfolge Siege, VP und Archetyp-Performance.', 'Tritt mehreren Gruppen bei, bearbeite oder lösche eine protokollierte Partie, und sperre die Bearbeitung optional mit einer Passphrase.'] },
+      { date: '2026-07-23', title: 'Vorkonstruktionsmengen, endlich richtig', summary: 'Eine Vorkonstruktion zum Inventar hinzuzufügen nutzt jetzt die echte Kopienzahl pro Karte jeder Vorkonstruktion, statt einer pauschalen Schätzung.', items: ['Gib an, wie viele Exemplare einer Vorkonstruktion du besitzt; jede Karte wird um ihre echte Menge angepasst.', 'Der Vorkonstruktions-Browser zeigt auch, was du aus deinem Inventar bereits besitzt.'] },
+      { date: '2026-07-23', title: 'Neuer Look, und Deutsch', summary: 'SchreckNet hat eine neue Fledermaus-Siegel-Identität, und die Oberfläche ist jetzt auf Deutsch verfügbar.', items: ['Logo, Wortmarke und Slogan in der ganzen App aufgefrischt.', 'Impressum- und Datenschutzerklärung-Seiten für deutsche Besucher hinzugefügt.'] },
+      { date: '2026-07-22', title: 'Suche in deiner Sprache', summary: 'Krypta- und Bibliotheksrecherche folgt jetzt der gewählten Oberflächensprache Englisch, Spanisch oder Französisch.', items: ['Exakte, Regex-, semantische, Set-, Vorkonstruktions-, Merkmals- und Sortiersteuerungen lokalisiert.', 'Browser-Testabdeckung für beide Suchrouten auf Spanisch und Französisch hinzugefügt.'] },
+      { date: '2026-07-22', title: 'Responsives Deckbauen', summary: 'Die komplette Werkstatt passt jetzt auch auf kompakte Handys, ohne zentrale Aktionen zu verstecken.', items: ['Zehn Hauptrouten bei 320 px und 360 px geprüft.', 'Touch-Ziele, Inventar-Layout und den gefüllten Deck-Editor verbessert.'] },
+      { date: '2026-07-22', title: 'Lokales Inventar fertig', summary: 'Anonymes Inventar funktioniert offline neben lokalen Decks.', items: ['Filter für besessene Karten, Listen fehlender Karten, Wunschlisten-Export und Proxy-Integration hinzugefügt.', 'Inventar- und Deckdaten in der browserlokalen Benutzerdatenbank behalten.'] },
+      { date: '2026-07-21', title: 'Offline-semantische Recherche', summary: 'Konzeptsuche ist möglich, ohne Kartentext oder Anfragen an ein entferntes Modell zu senden.', items: ['Ein prüfsummenfixiertes lokales Modell und eingebettete V5-Vektoren hinzugefügt.', 'Browser-, REST- und MCP-Ergebnisreihenfolge über gemeinsamen Rust-Code synchron gehalten.'] },
+    ],
+  },
+  search: {
+    nameText: 'Name / Text', semanticPrompt: 'Beschreibe ein Kartenkonzept (Englisch)', all: 'Alle', any: 'Beliebig', not: 'Nicht', only: 'Nur', name: 'Name', text: 'Text', artist: 'Künstler', clear: 'leeren', loading: 'Lade Kartendatenbank…', loadError: 'Kartendatenbank konnte nicht geladen werden', noMatches: 'Keine Karten entsprechen diesen Filtern.', sort: 'Sortieren', relevance: 'Relevanz', onlyOwned: 'Nur besessene', onlyInFormat: 'Nur im Format', traits: 'Merkmale', allTraitsRequired: 'alle ausgewählten Merkmale erforderlich', set: 'Set', anySet: 'Beliebiges Set', setAge: 'Set-Alter-Beziehung', inSet: 'Im Set', orNewer: 'Oder neuer', orOlder: 'Oder älter', notNewer: 'Nicht neuer', notOlder: 'Nicht älter', printing: 'Druck-Beziehung', anyPrinting: 'Beliebiger Druck', onlyIn: 'Nur in', firstPrint: 'Erstdruck', reprint: 'Nachdruck', preconFilters: 'Vorkonstruktions-Filter', addPrecon: 'Vorkonstruktion hinzufügen', anyPrecon: 'Beliebige Vorkonstruktion / weitere hinzufügen…', selectedPrecons: 'Ausgewählte Vorkonstruktionen', removePrecon: (precon, set) => `${precon} aus ${set} entfernen`, semantic: 'Semantisch', semanticTitle: 'Karten per englischem Konzept mit dem lokalen Offline-Modell finden', semanticIdle: 'Beschreibe ein englisches Kartenkonzept. Die erste Nutzung lädt etwa 46 MB (Modell + Laufzeit) herunter; Anfragen bleiben auf diesem Gerät.', semanticLoading: 'Bereite das lokale semantische Modell vor…', semanticDownloading: 'Lokales Modell wird heruntergeladen', semanticReady: 'Lokales semantisches Modell bereit. Ergebnisse sind kosinussortiert; der Wert ist eine Ähnlichkeit, keine Wahrscheinlichkeit.', semanticUnavailable: (error) => `Semantisches Modell nicht verfügbar: ${error}`, retry: 'Erneut versuchen', removeModel: 'Lokales Modell entfernen',
+  },
+  cryptSearch: {
+    clanLabel: 'Klan', anyClan: 'Beliebiger Klan', titleLabel: 'Titel', anyTitle: 'Beliebiger Titel', nonTitled: 'Ohne Titel', votes: 'Stimmen', anyVotes: 'Beliebige Stimmen', noVotes: 'Keine Stimmen', votesAtLeast: (count) => `${count}+ Stimmen`, group: 'Gruppe', groupsAria: 'Kryptagruppen', sortAria: 'Kryptaergebnisse sortieren', capacity: 'Kap', minimum: 'min', maximum: 'max', sect: 'Sekte', orDiscipline: '+ ODER-Disziplin', choose: 'Wählen…', results: (count, semantic) => `${count} Kryptakarten${semantic ? ' semantisch' : ''}`, semanticEmpty: 'Beschreibe ein Konzept, um die V5-Krypta zu durchsuchen.', sortCapacityDesc: 'Kapazität hoch–niedrig', sortCapacityAsc: 'Kapazität niedrig–hoch', sortClan: 'Klan', sortGroup: 'Gruppe', sortName: 'Name', sortSect: 'Sekte', similarity: 'Ähnlichkeit',
+  },
+  librarySearch: {
+    anyType: 'Beliebiger Typ', anyClanRequirement: 'Beliebige Klan- / Pfad-Anforderung', requiresCapacity: 'erfordert Kap', capacityRequirementAria: 'Kapazitätsanforderung', capacityRequirementComparisonAria: 'Vergleich der Kapazitätsanforderung', blood: 'Blut', bloodCostAria: 'Blutkosten', bloodCostComparisonAria: 'Vergleich der Blutkosten', pool: 'Pool', poolCostAria: 'Poolkosten', poolCostComparisonAria: 'Vergleich der Poolkosten', sortAria: 'Bibliotheksergebnisse sortieren', disciplineLogic: 'Disziplin-Logik', noRequirement: 'Keine Anforderung', sect: 'Sekte', title: 'Titel', results: (count, semantic) => `${count} Bibliothekskarten${semantic ? ' semantisch' : ''}`, semanticEmpty: 'Beschreibe ein Konzept, um die V5-Bibliothek zu durchsuchen.', sortRequirement: 'Klan / Pfad / Disziplin', sortCostDesc: 'Kosten hoch–niedrig', sortCostAsc: 'Kosten niedrig–hoch', sortName: 'Name', sortType: 'Typ', similarity: 'Ähnlichkeit', requirement: 'Anforderung', notRequired: 'Nicht erforderlich', titledSpecific: 'Betitelt (bestimmt)', titledAny: 'Betitelt (beliebig)', nonTitled: 'Ohne Titel',
+  },
+  table: {
+    title: 'Tisch', intro: 'Erfasse Partien mit deiner privaten Spielgruppe und führe eine gemeinsame Rangliste — ohne Konto. Die Daten sind nur mit dem Gruppencode erreichbar.', cancel: 'Abbrechen', joinAnother: '+ Weiterer Gruppe beitreten', groupMissing: 'Diesen Gruppencode gibt es nicht mehr.', noGroup: 'Keine Gruppe hat diesen Code.', confirmLeave: (name) => `${name} verlassen? Du kannst später mit dem Code wieder beitreten.`, thisGroup: 'diese Gruppe', createGroup: 'Gruppe erstellen', groupExample: 'z. B. Donnerstags-Coterie', create: 'Erstellen', joinGroup: 'Gruppe beitreten', groupCode: 'Gruppencode', join: 'Beitreten', shareCode: 'Teile diesen privaten Code mit deiner Gruppe:', copied: 'Kopiert!', leaveGroup: 'Gruppe verlassen', loading: 'Lädt…', leaderboard: 'Rangliste', noGamesFirst: 'Noch keine Partien — erfasse unten die erste.', player: 'Spieler', games: 'Partien', totalVp: 'VP gesamt', avgVp: 'VP Ø', wins: 'Siege', winRate: 'Siegquote', logGame: 'Partie erfassen', editGame: 'Partie bearbeiten', datePlayed: 'Spieldatum', notes: 'Notizen (optional)', seat: (number) => `Sitz ${number}`, playerName: 'Spielername', deckOptional: 'Deck (optional)', archetype: 'Archetyp', anyArchetype: 'Archetyp (optional)', removeRow: (number) => `Spielerzeile ${number} entfernen`, addPlayer: '+ Spieler hinzufügen', addOnePlayer: 'Füge mindestens einen Spieler hinzu.', invalidVp: (name) => `${name}: VP müssen eine nichtnegative Zahl sein.`, saveChanges: 'Änderungen speichern', archetypePerformance: 'Archetypen-Auswertung', recentGames: 'Letzte Partien', exportCsv: 'CSV exportieren', exportText: 'Text exportieren', edit: 'Bearbeiten', delete: 'Löschen', deleting: 'Wird gelöscht…', deleteAria: (date) => `Partie vom ${date} löschen`, confirmDelete: (date, players) => `Partie vom ${date} (${players}) löschen? Sie wird dauerhaft aus der Rangliste entfernt.`, alreadyDeleted: 'Diese Partie wurde bereits gelöscht.', noGames: 'Noch keine Partien erfasst.', predator: (name) => `Predator: ${name}`, prey: (name) => `Prey: ${name}`, writePassphraseOptional: 'Schreib-Passphrase (optional, mindestens 8 Zeichen)', confirmPassphrase: 'Schreib-Passphrase bestätigen', passphraseTooShort: 'Die Schreib-Passphrase braucht mindestens 8 Zeichen.', passphrasesDiffer: 'Die Passphrasen stimmen nicht überein.', editingLocked: 'Bearbeitung gesperrt', editingLockedHelp: 'Mit dem Gruppencode kann jeder lesen. Gib die Schreib-Passphrase ein, um Partien hinzuzufügen, zu bearbeiten oder zu löschen.', writePassphrase: 'Schreib-Passphrase', unlockEditing: 'Bearbeitung entsperren', editingUnlocked: 'Die Bearbeitung ist für diese Browsersitzung entsperrt.', wrongPassphrase: 'Die Schreib-Passphrase ist falsch.',
+  },
+  inventory: {
+    title: 'Inventar', counts: (crypt, library) => `${crypt} Krypta · ${library} Bibliothek`, loading: 'Lade Inventar…', loadError: 'Inventar konnte nicht geladen werden', decreaseQty: 'Menge verringern', increaseQty: 'Menge erhöhen', importExportTitle: 'Text importieren / exportieren', exportTxt: 'Exportieren .txt', loadTxt: 'Laden .txt', importText: 'Text importieren…', hideImport: 'Import ausblenden', importPlaceholder: 'Füge eine Kartenliste ein, z. B.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', addToInventory: 'Zum Inventar hinzufügen', importing: 'Importiere…', addedCards: (count) => `${count} Karte${count === 1 ? '' : 'n'} hinzugefügt.`, couldNotMatch: (names) => `Konnte nicht gefunden werden: ${names}.`, addRemovePreconTitle: 'Vorkonstruktion hinzufügen / entfernen', preconNote: 'Gib an, wie viele Exemplare dieser Vorkonstruktion du besitzt — jede Karte wird um ihre echte Kopienzahl pro Vorkonstruktion angepasst (manche Vorkonstruktionen enthalten manche Karten mehrfach), nicht um eine feste Menge.', choosePrecon: 'Vorkonstruktion wählen…', preconQuantityLabel: 'Vorkonstruktionen', adding: 'Füge hinzu…', removeFromInventory: 'Aus Inventar entfernen', removing: 'Entferne…', addedCopies: (precons, count) => `${precons} Vorkonstruktion${precons === 1 ? '' : 'en'} hinzugefügt (${count} verschiedene Karten, mit der echten Kopienzahl pro Karte je Vorkonstruktion).`, removedCopies: (precons, count) => `${precons} Vorkonstruktion${precons === 1 ? '' : 'en'} entfernt (${count} verschiedene Karten, mit der echten Kopienzahl pro Karte je Vorkonstruktion).`, noOwnedPrecons: 'Von dieser Vorkonstruktion ist kein Exemplar als besessen erfasst.', missingCardsTitle: (total, count) => `Fehlende Karten — ${total} Exemplare auf ${count} Karte${count === 1 ? '' : 'n'}`, exportWantList: 'Wunschliste exportieren .txt', missingNote: 'Was jedes im Inventar erfasste Deck insgesamt noch braucht — Decks, die als "Nicht im Inventar" markiert sind, zählen nicht mit.', crypt: 'Krypta', library: 'Bibliothek', noCryptOwned: 'Noch keine Kryptakarten besessen.', noLibraryOwned: 'Noch keine Bibliothekskarten besessen.', removeAria: (name) => `${name} aus dem Inventar entfernen`, youOwn: (qty) => `Du besitzt ${qty}`, ownedBadge: (qty) => `Besessen ${qty}`,
+  },
+  addCardBox: {
+    placeholderCrypt: 'Kryptakarte per Namen hinzufügen…', placeholderLibrary: 'Bibliothekskarte per Namen hinzufügen…',
+  },
+  precons: {
+    title: 'Vorkonstruierte Decks', intro: 'Offizielle vorkonstruierte Decks der modernen BCP-/V5-Produktlinie, gruppiert nach Set.', cardCountNote: 'Spielfertige Deckliste mit der echten Anzahl jeder enthaltenen Karte.', loading: 'Lade Vorkonstruktionen…', loadError: (error) => `Vorkonstruktionen konnten nicht geladen werden: ${error}`, backToPrecons: '← Vorkonstruktionen', cardsSuffix: (count) => `${count} verschiedene Karten`, cryptCount: (count) => `Krypta · ${count}`, libraryCount: (count) => `Bibliothek · ${count}`, none: 'Keine', ownedOverview: (copies, distinct) => `${copies} Vorkonstruktion${copies === 1 ? '' : 'en'} besessen · ${distinct} verschiedene`, ownedOverviewNote: 'Zählt Produkte, die über das Inventar hinzugefügt wurden; lose Karten werden nicht fälschlich als physische Vorkonstruktionen gezählt.', ownedCopies: (count) => `${count} besessen`, notOwned: 'nicht besessen',
+  },
+  decks: {
+    newDeckPlaceholder: 'Name des neuen Decks', createDeck: 'Deck erstellen', compareTwoDecks: 'Zwei Decks vergleichen →', loading: 'Lade Decks…', loadError: (error) => `Deine Decks konnten nicht geladen werden: ${error}`, noDecks: 'Noch keine Decks — Decks werden lokal in diesem Browser gespeichert (kein Konto nötig).', ownsCopies: 'Besitzt Exemplare', sharesCopies: 'Teilt Exemplare', missingSuffix: (count) => `${count} fehlend`, byAuthor: (author) => `von ${author}`, clone: 'Klonen', delete: 'Löschen', confirmDelete: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`,
+  },
+  deckEditor: {
+    decreaseQty: 'Menge verringern', increaseQty: 'Menge erhöhen', inventoryModeLabel: 'Inventar', inventoryModeAria: 'Inventarmodus', modeExcluded: 'Nicht im Inventar', modeExcludedHint: 'Die Karten dieses Decks wirken sich nicht auf die Zählung fehlender Exemplare aus.', modeFlexible: 'Teilt Exemplare', modeFlexibleHint: 'Beansprucht Exemplare aus einem gemeinsamen Pool — andere flexible Decks können dieselben Exemplare nutzen.', modeFixed: 'Besitzt Exemplare', modeFixedHint: 'Beansprucht Exemplare exklusiv — kein anderes Deck kann darauf zählen.', missingBadge: (count) => `${count} fehlend`, fixedHint: 'Hier fest — beansprucht diese Exemplare exklusiv. Klicken, um stattdessen zu teilen.', flexibleHint: 'Hier flexibel — teilt Exemplare mit anderen Decks. Klicken, um exklusiv zu beanspruchen.', fixedLabel: 'Fest', flexibleLabel: 'Flexibel', importExportTitle: 'Text importieren / exportieren', exportTxt: 'Exportieren .txt', copied: 'Kopiert!', couldNotCopy: 'Kopieren fehlgeschlagen', copyText: 'Text kopieren', loadTxt: 'Laden .txt', hideImport: 'Import ausblenden', importText: 'Text importieren…', importPlaceholder: 'Füge eine Deckliste ein, z. B.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', importing: 'Importiere…', importIntoDeck: 'In dieses Deck importieren', addedCards: (count) => `${count} Karte${count === 1 ? '' : 'n'} hinzugefügt.`, couldNotMatch: (names) => `Konnte nicht gefunden werden: ${names}.`, drawErrorFallback: 'Testhand konnte nicht gezogen werden', testHand: 'Testhand', drawCrypt: 'Krypta ziehen', drawLibrary: 'Bibliothek ziehen', capAbbrev: (capacity) => `Kap ${capacity}`, archetypeScan: 'Archetyp-Scan', tagged: 'Getaggt', addTagButton: '+ Tag', removeTagAria: (name) => `Tag ${name} entfernen`, addTagPlaceholder: 'Tag hinzufügen…', addButton: 'Hinzufügen', loadingDeck: 'Lade Deck…', loadError: (error) => `Deck konnte nicht geladen werden: ${error}`, noDeckWithId: (id) => `Kein Deck mit der ID ${id}.`, backToDecks: 'Zurück zu den Decks', backArrow: '← Decks', linkCopied: 'Link kopiert!', share: 'Teilen', clone: 'Klonen', review: 'Überprüfung', printProxies: 'Proxys drucken', confirmDeleteDeck: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`, deleteDeck: 'Deck löschen', authorPlaceholder: 'Autor', descriptionPlaceholder: 'Deckbeschreibung, Strategie oder Notizen…', cryptWord: 'Krypta', libraryWord: 'Bibliothek', capacityWord: 'Kapazität', avgWord: 'Ø', v5Legal: 'V5 legal', limitedFormatLegal: 'Limitiertes Format legal', limitedViolationsText: (count, names) => `${count} Karte${count === 1 ? '' : 'n'} nicht im aktiven limitierten Format: ${names}`, libraryTypes: 'Bibliothekstypen', disciplinesLabel: 'Disziplinen', bloodCostCurve: 'Blutkosten-Kurve', poolCostCurve: 'Pool-Kosten-Kurve', copiesMissing: (count) => `${count} fehlende Exemplare`, allCopiesCovered: 'Alle Exemplare durch das Inventar gedeckt', cryptHeader: 'Krypta', sortLabel: 'Sortieren', sortOptionCapacity: 'Kapazität', sortOptionClan: 'Klan', sortOptionGroup: 'Gruppe', sortOptionName: 'Name', sortOptionQuantity: 'Menge', noCryptCards: 'Noch keine Kryptakarten.', libraryHeader: 'Bibliothek', noLibraryCards: 'Noch keine Bibliothekskarten.',
+  },
+  deckReview: {
+    loadError: (error) => `Deck konnte nicht überprüft werden: ${error}`, loading: 'Lade Deck-Überprüfung…', backToEdit: '← Deck bearbeiten', title: 'Deck-Überprüfung', byAuthor: (author) => `von ${author}`, crypt: 'Krypta', library: 'Bibliothek', capacity: 'Kapazität', average: (value) => `Durchschnitt ${value}`, legality: 'V5-Legalität', noViolations: 'Keine Verstöße gegen das Basisformat gefunden.', libraryComposition: 'Bibliothekszusammensetzung', disciplineFootprint: 'Disziplin-Verteilung', bloodCostCurve: 'Blutkosten-Kurve', poolCostCurve: 'Pool-Kosten-Kurve', timingWindows: 'Spielfenster',
+  },
+  limitedFormat: {
+    title: 'Limitiertes Format', introActive: 'Baue einen eigenen Kartenpool für ein Limited-/Draft-Event: wähle erlaubte Sets, erlaube oder verbanne dann einzelne Karten. Dieses Format ist aktiv — Decks zeigen seine Legalität neben der V5-Legalität an.', introInactive: 'Baue einen eigenen Kartenpool für ein Limited-/Draft-Event: wähle erlaubte Sets, erlaube oder verbanne dann einzelne Karten. Momentan leer, wirkt sich also nicht auf Decks aus.', importExportTitle: 'Importieren / Exportieren', exportTxt: 'Exportieren .txt', loadTxt: 'Laden .txt', importText: 'Text importieren…', hideImport: 'Import ausblenden', resetFormat: 'Format zurücksetzen', importPlaceholder: 'Füge ein exportiertes Limited-Format .txt ein', loadFormat: 'Format laden', importError: 'Die Datei konnte nicht gelesen werden — erwartet wurde das von dieser Seite exportierte JSON.', allowedSets: 'Erlaubte Sets', allowedCrypt: 'Erlaubte Kryptakarten', allowedLibrary: 'Erlaubte Bibliothekskarten', bannedCrypt: 'Verbannte Kryptakarten', bannedLibrary: 'Verbannte Bibliothekskarten', none: 'Keine', removeAria: (name) => `${name} entfernen`,
+  },
+  rules: {
+    subLoopEntry: 'Unterablauf-Einstieg', close: 'Schließen', summarizedNote: 'Dieser Zweig wird hier zusammengefasst, da er außerhalb der vier Kern-Detailansichten liegt.', unavailable: 'Regelreferenz nicht verfügbar', opening: 'Öffne die V5-Regelreferenz…', eyebrow: 'VTES-V5-Regelreferenz', heading: 'Ein Zug, in fünf klaren Phasen.', intro: 'Folge dem Zug eines Methusalems vom Entsperren bis zum Abwerfen. Wähle eine Phase, um zu sehen, was passiert und wo ihr tieferer Regelablauf beginnt.', complexityLabel: 'Regelkomplexität', complexityBasicHint: 'Kernablauf zum Lernen und Spielen.', complexityAdvancedHint: 'Vollständige Timing-Details für erfahrene Spieler und Judges.', basic: 'Einfach', advancedJudge: 'Erweitert / Judge', impulseOrder: 'Impuls- & Prioritätsreihenfolge →', turnPhasesAria: 'Zugphasen', phaseOf: (index, total) => `Phase ${index} von ${total}`, previous: '← Zurück', next: 'Weiter →', continueInto: 'Weiter in diese Phase', source: 'Quelle: der kanonische SchreckNet-V5-Spielablauf-Statechart · offline verfügbar',
+  },
+  deckDiff: {
+    title: 'Decks vergleichen', backToDecks: '← Decks', needTwoDecks: 'Lege mindestens zwei Decks an, um sie zu vergleichen.', deckA: 'Deck A', deckB: 'Deck B', identical: 'Decks sind identisch', changedCount: (count) => `${count} geänderte Karte${count === 1 ? '' : 'n'}`, quantityChanged: 'Menge geändert', onlyInA: 'Nur in Deck A', onlyInB: 'Nur in Deck B', unchanged: 'Unverändert',
+  },
+  sharedDeck: {
+    invalidLink: (error) => `Dieser Freigabelink ist ungültig: ${error}`, backToDecks: 'Zurück zu den Decks', loading: 'Lade geteiltes Deck…', title: 'Geteiltes Deck', namePlaceholder: 'Name für dieses Deck', saveAsNewDeck: 'Als neues Deck speichern', emptyDeck: 'Dieser Freigabelink verweist auf ein leeres Deck.', crypt: 'Krypta', library: 'Bibliothek', none: 'Keine',
+  },
+  proxy: {
+    backToDeck: '← Zurück zum Deck', print: 'Drucken / Als PDF speichern', onlyMissing: 'Nur fehlende Exemplare', caption: (count) => `${count} Karte${count === 1 ? '' : 'n'} in 2,5"×3,5" (echte Kartengröße), 9 pro US-Letter-Seite. Nur für den persönlichen Proxy-Gebrauch.`, empty: 'Dieses Deck hat noch keine Karten zum Drucken.',
+  },
+  badges: {
+    outOfFormat: 'Außerhalb des Formats', outOfFormatTooltip: 'Im aktiven limitierten Format nicht legal', rulingsHeading: 'Urteile', printingsHeading: 'Drucke', sourceFallback: 'Quelle', noRuleDetail: 'Für diesen Schritt sind keine weiteren Details erfasst.', previewCardImage: 'Kartenbild-Vorschau', previewImageFor: (name) => `Bildvorschau für ${name}`, cardImageAlt: (name) => `Karte ${name}`,
+  },
+  cardDetail: {
+    loading: 'Lade…', loadError: (error) => `Karte konnte nicht geladen werden: ${error}`, notFound: (id) => `Keine Karte mit der ID ${id} im V5-Pool.`, backToSearch: 'Zurück zur Suche', backToKindSearch: (kind) => `← zurück zur ${kind}-Suche`, englishName: (name) => `Englischer Name: ${name}`, groupSuffix: (group) => `· Gruppe ${group}`, requiresClan: (clan) => `· erfordert ${clan}`, requires: '· erfordert', bloodSuffix: (cost) => `· ${cost} Blut`, poolSuffix: (cost) => `· ${cost} Pool`, noTranslation: (lang) => `Keine ${lang}-Übersetzung für diese Karte verfügbar; zeige Englisch.`, cardTextLanguage: (lang) => `Kartentext: ${lang}`, artistsLabel: (_count, names) => `Künstler: ${names}`, availableCardText: (langs) => `Verfügbarer Kartentext: ${langs}`, printingsInline: 'Drucke:', fullPageLink: 'Vollständige Seite & Freigabelink →',
+  },
+  commandPalette: {
+    searchPlaceholder: 'Beliebige Karte nach Namen suchen…', noResults: (query) => `Keine Karten namens „${query}“.`,
+  },
+  searchDeckPanel: {
+    panelAria: 'Such-Deck', activeDeck: 'Aktives Deck', noLocalDecks: 'Keine lokalen Decks', hideDeck: 'Deck ausblenden', showDeck: 'Deck anzeigen', loadingDecks: 'Lade lokale Decks…', updateError: (error) => `Das lokale Deck konnte nicht aktualisiert werden: ${error}`, tryAgain: 'Erneut versuchen', createDeckPrompt: 'Erstelle ein lokales Deck, um während der Suche Karten hinzuzufügen.', goToDecks: 'Zu den Decks', summary: (crypt, library, total) => `${crypt} Krypta · ${library} Bibliothek · ${total} gesamt`, crypt: 'Krypta', library: 'Bibliothek', groupAria: (label) => `${label}-Karten`, emptyGroup: (label) => `Noch keine ${label}-Karten.`, savingChanges: 'Speichere Deck-Änderungen…', addAnother: (cardName, deckName, qty) => `Ein weiteres Exemplar von ${cardName} zu ${deckName} hinzufügen; aktuell ${qty}`, addToDeck: (cardName, deckName) => `${cardName} zu ${deckName} hinzufügen`, selectDeckFirst: (cardName) => `Erstelle oder wähle ein Deck, bevor du ${cardName} hinzufügst`, removeOneCopy: (cardName) => `Ein Exemplar von ${cardName} entfernen`, copiesAria: (qty) => `${qty} Exemplare`, addOneCopy: (cardName) => `Ein Exemplar von ${cardName} hinzufügen`,
+  },
+  cardTiming: {
+    heading: 'Wann kann ich das spielen?', fullReference: 'Vollständige Regelreferenz ansehen →',
+  },
+  gameLoopWidgets: {
+    breadcrumbAria: 'Regel-Breadcrumb', actionResolution: 'Aktionsauflösung', visibleNodes: (count) => `${count} sichtbare Knoten`, flowAria: (label) => `${label}-Ablauf`, advanced: 'Erweitert', nextPathsAria: 'Nächste Pfade', openBranch: (label) => `${label} öffnen →`, stateKindDecision: 'Entscheidung', stateKindNote: 'Timing-Hinweis', stateKindWindow: 'Spielfenster', stateKindStep: 'Schritt', impulsePriorityOrderLabel: 'Impuls- & Prioritätsreihenfolge', priorityWindow: 'Prioritätsfenster', whoPassesNext: 'Wer gibt den Impuls als Nächstes weiter?', impulseIntro: 'Der Impuls kehrt nach jedem Spielzug immer zum aktiven Methusalem zurück. Wähle einen Kontext, um zu sehen, wer Priorität bekommt und in welcher Reihenfolge, sobald weitergegeben wird.', contextAria: 'Kontext', seatActing: 'Aktiver Methusalem', seatDefender: 'Verteidiger', seatTargeted: 'Anvisiert', seatPasses: 'Weitergabe', seatPrey: 'Beute', seatPredator: 'Prädator', positionActing: 'Aktiv', stepOf: (step, total) => `Schritt ${step} von ${total}`, seatSuffix: (seat) => `— Sitz ${seat}`, firstPriority: 'Der aktive Methusalem hat zuerst Priorität.', passOrderNote: 'Der Impuls springt zum aktiven Methusalem zurück, sobald jemand spielt — das ist die Weitergabereihenfolge, wenn alle der Reihe nach ablehnen.', pause: 'Pause', animate: 'Animieren',
+  },
+  gameLoopHooks: {
+    HK_UNLOCK: 'Während der Entsperrphase.', HK_MASTER: 'Während deiner Herrenphase, einmal pro Zug.', HK_INFLUENCE: 'Während deiner Einflussphase.', HK_DISCARD: 'Während deiner Abwurfphase.', HK_ASANN: 'Beim Ankündigen einer Aktion.', HK_AMOD: 'Nachdem eine Aktion erklärt wurde, bevor sie sich auflöst.', HK_REACT: 'Als Reaktion auf eine Aktion gegen dich oder deine Verbündeten.', HK_BLOCK: 'Beim Erklären oder Anfechten eines Blockversuchs.', HK_REF: 'Solange ein Referendum oder eine Abstimmung offen ist.', HK_BLEED: 'Konkret während der Aderlassschaden ermittelt wird.', HK_CMB_RANGE: 'Zu Beginn einer Kampfrunde, wenn die Reichweite festgelegt wird.', HK_CMB_STRIKE: 'Während des Schlag-Schritts einer Kampfrunde.', HK_CMB_PRESS: 'Während des Fortsetzungs-Schritts, beim Weiterführen des Kampfes.', HK_CMB_END: 'Wenn der Kampf endet.', HK_OOT: 'Außerhalb deines Zugs, so als wäre es eine Herrenkarte während des Zugs eines anderen Spielers.', HK_INPLAY: 'Fortlaufend, sobald im Spiel.', HK_ASPLAYED: 'Sofort, sobald sie gespielt wird.',
+  },
+}
+
+export default de

@@ -5,7 +5,7 @@ import CommandPalette from './components/CommandPalette'
 import BackupReminder from './components/BackupReminder'
 import { cardDbVersion, getCardsMeta, type CardMeta } from './lib/db'
 import { languageLabel, useCardLanguage } from './lib/cardLanguage'
-import { getUiStrings, UI_LANGUAGES } from './lib/i18n'
+import { getUiStrings, loadUiLanguage, UI_LANGUAGES } from './lib/i18n'
 import { useRoute, navigate } from './lib/route'
 import { useDocumentHead } from './lib/documentHead'
 import { routeDocumentHead } from './lib/seo'
@@ -87,7 +87,11 @@ export default function App() {
               <button
                 key={option}
                 type="button"
-                onClick={() => setLanguage(option)}
+                // Load the pack before switching, so the UI never flashes
+                // English on the way to the chosen language. `loadUiLanguage`
+                // resolves immediately for an already-loaded pack (and for en),
+                // and never rejects.
+                onClick={() => void loadUiLanguage(option).then(() => setLanguage(option))}
                 aria-pressed={language === option}
                 aria-label={languageLabel(option)}
                 title={languageLabel(option)}

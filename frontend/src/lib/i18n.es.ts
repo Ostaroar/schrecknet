@@ -1,0 +1,192 @@
+// Split out of i18n.ts so the three non-English UI packs are code-split: every
+// visitor used to download all four languages (~33 KB gzip of it unused) to use
+// one. i18n.ts keeps `en` statically imported as the synchronous fallback and
+// registers this pack via `loadUiLanguage()` before first paint, which is why
+// `getUiStrings()` can stay synchronous and no component needed to change.
+// The `UiStrings` import is type-only, so there is no runtime import cycle.
+import type { UiStrings } from './i18n'
+
+const es: UiStrings = {
+  nav: {
+    cryptSearch: 'buscar cripta',
+    librarySearch: 'buscar biblioteca',
+    decks: 'mazos',
+    inventory: 'inventario',
+    limited: 'formato limitado',
+    precons: 'premontados',
+    table: 'mesa',
+    rules: 'reglas',
+    changelog: 'novedades',
+    help: 'ayuda',
+    about: 'acerca de',
+  },
+  header: {
+    cardTextLabel: 'Texto de carta',
+    cardCounts: (crypt, library) => `${crypt} cripta · ${library} biblioteca`,
+    v5Only: 'Solo V5',
+    tagline: 'Busca rápido. Construye en local. Mantén el control.',
+    routeLoading: 'Cargando…',
+  },
+  footer: {
+    copyright:
+      'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com.',
+    disclaimer:
+      'SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive. No es material oficial de World of Darkness.',
+    help: 'Ayuda',
+    about: 'Acerca de',
+    legal: 'Aviso legal',
+    support: 'Apoya este proyecto',
+    settings: 'Datos y copia de seguridad',
+  },
+  settings: {
+    title: 'Datos y copia de seguridad',
+    intro: 'Tus mazos e inventario se guardan solo en este navegador. Nada se sube, lo que también significa que nadie puede recuperarlo por ti: guarda una copia de seguridad.',
+    yourDataTitle: 'Tus datos',
+    yourDataNote: 'Una copia de seguridad contiene todo: los mazos con sus etiquetas, descripciones y modos de inventario, tus cantidades de cartas sueltas y las vorconstrucciones que posees.',
+    counts: (decks, cards, precons) => `${decks} mazo${decks === 1 ? '' : 's'} · ${cards} carta${cards === 1 ? '' : 's'} de inventario · ${precons} vorconstrucción${precons === 1 ? '' : 'es'} en posesión`,
+    downloadBackup: 'Descargar copia de seguridad',
+    creating: 'Creando copia de seguridad…',
+    backupCreated: (name) => `Guardado ${name}`,
+    restoreTitle: 'Restaurar una copia de seguridad',
+    restoreNote: 'Restaurar reemplaza todo lo que hay ahora en este navegador por el contenido del archivo. No se puede deshacer, así que primero se descarga una copia de tus datos actuales.',
+    chooseFile: 'Elegir archivo de copia…',
+    restoring: 'Restaurando…',
+    restoreConfirm: (currentDecks, currentCards, backupDecks, backupCards) =>
+      `¿Reemplazar tus datos actuales (${currentDecks} mazos, ${currentCards} cartas de inventario) por la copia (${backupDecks} mazos, ${backupCards} cartas)? No se puede deshacer.`,
+    restoreDone: 'Copia de seguridad restaurada.',
+    restoreFailed: (error) => `No se pudo restaurar: ${error}`,
+    sensitiveNote: 'El archivo también contiene los códigos y contraseñas de tus grupos de juego: trátalo como una contraseña.',
+    lastBackup: (when) => `Última copia: ${when}`,
+    neverBackedUp: 'Nunca has hecho una copia de seguridad.',
+    reminder: 'Tus mazos e inventario existen solo en este navegador. Descarga una copia para que borrar los datos del sitio no los pierda.',
+    storageTitle: 'Almacenamiento del navegador',
+    storagePersisted: 'Se ha pedido al navegador conservar tus datos y ha aceptado: no se descartarán automáticamente.',
+    storageNotPersisted: 'Tus datos se guardan «según disponibilidad»: el navegador puede descartarlos si queda poco espacio.',
+    enablePersistence: 'Pedir al navegador que conserve mis datos',
+    storageUsage: (used, quota) => `Usando ${used} de aproximadamente ${quota} disponibles`,
+    cardDataTitle: 'Datos de cartas',
+    cardDataNote: 'La base de datos de cartas se descarga del servidor y se actualiza cuando se publica una versión nueva. Recargarla nunca afecta a tus mazos ni a tu inventario.',
+    cardDataVersion: (version) => `Versión de datos de cartas cargada: ${version}`,
+    refreshCardData: 'Recargar datos de cartas',
+    refreshing: 'Recargando…',
+    refreshDone: 'Datos de cartas recargados.',
+  },
+  help: {
+    eyebrow: 'Ayuda',
+    title: 'Busca rápido. Construye en local. Mantén el control.',
+    findCardsTitle: 'Buscar cartas',
+    findCards1:
+      'Usa la búsqueda de Cripta o Biblioteca para filtros detallados exclusivos de V5. Selecciona un resultado para abrir su página completa.',
+    findCards2: 'Pulsa ⌘K en macOS o Ctrl+K en otros sistemas para buscar cualquier carta por nombre.',
+    buildDecksTitle: 'Construir mazos',
+    buildDecks1: 'Crea un mazo local, añade cartas por nombre y ajusta las cantidades con los controles compactos.',
+    buildDecks2: 'Importa o exporta listas de texto, comparte la URL de un mazo, roba manos de prueba, compara mazos y revisa la legalidad V5.',
+    offlineTitle: 'Datos sin conexión',
+    offline1:
+      'La primera visita descarga la base de datos de cartas V5. Las búsquedas y ediciones posteriores usan SQLite local del navegador.',
+    offline2:
+      'Borrar el almacenamiento del navegador de este sitio también elimina los mazos locales anónimos, así que exporta las listas importantes.',
+    apiTitle: 'API para máquinas',
+    api1: 'MCP Streamable HTTP se sirve en /mcp; los clientes locales pueden usar schrecknet-server --mcp-stdio.',
+    api2: 'Los endpoints REST de cartas, reflejo del MCP, están bajo /api/v1.',
+  },
+  about: {
+    eyebrow: 'Acerca de SchreckNet',
+    title: 'La biblioteca de cartas y el taller de mazos de V5.',
+    lead: 'SchreckNet es una aplicación independiente, creada desde cero y sin conexión, centrada exclusivamente en la investigación de cartas y la construcción de mazos de VTES Quinta Edición. VDB sirve como referencia de funciones y comportamiento; SchreckNet no reutiliza ni depende de su código fuente. Los archivos de torneos, las clasificaciones comunitarias y las funciones del programa de pruebas quedan deliberadamente fuera de su alcance.',
+    travelTitle: 'Hecho para viajar',
+    travel1: 'La búsqueda de cartas y los mazos locales siguen funcionando después de que la app y la base de datos V5 se hayan guardado en caché.',
+    travel2: 'Tus mazos anónimos viven en una base de datos SQLite separada y con permisos de escritura en este navegador.',
+    engineTitle: 'Un único motor de reglas',
+    engine1: 'La lógica de dominio en Rust se ejecuta de forma nativa en el servidor y como WebAssembly en el navegador.',
+    engine2: 'SQLite es la capa de almacenamiento en ambos lados; MCP y REST comparten los mismos servicios de cartas.',
+    creditsTitle: 'Créditos',
+    creditsBuildsOn: 'SchreckNet usa',
+    creditsAnd: 'como referencia de funciones y comportamiento; los datos de cartas y erratas proceden de',
+    creditsCardData: '. El código fuente está disponible bajo licencia MIT.',
+    creditsRights:
+      'Parte de este material es propiedad y marca registrada de Paradox Interactive AB, y se usa con permiso. Todos los derechos reservados. Para más información visite worldofdarkness.com. SchreckNet es contenido de fans no oficial y no está avalado ni afiliado a Paradox Interactive; no es material oficial de World of Darkness.',
+  },
+  changelog: {
+    eyebrow: 'Novedades',
+    title: 'Qué ha cambiado en SchreckNet.',
+    lead: 'Hitos del banco de trabajo para investigar cartas y construir mazos V5.',
+    entries: [
+      { date: '2026-07-23', title: 'Grupos de juego privados y clasificaciones', summary: 'Registra partidas informales con tu grupo habitual y consulta una clasificación compartida — sin necesidad de cuenta.', items: ['Únete a un grupo con un código para compartir, registra partidas y sigue victorias, VP y rendimiento por arquetipo.', 'Únete a más de un grupo, edita o elimina una partida registrada, y bloquea la edición con una frase de acceso opcional.'] },
+      { date: '2026-07-23', title: 'Cantidades de premontados, bien hechas', summary: 'Añadir un premontado a tu inventario ahora usa el número real de copias por carta de cada premontado, no una estimación fija.', items: ['Indica cuántas copias de un premontado tienes; cada carta se ajusta según su cantidad real.', 'El navegador de premontados también muestra lo que ya posees, tomado de tu inventario.'] },
+      { date: '2026-07-23', title: 'Nuevo aspecto, y alemán', summary: 'SchreckNet estrena una nueva identidad con sigilo de murciélago, y la interfaz ya está disponible en alemán.', items: ['Logo, wordmark y eslogan renovados en toda la aplicación.', 'Se añadieron páginas de Impressum y Datenschutzerklärung para visitantes alemanes.'] },
+      { date: '2026-07-22', title: 'Busca en tu idioma', summary: 'Los controles de Cripta y Biblioteca siguen ahora el idioma de interfaz seleccionado: inglés, español o francés.', items: ['Se han traducido los controles de búsqueda exacta, regex, semántica, edición, premontado, rasgos y ordenación.', 'La cobertura del navegador prueba ambas rutas de búsqueda en español y francés.'] },
+      { date: '2026-07-22', title: 'Construcción de mazos adaptable', summary: 'El banco de trabajo completo cabe ahora en teléfonos compactos sin ocultar las acciones principales.', items: ['Se han validado diez rutas principales a 320 px y 360 px.', 'Se han mejorado los objetivos táctiles, el inventario y el editor de mazos con cartas.'] },
+      { date: '2026-07-22', title: 'Inventario local completo', summary: 'El inventario anónimo funciona sin conexión junto a los mazos locales.', items: ['Incluye filtros de cartas propias, listas de faltantes, exportación de compras e integración con proxies.', 'El inventario y los mazos permanecen en la base local del navegador.'] },
+      { date: '2026-07-21', title: 'Investigación semántica sin conexión', summary: 'La búsqueda conceptual funciona sin enviar textos ni consultas a un modelo remoto.', items: ['Se añadió un modelo local verificado y vectores V5 integrados.', 'El navegador, REST y MCP comparten la clasificación implementada en Rust.'] },
+    ],
+  },
+  search: {
+    nameText: 'Nombre / texto', semanticPrompt: 'Describe un concepto de carta (en inglés)', all: 'Todos', any: 'Cualquiera', not: 'No', only: 'Solo', name: 'Nombre', text: 'Texto', artist: 'Artista', clear: 'limpiar', loading: 'Cargando la base de cartas…', loadError: 'No se pudo cargar la base de cartas', noMatches: 'Ninguna carta coincide con esos filtros.', sort: 'Ordenar', relevance: 'Relevancia', onlyOwned: 'Solo propias', onlyInFormat: 'Solo en formato', traits: 'Rasgos', allTraitsRequired: 'se requieren todos los rasgos seleccionados', set: 'Edición', anySet: 'Cualquier edición', setAge: 'Relación de edición', inSet: 'En la edición', orNewer: 'O más nueva', orOlder: 'O más antigua', notNewer: 'No más nueva', notOlder: 'No más antigua', printing: 'Relación de impresión', anyPrinting: 'Cualquier impresión', onlyIn: 'Solo en', firstPrint: 'Primera impresión', reprint: 'Reimpresión', preconFilters: 'Filtros de premontados', addPrecon: 'Añadir premontado', anyPrecon: 'Cualquier premontado / añadir otro…', selectedPrecons: 'Premontados seleccionados', removePrecon: (precon, set) => `Quitar ${precon} de ${set}`, semantic: 'Semántica', semanticTitle: 'Busca cartas por concepto en inglés con el modelo local sin conexión', semanticIdle: 'Describe un concepto de carta en inglés. El primer uso descarga unos 46 MB; las consultas permanecen en este dispositivo.', semanticLoading: 'Preparando el modelo semántico local…', semanticDownloading: 'Descargando el modelo local', semanticReady: 'Modelo semántico local listo. Los resultados se ordenan por similitud coseno; la puntuación no es una probabilidad.', semanticUnavailable: (error) => `Modelo semántico no disponible: ${error}`, retry: 'Reintentar', removeModel: 'Eliminar modelo local',
+  },
+  cryptSearch: {
+    clanLabel: 'Clan', anyClan: 'Cualquier clan', titleLabel: 'Título', anyTitle: 'Cualquier título', nonTitled: 'Sin título', votes: 'Votos', anyVotes: 'Cualquier voto', noVotes: 'Sin votos', votesAtLeast: (count) => `${count}+ votos`, group: 'Grupo', groupsAria: 'Grupos de cripta', sortAria: 'Ordenar resultados de cripta', capacity: 'cap', minimum: 'mín', maximum: 'máx', sect: 'Secta', orDiscipline: '+ disciplina O', choose: 'Elegir…', results: (count, semantic) => `${count} cartas de cripta${semantic ? ' semánticas' : ''}`, semanticEmpty: 'Describe un concepto para buscar en la cripta V5.', sortCapacityDesc: 'Capacidad mayor–menor', sortCapacityAsc: 'Capacidad menor–mayor', sortClan: 'Clan', sortGroup: 'Grupo', sortName: 'Nombre', sortSect: 'Secta', similarity: 'similitud',
+  },
+  librarySearch: {
+    anyType: 'Cualquier tipo', anyClanRequirement: 'Cualquier requisito de clan / senda', requiresCapacity: 'requiere cap', capacityRequirementAria: 'Requisito de capacidad', capacityRequirementComparisonAria: 'Comparación de requisito de capacidad', blood: 'sangre', bloodCostAria: 'Coste de sangre', bloodCostComparisonAria: 'Comparación de coste de sangre', pool: 'pool', poolCostAria: 'Coste de pool', poolCostComparisonAria: 'Comparación de coste de pool', sortAria: 'Ordenar resultados de biblioteca', disciplineLogic: 'Lógica de disciplinas', noRequirement: 'Sin requisito', sect: 'Secta', title: 'Título', results: (count, semantic) => `${count} cartas de biblioteca${semantic ? ' semánticas' : ''}`, semanticEmpty: 'Describe un concepto para buscar en la biblioteca V5.', sortRequirement: 'Clan / senda / disciplina', sortCostDesc: 'Coste mayor–menor', sortCostAsc: 'Coste menor–mayor', sortName: 'Nombre', sortType: 'Tipo', similarity: 'similitud', requirement: 'requisito', notRequired: 'No requerido', titledSpecific: 'Con título (específico)', titledAny: 'Con título (cualquiera)', nonTitled: 'Sin título',
+  },
+  table: {
+    title: 'Mesa', intro: 'Registra partidas con tu grupo privado y mantén una clasificación compartida, sin cuenta. Solo se accede a los datos con el código del grupo.', cancel: 'Cancelar', joinAnother: '+ Unirse a otro', groupMissing: 'Ese código de grupo ya no existe.', noGroup: 'No existe un grupo con ese código.', confirmLeave: (name) => `¿Salir de ${name}? Puedes volver a unirte con su código.`, thisGroup: 'este grupo', createGroup: 'Crear un grupo', groupExample: 'p. ej. Coterie del jueves', create: 'Crear', joinGroup: 'Unirse a un grupo', groupCode: 'Código del grupo', join: 'Unirse', shareCode: 'Comparte este código privado con tu grupo:', copied: '¡Copiado!', leaveGroup: 'Salir del grupo', loading: 'Cargando…', leaderboard: 'Clasificación', noGamesFirst: 'Aún no hay partidas — registra la primera abajo.', player: 'Jugador', games: 'Partidas', totalVp: 'VP total', avgVp: 'VP medio', wins: 'Victorias', winRate: '% victorias', logGame: 'Registrar partida', editGame: 'Editar partida', datePlayed: 'Fecha', notes: 'Notas (opcional)', seat: (number) => `Asiento ${number}`, playerName: 'Nombre del jugador', deckOptional: 'Mazo (opcional)', archetype: 'Arquetipo', anyArchetype: 'Arquetipo (opcional)', removeRow: (number) => `Quitar fila ${number}`, addPlayer: '+ Añadir jugador', addOnePlayer: 'Añade al menos un jugador.', invalidVp: (name) => `${name}: los VP deben ser un número no negativo.`, saveChanges: 'Guardar cambios', archetypePerformance: 'Rendimiento por arquetipo', recentGames: 'Partidas recientes', exportCsv: 'Exportar CSV', exportText: 'Exportar texto', edit: 'Editar', delete: 'Eliminar', deleting: 'Eliminando…', deleteAria: (date) => `Eliminar la partida del ${date}`, confirmDelete: (date, players) => `¿Eliminar la partida del ${date} (${players})? Se quitará permanentemente de la clasificación.`, alreadyDeleted: 'Esa partida ya se había eliminado.', noGames: 'Aún no hay partidas.', predator: (name) => `Depredador: ${name}`, prey: (name) => `Presa: ${name}`, writePassphraseOptional: 'Frase de escritura (opcional, 8+ caracteres)', confirmPassphrase: 'Confirmar frase de escritura', passphraseTooShort: 'La frase de escritura necesita al menos 8 caracteres.', passphrasesDiffer: 'Las frases no coinciden.', editingLocked: 'Edición bloqueada', editingLockedHelp: 'Cualquiera con el código puede leer. Introduce la frase para añadir, editar o eliminar partidas.', writePassphrase: 'Frase de escritura', unlockEditing: 'Desbloquear edición', editingUnlocked: 'La edición está desbloqueada durante esta sesión.', wrongPassphrase: 'La frase de escritura es incorrecta.',
+  },
+  inventory: {
+    title: 'Inventario', counts: (crypt, library) => `${crypt} cripta · ${library} biblioteca`, loading: 'Cargando inventario…', loadError: 'No se pudo cargar el inventario', decreaseQty: 'Disminuir cantidad', increaseQty: 'Aumentar cantidad', importExportTitle: 'Importar / exportar texto', exportTxt: 'Exportar .txt', loadTxt: 'Cargar .txt', importText: 'Importar texto…', hideImport: 'Ocultar importación', importPlaceholder: 'Pega una lista de cartas, p. ej.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', addToInventory: 'Añadir al inventario', importing: 'Importando…', addedCards: (count) => `${count} carta${count === 1 ? '' : 's'} añadida${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `No se pudo encontrar: ${names}.`, addRemovePreconTitle: 'Añadir / quitar un premontado', preconNote: 'Indica cuántas copias de este premontado tienes — cada carta se ajusta según su número real de copias por premontado (algunos premontados incluyen más de una copia de ciertas cartas), no una cantidad fija.', choosePrecon: 'Elegir un premontado…', preconQuantityLabel: 'Premontados', adding: 'Añadiendo…', removeFromInventory: 'Quitar del inventario', removing: 'Quitando…', addedCopies: (precons, count) => `Añadido${precons === 1 ? '' : 's'} ${precons} premontado${precons === 1 ? '' : 's'} (${count} cartas distintas, usando el número real de copias por carta de cada premontado).`, removedCopies: (precons, count) => `Quitado${precons === 1 ? '' : 's'} ${precons} premontado${precons === 1 ? '' : 's'} (${count} cartas distintas, usando el número real de copias por carta de cada premontado).`, noOwnedPrecons: 'No hay ninguna copia de este premontado registrada.', missingCardsTitle: (total, count) => `Cartas que faltan — ${total} copias en ${count} carta${count === 1 ? '' : 's'}`, exportWantList: 'Exportar lista de deseos .txt', missingNote: 'Lo que necesita en total cada mazo con seguimiento de inventario — los mazos marcados "No en inventario" no cuentan.', crypt: 'Cripta', library: 'Biblioteca', noCryptOwned: 'Aún no posees cartas de cripta.', noLibraryOwned: 'Aún no posees cartas de biblioteca.', removeAria: (name) => `Quitar ${name} del inventario`, youOwn: (qty) => `Posees ${qty}`, ownedBadge: (qty) => `Poseídas ${qty}`,
+  },
+  addCardBox: {
+    placeholderCrypt: 'Añadir carta de cripta por nombre…', placeholderLibrary: 'Añadir carta de biblioteca por nombre…',
+  },
+  precons: {
+    title: 'Mazos premontados', intro: 'Mazos preconstruidos oficiales de la línea moderna BCP/V5, agrupados por edición.', cardCountNote: 'Lista lista para jugar con la cantidad real de cada carta.', loading: 'Cargando premontados…', loadError: (error) => `No se pudieron cargar los premontados: ${error}`, backToPrecons: '← Premontados', cardsSuffix: (count) => `${count} cartas distintas`, cryptCount: (count) => `Cripta · ${count}`, libraryCount: (count) => `Biblioteca · ${count}`, none: 'Ninguna', ownedOverview: (copies, distinct) => `${copies} premontado${copies === 1 ? '' : 's'} · ${distinct} diferente${distinct === 1 ? '' : 's'}`, ownedOverviewNote: 'Cuenta productos añadidos desde el inventario; las cartas sueltas no se confunden con premontados físicos.', ownedCopies: (count) => `${count} propio${count === 1 ? '' : 's'}`, notOwned: 'no propio',
+  },
+  decks: {
+    newDeckPlaceholder: 'Nombre del mazo nuevo', createDeck: 'Crear mazo', compareTwoDecks: 'Comparar dos mazos →', loading: 'Cargando mazos…', loadError: (error) => `No se pudieron cargar tus mazos: ${error}`, noDecks: 'Aún no hay mazos — los mazos se guardan localmente en este navegador (sin necesidad de cuenta).', ownsCopies: 'Posee copias', sharesCopies: 'Comparte copias', missingSuffix: (count) => `${count} faltantes`, byAuthor: (author) => `por ${author}`, clone: 'Clonar', delete: 'Eliminar', confirmDelete: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`,
+  },
+  deckEditor: {
+    decreaseQty: 'Disminuir cantidad', increaseQty: 'Aumentar cantidad', inventoryModeLabel: 'Inventario', inventoryModeAria: 'Modo de inventario', modeExcluded: 'No en inventario', modeExcludedHint: 'Las cartas de este mazo no afectan al recuento de copias faltantes.', modeFlexible: 'Comparte copias', modeFlexibleHint: 'Reclama copias de un fondo compartido — otros mazos flexibles pueden usar las mismas copias.', modeFixed: 'Posee copias', modeFixedHint: 'Reclama copias en exclusiva — ningún otro mazo puede contar con ellas.', missingBadge: (count) => `${count} faltantes`, fixedHint: 'Fijo aquí — reclama estas copias en exclusiva. Haz clic para compartir en su lugar.', flexibleHint: 'Flexible aquí — comparte copias con otros mazos. Haz clic para reclamarlas en exclusiva.', fixedLabel: 'Fijo', flexibleLabel: 'Flexible', importExportTitle: 'Importar / exportar texto', exportTxt: 'Exportar .txt', copied: '¡Copiado!', couldNotCopy: 'No se pudo copiar', copyText: 'Copiar texto', loadTxt: 'Cargar .txt', hideImport: 'Ocultar importación', importText: 'Importar texto…', importPlaceholder: 'Pega una lista de mazo, p. ej.\n4x Deflection\n1x Aaradhya, The Callous Tyrant', importing: 'Importando…', importIntoDeck: 'Importar a este mazo', addedCards: (count) => `${count} carta${count === 1 ? '' : 's'} añadida${count === 1 ? '' : 's'}.`, couldNotMatch: (names) => `No se pudo encontrar: ${names}.`, drawErrorFallback: 'No se pudo robar una mano de prueba', testHand: 'Mano de prueba', drawCrypt: 'Robar cripta', drawLibrary: 'Robar biblioteca', capAbbrev: (capacity) => `cap ${capacity}`, archetypeScan: 'Análisis de arquetipos', tagged: 'Etiquetado', addTagButton: '+ etiqueta', removeTagAria: (name) => `Quitar etiqueta ${name}`, addTagPlaceholder: 'Añadir etiqueta…', addButton: 'Añadir', loadingDeck: 'Cargando mazo…', loadError: (error) => `No se pudo cargar el mazo: ${error}`, noDeckWithId: (id) => `No hay ningún mazo con id ${id}.`, backToDecks: 'Volver a mazos', backArrow: '← mazos', linkCopied: '¡Enlace copiado!', share: 'Compartir', clone: 'Clonar', review: 'Revisión', printProxies: 'Imprimir proxies', confirmDeleteDeck: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`, deleteDeck: 'Eliminar mazo', authorPlaceholder: 'Autor', descriptionPlaceholder: 'Descripción del mazo, estrategia o notas…', cryptWord: 'cripta', libraryWord: 'biblioteca', capacityWord: 'capacidad', avgWord: 'prom', v5Legal: 'V5 legal', limitedFormatLegal: 'Formato limitado legal', limitedViolationsText: (count, names) => `${count} carta${count === 1 ? '' : 's'} fuera del formato limitado activo: ${names}`, libraryTypes: 'Tipos de biblioteca', disciplinesLabel: 'Disciplinas', bloodCostCurve: 'Curva de coste de sangre', poolCostCurve: 'Curva de coste de pool', copiesMissing: (count) => `${count} copias faltantes`, allCopiesCovered: 'Todas las copias cubiertas por el inventario', cryptHeader: 'Cripta', sortLabel: 'Ordenar', sortOptionCapacity: 'Capacidad', sortOptionClan: 'Clan', sortOptionGroup: 'Grupo', sortOptionName: 'Nombre', sortOptionQuantity: 'Cantidad', noCryptCards: 'Aún no hay cartas de cripta.', libraryHeader: 'Biblioteca', noLibraryCards: 'Aún no hay cartas de biblioteca.',
+  },
+  deckReview: {
+    loadError: (error) => `No se pudo revisar el mazo: ${error}`, loading: 'Cargando revisión del mazo…', backToEdit: '← editar mazo', title: 'Revisión del mazo', byAuthor: (author) => `por ${author}`, crypt: 'Cripta', library: 'Biblioteca', capacity: 'Capacidad', average: (value) => `promedio ${value}`, legality: 'Legalidad V5', noViolations: 'No se encontraron infracciones del formato base.', libraryComposition: 'Composición de la biblioteca', disciplineFootprint: 'Distribución de disciplinas', bloodCostCurve: 'Curva de coste de sangre', poolCostCurve: 'Curva de coste de pool', timingWindows: 'Ventanas de juego',
+  },
+  limitedFormat: {
+    title: 'Formato limitado', introActive: 'Crea un conjunto de cartas personalizado para un evento limitado/draft: elige las ediciones permitidas y luego permite o prohíbe cartas individuales. Este formato está activo — los mazos muestran su legalidad junto a la legalidad V5.', introInactive: 'Crea un conjunto de cartas personalizado para un evento limitado/draft: elige las ediciones permitidas y luego permite o prohíbe cartas individuales. Está vacío por ahora, así que no afecta a los mazos.', importExportTitle: 'Importar / exportar', exportTxt: 'Exportar .txt', loadTxt: 'Cargar .txt', importText: 'Importar texto…', hideImport: 'Ocultar importación', resetFormat: 'Restablecer formato', importPlaceholder: 'Pega un formato limitado exportado .txt', loadFormat: 'Cargar formato', importError: 'No se pudo interpretar ese archivo — se esperaba el JSON exportado desde esta página.', allowedSets: 'Ediciones permitidas', allowedCrypt: 'Cartas de cripta permitidas', allowedLibrary: 'Cartas de biblioteca permitidas', bannedCrypt: 'Cartas de cripta prohibidas', bannedLibrary: 'Cartas de biblioteca prohibidas', none: 'Ninguna', removeAria: (name) => `Quitar ${name}`,
+  },
+  rules: {
+    subLoopEntry: 'Entrada al subciclo', close: 'Cerrar', summarizedNote: 'Esta rama se resume aquí porque queda fuera de las cuatro secciones detalladas principales.', unavailable: 'Referencia de reglas no disponible', opening: 'Abriendo la referencia de reglas V5…', eyebrow: 'Referencia de reglas VTES V5', heading: 'Un turno, en cinco fases claras.', intro: 'Sigue el turno de un matusalén desde el desbloqueo hasta el descarte. Elige una fase para ver qué ocurre y dónde empieza su subciclo de reglas.', complexityLabel: 'Complejidad de las reglas', complexityBasicHint: 'Flujo esencial para aprender y jugar.', complexityAdvancedHint: 'Detalle completo de tiempos para jugadores experimentados y jueces.', basic: 'Básico', advancedJudge: 'Avanzado / Juez', impulseOrder: 'Orden de impulso y prioridad →', turnPhasesAria: 'Fases del turno', phaseOf: (index, total) => `Fase ${index} de ${total}`, previous: '← Anterior', next: 'Siguiente →', continueInto: 'Continuar en esta fase', source: 'Fuente: el diagrama de estados canónico del ciclo de juego V5 de SchreckNet · disponible sin conexión',
+  },
+  deckDiff: {
+    title: 'Comparar mazos', backToDecks: '← Mazos', needTwoDecks: 'Crea al menos dos mazos para compararlos.', deckA: 'Mazo A', deckB: 'Mazo B', identical: 'Los mazos son idénticos', changedCount: (count) => `${count} carta${count === 1 ? '' : 's'} con cambios`, quantityChanged: 'Cantidad modificada', onlyInA: 'Solo en el mazo A', onlyInB: 'Solo en el mazo B', unchanged: 'Sin cambios',
+  },
+  sharedDeck: {
+    invalidLink: (error) => `Este enlace no es válido: ${error}`, backToDecks: 'Volver a mazos', loading: 'Cargando mazo compartido…', title: 'Mazo compartido', namePlaceholder: 'Nombra este mazo', saveAsNewDeck: 'Guardar como mazo nuevo', emptyDeck: 'Este enlace apunta a un mazo vacío.', crypt: 'Cripta', library: 'Biblioteca', none: 'Ninguna',
+  },
+  proxy: {
+    backToDeck: '← Volver al mazo', print: 'Imprimir / Guardar como PDF', onlyMissing: 'Solo copias faltantes', caption: (count) => `${count} carta${count === 1 ? '' : 's'} a 2,5"×3,5" (tamaño real), 9 por página carta EE. UU. Solo para uso personal como proxy.`, empty: 'Este mazo aún no tiene cartas para imprimir.',
+  },
+  badges: {
+    outOfFormat: 'Fuera de formato', outOfFormatTooltip: 'No es legal en el formato limitado activo', rulingsHeading: 'Fallos', printingsHeading: 'Ediciones', sourceFallback: 'Fuente', noRuleDetail: 'No hay más detalle registrado para este paso.', previewCardImage: 'Vista previa de la carta', previewImageFor: (name) => `Vista previa de la imagen de ${name}`, cardImageAlt: (name) => `Carta ${name}`,
+  },
+  cardDetail: {
+    loading: 'Cargando…', loadError: (error) => `No se pudo cargar la carta: ${error}`, notFound: (id) => `No hay ninguna carta con id ${id} en el pool V5.`, backToSearch: 'Volver a la búsqueda', backToKindSearch: (kind) => `← volver a la búsqueda de ${kind}`, englishName: (name) => `Nombre en inglés: ${name}`, groupSuffix: (group) => `· Grupo ${group}`, requiresClan: (clan) => `· requiere ${clan}`, requires: '· requiere', bloodSuffix: (cost) => `· ${cost} sangre`, poolSuffix: (cost) => `· ${cost} pool`, noTranslation: (lang) => `No hay traducción al ${lang} disponible para esta carta; se muestra en inglés.`, cardTextLanguage: (lang) => `Texto de la carta: ${lang}`, artistsLabel: (count, names) => `Artista${count > 1 ? 's' : ''}: ${names}`, availableCardText: (langs) => `Texto de carta disponible: ${langs}`, printingsInline: 'Ediciones:', fullPageLink: 'Página completa y enlace para compartir →',
+  },
+  commandPalette: {
+    searchPlaceholder: 'Busca cualquier carta por nombre…', noResults: (query) => `No hay cartas llamadas «${query}».`,
+  },
+  searchDeckPanel: {
+    panelAria: 'Mazo de búsqueda', activeDeck: 'Mazo activo', noLocalDecks: 'No hay mazos locales', hideDeck: 'Ocultar mazo', showDeck: 'Mostrar mazo', loadingDecks: 'Cargando mazos locales…', updateError: (error) => `No se pudo actualizar el mazo local: ${error}`, tryAgain: 'Reintentar', createDeckPrompt: 'Crea un mazo local para añadir cartas mientras buscas.', goToDecks: 'Ir a mazos', summary: (crypt, library, total) => `${crypt} cripta · ${library} biblioteca · ${total} total`, crypt: 'Cripta', library: 'Biblioteca', groupAria: (label) => `Cartas de ${label.toLowerCase()}`, emptyGroup: (label) => `Aún no hay cartas de ${label.toLowerCase()}.`, savingChanges: 'Guardando cambios del mazo…', addAnother: (cardName, deckName, qty) => `Añadir otra copia de ${cardName} a ${deckName}; actualmente ${qty}`, addToDeck: (cardName, deckName) => `Añadir ${cardName} a ${deckName}`, selectDeckFirst: (cardName) => `Crea o selecciona un mazo antes de añadir ${cardName}`, removeOneCopy: (cardName) => `Quitar una copia de ${cardName}`, copiesAria: (qty) => `${qty} copias`, addOneCopy: (cardName) => `Añadir una copia de ${cardName}`,
+  },
+  cardTiming: {
+    heading: '¿Cuándo puedo jugar esto?', fullReference: 'Ver la referencia de reglas completa →',
+  },
+  gameLoopWidgets: {
+    breadcrumbAria: 'Ruta de navegación de reglas', actionResolution: 'Resolución de acción', visibleNodes: (count) => `${count} nodos visibles`, flowAria: (label) => `Flujo de ${label}`, advanced: 'Avanzado', nextPathsAria: 'Siguientes caminos', openBranch: (label) => `Abrir ${label} →`, stateKindDecision: 'Decisión', stateKindNote: 'Nota de tiempo', stateKindWindow: 'Ventana de juego', stateKindStep: 'Paso', impulsePriorityOrderLabel: 'Orden de impulso y prioridad', priorityWindow: 'Ventana de prioridad', whoPassesNext: '¿Quién pasa el impulso a continuación?', impulseIntro: 'El impulso siempre vuelve al matusalén activo tras cualquier jugada. Elige un contexto para ver quién tiene prioridad, y en qué orden, una vez que pasan.', contextAria: 'Contexto', seatActing: 'Matusalén activo', seatDefender: 'Defensor', seatTargeted: 'Objetivo', seatPasses: 'Pasa', seatPrey: 'Presa', seatPredator: 'Depredador', positionActing: 'Activo', stepOf: (step, total) => `Paso ${step} de ${total}`, seatSuffix: (seat) => `— asiento ${seat}`, firstPriority: 'El matusalén activo tiene prioridad primero.', passOrderNote: 'El impulso vuelve al matusalén activo en cuanto alguien juega — este es el orden de paso si todos declinan por turno.', pause: 'Pausar', animate: 'Animar',
+  },
+  gameLoopHooks: {
+    HK_UNLOCK: 'Durante la fase de desbloqueo.', HK_MASTER: 'Durante tu fase heril, una vez por turno.', HK_INFLUENCE: 'Durante tu fase de influencia.', HK_DISCARD: 'Durante tu fase de descarte.', HK_ASANN: 'Al anunciar una acción.', HK_AMOD: 'Tras declararse una acción, antes de que se resuelva.', HK_REACT: 'En reacción a una acción dirigida a ti o a tus aliados.', HK_BLOCK: 'Al declarar o disputar un intento de bloqueo.', HK_REF: 'Mientras haya un referéndum o votación abiertos.', HK_BLEED: 'Específicamente mientras se determina el daño de sangrado.', HK_CMB_RANGE: 'Al inicio de una ronda de combate, cuando se fija el alcance.', HK_CMB_STRIKE: 'Durante el paso de golpe de una ronda de combate.', HK_CMB_PRESS: 'Durante el paso de continuar, al proseguir el combate.', HK_CMB_END: 'Al terminar el combate.', HK_OOT: 'Fuera de turno, como si fuera una carta heril durante el turno de otro jugador.', HK_INPLAY: 'De forma continua, mientras esté en juego.', HK_ASPLAYED: 'Inmediatamente, al jugarse.',
+  },
+}
+
+export default es
