@@ -174,7 +174,10 @@ async fn main() {
         Default::default(),
     );
 
-    let app = Router::new()
+    // Annotated `Router<()>` so the whole chain's `with_state<S2>` resolves
+    // S2 = () right here, rather than leaving it a free type variable for
+    // the later `.merge(SwaggerUi...)` to fail to pin down on its own.
+    let app: Router<()> = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/api/v1/meta", get(meta))
         .route("/api/v1/crypt/search", get(api::search_crypt))
