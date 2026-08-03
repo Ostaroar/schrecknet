@@ -12,8 +12,7 @@ pub struct GetCardParams {
     pub id: i64,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
-#[derive(utoipa::IntoParams)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct GetCardByNameParams {
     /// Exact canonical or ASCII-folded card name (case-insensitive).
     pub name: String,

@@ -12,8 +12,7 @@ use rusqlite::Connection;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default, Deserialize, JsonSchema, utoipa::ToSchema)]
-#[derive(utoipa::IntoParams)]
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct CryptSearchParams {
     /// Substring match against card name or card text (case-sensitive as stored).
     #[serde(default)]
@@ -453,8 +452,7 @@ pub struct CryptCard {
     pub disciplines: Vec<Discipline>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, JsonSchema, utoipa::ToSchema)]
-#[derive(utoipa::IntoParams)]
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct LibrarySearchParams {
     /// Substring match against card name or card text.
     #[serde(default)]
@@ -1000,8 +998,7 @@ pub fn list_precons(conn: &Connection) -> rusqlite::Result<Vec<PreconSummary>> {
     rows.collect()
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
-#[derive(utoipa::IntoParams)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct PreconCardCountsParams {
     /// Exact set name, as returned by list_precons (e.g. "Fifth Edition").
     pub set: String,

@@ -214,8 +214,11 @@ async fn main() {
         .route("/help", get(api::get_prerendered_help))
         .route("/about", get(api::get_prerendered_about))
         .route("/changelog", get(api::get_prerendered_changelog))
-        .merge(SwaggerUi::new("/api/v1/docs").url("/api/v1/openapi.json", ApiDoc::openapi()))
         .with_state(state)
+        // Swagger UI needs no AppState, so it's merged after `with_state`
+        // collapses the router to `Router<()>` — `SwaggerUi` only implements
+        // `Into<Router<()>>`, not a generic `Into<Router<S>>`.
+        .merge(SwaggerUi::new("/api/v1/docs").url("/api/v1/openapi.json", ApiDoc::openapi()))
         // Vite's hashed build output — safe to cache forever (see
         // cache_control_for_mount's doc comment).
         .nest_service(
