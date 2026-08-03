@@ -17,7 +17,7 @@ const DEFAULT_LIMIT: usize = 20;
 const MAX_LIMIT: usize = 50;
 const MAX_QUERY_CHARS: usize = 512;
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, JsonSchema, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SemanticKind {
     #[default]
@@ -26,7 +26,7 @@ pub enum SemanticKind {
     Library,
 }
 
-#[derive(Clone, Debug, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct SemanticSearchParams {
     /// English concept query, e.g. "wake and block" or "gain pool".
     #[schemars(length(min = 1, max = 512))]
@@ -56,7 +56,7 @@ fn default_limit() -> usize {
     DEFAULT_LIMIT
 }
 
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq, utoipa::ToSchema)]
 pub struct SemanticHit {
     pub id: i64,
     pub name: String,

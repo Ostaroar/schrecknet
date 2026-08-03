@@ -25,6 +25,39 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+/// REST/OpenAPI mirror of the MCP tools (AGENTS.md hard rule 2, ADR 0003,
+/// docs/adr/0017-utoipa-for-openapi.md). `paths(...)` pulls in every
+/// `#[utoipa::path]`-annotated handler in `api.rs`; utoipa collects their
+/// request/response schemas transitively, so they don't need repeating here.
+#[derive(OpenApi)]
+#[openapi(
+    info(title = "SchreckNet API", description = "REST mirror of the MCP tools — see /mcp for the primary machine API."),
+    paths(
+        api::search_crypt,
+        api::search_library,
+        api::list_precons,
+        api::get_precon_card_counts,
+        api::draw_hand,
+        api::validate_deck,
+        api::diff_decks,
+        api::import_deck,
+        api::export_deck,
+        api::semantic_search,
+        api::get_card,
+        api::get_card_by_name,
+        api::create_game_group,
+        api::get_game_group,
+        api::log_group_game,
+        api::list_group_games,
+        api::get_group_leaderboard,
+        api::delete_group_game,
+        api::update_group_game,
+    )
+)]
+struct ApiDoc;
 
 /// One line per request (method, path, status, latency) to stderr — never
 /// stdout, which `--mcp-stdio` mode uses for the JSON-RPC transport (docs/adr/
@@ -181,6 +214,7 @@ async fn main() {
         .route("/help", get(api::get_prerendered_help))
         .route("/about", get(api::get_prerendered_about))
         .route("/changelog", get(api::get_prerendered_changelog))
+        .merge(SwaggerUi::new("/api/v1/docs").url("/api/v1/openapi.json", ApiDoc::openapi()))
         .with_state(state)
         // Vite's hashed build output — safe to cache forever (see
         // cache_control_for_mount's doc comment).

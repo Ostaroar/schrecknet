@@ -19,7 +19,7 @@ pub fn open(path: &str) -> rusqlite::Result<Connection> {
     Ok(connection)
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct CreateGroupParams {
     /// Display name for the group, e.g. "Thursday Night Coterie".
     pub name: String,
@@ -28,7 +28,7 @@ pub struct CreateGroupParams {
     pub write_passphrase: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct GroupInfo {
     pub code: String,
     pub name: String,
@@ -36,13 +36,13 @@ pub struct GroupInfo {
     pub write_protected: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct GroupCodeParams {
     /// The group's shareable code, as returned by create_game_group.
     pub code: String,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct PlayerResultInput {
     pub player_name: String,
     #[serde(default)]
@@ -57,7 +57,7 @@ pub struct PlayerResultInput {
     pub game_win: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct DeleteGameParams {
     pub code: String,
     #[serde(default)]
@@ -66,7 +66,7 @@ pub struct DeleteGameParams {
     pub game_id: i64,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct UpdateGameParams {
     pub code: String,
     #[serde(default)]
@@ -78,7 +78,7 @@ pub struct UpdateGameParams {
     pub results: Vec<PlayerResultInput>,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct LogGameParams {
     pub code: String,
     #[serde(default)]
@@ -91,7 +91,7 @@ pub struct LogGameParams {
     pub results: Vec<PlayerResultInput>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct PlayerResultRecord {
     pub player_name: String,
     pub deck_name: Option<String>,
@@ -100,7 +100,7 @@ pub struct PlayerResultRecord {
     pub game_win: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct GameRecord {
     pub id: i64,
     pub played_at: String,
@@ -108,7 +108,7 @@ pub struct GameRecord {
     pub results: Vec<PlayerResultRecord>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct LeaderboardEntry {
     pub player_name: String,
     pub games_played: i64,

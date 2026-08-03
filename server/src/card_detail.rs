@@ -6,25 +6,26 @@ use rusqlite::{Connection, OptionalExtension};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct GetCardParams {
     /// The card's numeric id, as returned by search_crypt/search_library.
     pub id: i64,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
+#[derive(utoipa::IntoParams)]
 pub struct GetCardByNameParams {
     /// Exact canonical or ASCII-folded card name (case-insensitive).
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct Discipline {
     pub code: String,
     pub superior: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct Printing {
     pub set: String,
     pub precon: Option<String>,
@@ -36,20 +37,20 @@ pub struct Printing {
     pub scan_url: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct Ruling {
     pub text: String,
     pub refs: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct Translation {
     pub lang: String,
     pub name: Option<String>,
     pub card_text: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct CardDetail {
     pub id: i64,
     pub kind: String,

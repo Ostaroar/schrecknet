@@ -18,6 +18,9 @@ use crate::game_groups::{
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
 use crate::AppState;
 
+#[utoipa::path(get, path = "/api/v1/crypt/search", params(CryptSearchParams),
+    responses((status = 200, description = "Matching crypt cards", body = Vec<cards_db::CryptCard>)),
+    tag = "cards")]
 pub async fn search_crypt(
     State(state): State<AppState>,
     Query(params): Query<CryptSearchParams>,
@@ -25,6 +28,9 @@ pub async fn search_crypt(
     run(state, move |conn| cards_db::search_crypt(conn, &params)).await
 }
 
+#[utoipa::path(get, path = "/api/v1/library/search", params(LibrarySearchParams),
+    responses((status = 200, description = "Matching library cards", body = Vec<cards_db::LibraryCard>)),
+    tag = "cards")]
 pub async fn search_library(
     State(state): State<AppState>,
     Query(params): Query<LibrarySearchParams>,
@@ -32,10 +38,16 @@ pub async fn search_library(
     run(state, move |conn| cards_db::search_library(conn, &params)).await
 }
 
+#[utoipa::path(get, path = "/api/v1/precons",
+    responses((status = 200, description = "All modern BCP/V5 precons grouped by set", body = Vec<cards_db::PreconSummary>)),
+    tag = "cards")]
 pub async fn list_precons(State(state): State<AppState>) -> impl IntoResponse {
     run(state, cards_db::list_precons).await
 }
 
+#[utoipa::path(get, path = "/api/v1/precons/cards", params(PreconCardCountsParams),
+    responses((status = 200, description = "Real per-card quantities for one precon", body = Vec<cards_db::PreconCardCount>)),
+    tag = "cards")]
 pub async fn get_precon_card_counts(
     State(state): State<AppState>,
     Query(params): Query<PreconCardCountsParams>,
@@ -46,6 +58,12 @@ pub async fn get_precon_card_counts(
     .await
 }
 
+#[utoipa::path(post, path = "/api/v1/decks/draw-hand", request_body = DrawHandParams,
+    responses(
+        (status = 200, description = "Drawn card ids and the seed that produced them", body = draw_hand::DrawHandResult),
+        (status = 400, description = "Invalid seed or draw error", body = String),
+    ),
+    tag = "decks")]
 pub async fn draw_hand(Json(params): Json<DrawHandParams>) -> impl IntoResponse {
     match draw_hand::draw_hand(&params) {
         Ok(result) => Json(result).into_response(),
@@ -58,6 +76,9 @@ pub async fn draw_hand(Json(params): Json<DrawHandParams>) -> impl IntoResponse 
     }
 }
 
+#[utoipa::path(post, path = "/api/v1/decks/validate", request_body = ValidateDeckParams,
+    responses((status = 200, description = "Legality report", body = deck_tools::ValidateDeckResult)),
+    tag = "decks")]
 pub async fn validate_deck(
     State(state): State<AppState>,
     Json(params): Json<ValidateDeckParams>,
@@ -65,10 +86,16 @@ pub async fn validate_deck(
     run(state, move |conn| deck_tools::validate_deck(conn, &params)).await
 }
 
+#[utoipa::path(post, path = "/api/v1/decks/diff", request_body = DiffDecksParams,
+    responses((status = 200, description = "Card-by-card diff, crypt and library separately", body = deck_tools::DiffDecksResult)),
+    tag = "decks")]
 pub async fn diff_decks(Json(params): Json<DiffDecksParams>) -> impl IntoResponse {
     Json(deck_tools::diff_decks(&params)).into_response()
 }
 
+#[utoipa::path(post, path = "/api/v1/decks/import", request_body = ImportDeckParams,
+    responses((status = 200, description = "Resolved card ids, split crypt/library, plus unresolved names", body = deck_tools::ImportDeckResult)),
+    tag = "decks")]
 pub async fn import_deck(
     State(state): State<AppState>,
     Json(params): Json<ImportDeckParams>,
@@ -76,6 +103,9 @@ pub async fn import_deck(
     run(state, move |conn| deck_tools::import_deck(conn, &params)).await
 }
 
+#[utoipa::path(post, path = "/api/v1/decks/export", request_body = ExportDeckParams,
+    responses((status = 200, description = "Plain-text deck list", body = deck_tools::ExportDeckResult)),
+    tag = "decks")]
 pub async fn export_deck(
     State(state): State<AppState>,
     Json(params): Json<ExportDeckParams>,
@@ -83,6 +113,9 @@ pub async fn export_deck(
     run(state, move |conn| deck_tools::export_deck(conn, &params)).await
 }
 
+#[utoipa::path(post, path = "/api/v1/cards/semantic", request_body = SemanticSearchParams,
+    responses((status = 200, description = "Ranked semantic search hits", body = Vec<crate::semantic_search::SemanticHit>)),
+    tag = "cards")]
 pub async fn semantic_search(
     State(state): State<AppState>,
     Json(params): Json<SemanticSearchParams>,
@@ -109,6 +142,13 @@ pub async fn semantic_search(
     }
 }
 
+#[utoipa::path(get, path = "/api/v1/cards/{id}",
+    params(("id" = i64, Path, description = "Card id, as returned by search_crypt/search_library")),
+    responses(
+        (status = 200, description = "Full card detail", body = card_detail::CardDetail),
+        (status = 404, description = "No card with that id", body = String),
+    ),
+    tag = "cards")]
 pub async fn get_card(State(state): State<AppState>, Path(id): Path<i64>) -> impl IntoResponse {
     let data_dir = state.data_dir.clone();
     let result = tokio::task::spawn_blocking(move || -> rusqlite::Result<_> {
@@ -170,6 +210,12 @@ pub async fn get_prerendered_changelog(State(state): State<AppState>) -> impl In
     serve_prerendered(&state, "changelog.html").await
 }
 
+#[utoipa::path(get, path = "/api/v1/cards/lookup", params(GetCardByNameParams),
+    responses(
+        (status = 200, description = "Full card detail", body = card_detail::CardDetail),
+        (status = 404, description = "No card with that name", body = String),
+    ),
+    tag = "cards")]
 pub async fn get_card_by_name(
     State(state): State<AppState>,
     Query(params): Query<GetCardByNameParams>,
@@ -209,7 +255,7 @@ where
 }
 
 /// Body for POST .../games — `code` comes from the path, not the body.
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct LogGameBody {
     #[serde(default)]
     pub write_passphrase: Option<String>,
@@ -219,6 +265,9 @@ pub struct LogGameBody {
     pub results: Vec<PlayerResultInput>,
 }
 
+#[utoipa::path(post, path = "/api/v1/groups", request_body = CreateGroupParams,
+    responses((status = 200, description = "The new group's code, name, and protection status", body = game_groups::GroupInfo)),
+    tag = "game-groups")]
 pub async fn create_game_group(
     State(state): State<AppState>,
     Json(params): Json<CreateGroupParams>,
@@ -226,6 +275,13 @@ pub async fn create_game_group(
     run_app(state, move |conn| game_groups::create_group(conn, &params)).await
 }
 
+#[utoipa::path(get, path = "/api/v1/groups/{code}",
+    params(("code" = String, Path, description = "The group's shareable code")),
+    responses(
+        (status = 200, description = "Group info", body = game_groups::GroupInfo),
+        (status = 404, description = "No group with that code", body = String),
+    ),
+    tag = "game-groups")]
 pub async fn get_game_group(
     State(state): State<AppState>,
     Path(code): Path<String>,
@@ -236,6 +292,14 @@ pub async fn get_game_group(
     .await
 }
 
+#[utoipa::path(post, path = "/api/v1/groups/{code}/games",
+    params(("code" = String, Path, description = "The group's shareable code")),
+    request_body = LogGameBody,
+    responses(
+        (status = 200, description = "The logged game", body = game_groups::GameRecord),
+        (status = 404, description = "No group with that code", body = String),
+    ),
+    tag = "game-groups")]
 pub async fn log_group_game(
     State(state): State<AppState>,
     Path(code): Path<String>,
@@ -256,6 +320,13 @@ pub async fn log_group_game(
     .await
 }
 
+#[utoipa::path(get, path = "/api/v1/groups/{code}/games",
+    params(("code" = String, Path, description = "The group's shareable code")),
+    responses(
+        (status = 200, description = "Every logged game, newest first", body = Vec<game_groups::GameRecord>),
+        (status = 404, description = "No group with that code", body = String),
+    ),
+    tag = "game-groups")]
 pub async fn list_group_games(
     State(state): State<AppState>,
     Path(code): Path<String>,
@@ -266,6 +337,13 @@ pub async fn list_group_games(
     .await
 }
 
+#[utoipa::path(get, path = "/api/v1/groups/{code}/leaderboard",
+    params(("code" = String, Path, description = "The group's shareable code")),
+    responses(
+        (status = 200, description = "Standing leaderboard, ranked by wins then VP", body = Vec<game_groups::LeaderboardEntry>),
+        (status = 404, description = "No group with that code", body = String),
+    ),
+    tag = "game-groups")]
 pub async fn get_group_leaderboard(
     State(state): State<AppState>,
     Path(code): Path<String>,
@@ -276,6 +354,17 @@ pub async fn get_group_leaderboard(
     .await
 }
 
+#[utoipa::path(delete, path = "/api/v1/groups/{code}/games/{game_id}",
+    params(
+        ("code" = String, Path, description = "The group's shareable code"),
+        ("game_id" = i64, Path, description = "The logged game's id"),
+    ),
+    request_body(content = DeleteGameBody, description = "Required only for protected groups"),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 404, description = "No matching group/game"),
+    ),
+    tag = "game-groups")]
 pub async fn delete_group_game(
     State(state): State<AppState>,
     Path((code, game_id)): Path<(String, i64)>,
@@ -304,6 +393,17 @@ pub async fn delete_group_game(
     }
 }
 
+#[utoipa::path(put, path = "/api/v1/groups/{code}/games/{game_id}",
+    params(
+        ("code" = String, Path, description = "The group's shareable code"),
+        ("game_id" = i64, Path, description = "The logged game's id"),
+    ),
+    request_body = LogGameBody,
+    responses(
+        (status = 200, description = "The updated game", body = game_groups::GameRecord),
+        (status = 404, description = "No matching group/game"),
+    ),
+    tag = "game-groups")]
 pub async fn update_group_game(
     State(state): State<AppState>,
     Path((code, game_id)): Path<(String, i64)>,
@@ -325,7 +425,7 @@ pub async fn update_group_game(
     .await
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct DeleteGameBody {
     #[serde(default)]
     pub write_passphrase: Option<String>,

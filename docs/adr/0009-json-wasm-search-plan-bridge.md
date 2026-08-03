@@ -1,4 +1,4 @@
-# ADR 0007 — JSON bridge for shared WASM search plans
+# ADR 0009 — JSON bridge for shared WASM search plans
 
 **Status:** accepted · 2026-07-21
 

@@ -11,7 +11,7 @@ use schrecknet_core::diff::{self, CardQtys};
 use schrecknet_core::dtext::{self, NamedQty};
 use schrecknet_core::legality::{self, Violation};
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct DeckCard {
     pub id: u32,
     pub quantity: u16,
@@ -43,15 +43,20 @@ fn crypt_groups(conn: &Connection, ids: &[u32]) -> rusqlite::Result<Vec<u8>> {
 // validate_deck
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct ValidateDeckParams {
     pub crypt: Vec<DeckCard>,
     pub library: Vec<DeckCard>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct ValidateDeckResult {
     pub legal: bool,
+    /// One entry per rule broken (crypt/library size, the group rule); see
+    /// `descriptions` for the human-readable form. `core::legality::Violation`
+    /// isn't OpenAPI-annotated (server-only concern, kept out of the
+    /// WASM-shipped core crate), so this is documented as an opaque object.
+    #[schema(value_type = Vec<Object>)]
     pub violations: Vec<Violation>,
     pub descriptions: Vec<String>,
 }
@@ -77,7 +82,7 @@ pub fn validate_deck(
 // diff_decks
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct DiffDecksParams {
     pub crypt_a: Vec<DeckCard>,
     pub library_a: Vec<DeckCard>,
@@ -85,9 +90,13 @@ pub struct DiffDecksParams {
     pub library_b: Vec<DeckCard>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct DiffDecksResult {
+    /// `core::diff::Entry` (card_id, qty_a, qty_b, change) — same opaque-object
+    /// note as `ValidateDeckResult::violations`.
+    #[schema(value_type = Vec<Object>)]
     pub crypt: Vec<diff::Entry>,
+    #[schema(value_type = Vec<Object>)]
     pub library: Vec<diff::Entry>,
 }
 
@@ -109,20 +118,20 @@ pub fn diff_decks(params: &DiffDecksParams) -> DiffDecksResult {
 // import_deck (plain text -> card ids)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct ImportDeckParams {
     /// Lackey/JOL-style plain text: one card per line, "<qty>x <name>".
     pub text: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct ImportedCard {
     pub id: u32,
     pub name: String,
     pub quantity: u16,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct ImportDeckResult {
     pub crypt: Vec<ImportedCard>,
     pub library: Vec<ImportedCard>,
@@ -185,13 +194,13 @@ pub fn import_deck(
 // export_deck (card ids -> plain text)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct ExportDeckParams {
     pub crypt: Vec<DeckCard>,
     pub library: Vec<DeckCard>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct ExportDeckResult {
     pub text: String,
 }

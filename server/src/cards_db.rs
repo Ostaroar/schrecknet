@@ -12,7 +12,8 @@ use rusqlite::Connection;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, utoipa::ToSchema)]
+#[derive(utoipa::IntoParams)]
 pub struct CryptSearchParams {
     /// Substring match against card name or card text (case-sensitive as stored).
     #[serde(default)]
@@ -114,7 +115,7 @@ pub struct CryptSearchParams {
 }
 
 /// Scope of the `text` filter on crypt search.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum TextMode {
     /// Match card name or card text (default).
@@ -127,7 +128,7 @@ pub enum TextMode {
 }
 
 /// VDB-compatible exact crypt-search ordering.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CryptSort {
     /// Highest capacity first (default), then name.
@@ -159,7 +160,7 @@ impl CryptSort {
 }
 
 /// Set logic for library discipline requirements, matching VDB's selector.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DisciplineLogic {
     /// Require every selected discipline (backwards-compatible default).
@@ -174,7 +175,7 @@ pub enum DisciplineLogic {
 }
 
 /// All/Any/Not composition used by VDB's sect/title selectors.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum RequirementLogic {
     /// Require every selected token (default).
@@ -187,7 +188,7 @@ pub enum RequirementLogic {
 }
 
 /// One discipline requirement used by exact and semantic structured search.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct DisciplineRequirement {
     /// Lowercase discipline code, e.g. `dom` or `for`.
     pub code: String,
@@ -197,7 +198,7 @@ pub struct DisciplineRequirement {
 }
 
 /// Numeric comparison used by library blood/pool cost filters.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CostMode {
     /// Cost must be less than or equal to the supplied value (default).
@@ -210,7 +211,7 @@ pub enum CostMode {
 }
 
 /// Direction of a library card's vampire-capacity requirement filter.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CapacityRequirementMode {
     /// Requirement allows a vampire at or below the supplied capacity.
@@ -221,7 +222,7 @@ pub enum CapacityRequirementMode {
 }
 
 /// Release-date relation used by set filters, matching vdb's age qualifiers.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SetAgeMode {
     /// Printed in the selected set (default).
@@ -238,7 +239,7 @@ pub enum SetAgeMode {
 }
 
 /// Printing-history qualifier used alongside a selected set.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SetPrintMode {
     /// Any matching V5 printing (default).
@@ -254,7 +255,7 @@ pub enum SetPrintMode {
 
 /// One exact preconstructed-deck identity. Precon names repeat across V5 sets,
 /// so the set is part of the stable machine value just as it is in VDB.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct PreconSelection {
     pub set: String,
     pub precon: String,
@@ -431,13 +432,13 @@ where
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct Discipline {
     pub code: String,
     pub superior: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct CryptCard {
     pub id: i64,
     pub name: String,
@@ -452,7 +453,8 @@ pub struct CryptCard {
     pub disciplines: Vec<Discipline>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, utoipa::ToSchema)]
+#[derive(utoipa::IntoParams)]
 pub struct LibrarySearchParams {
     /// Substring match against card name or card text.
     #[serde(default)]
@@ -566,7 +568,7 @@ pub struct LibrarySearchParams {
 }
 
 /// VDB-compatible exact library-search ordering.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum LibrarySort {
     /// Clan/path requirement, discipline requirement, type, then name.
@@ -594,7 +596,7 @@ impl LibrarySort {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct LibraryCard {
     pub id: i64,
     pub name: String,
@@ -966,7 +968,7 @@ fn search_library_inner(
     Ok(rows.into_iter().map(|(card, _)| card).collect())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct PreconSummary {
     pub set: String,
     pub precon: String,
@@ -998,7 +1000,8 @@ pub fn list_precons(conn: &Connection) -> rusqlite::Result<Vec<PreconSummary>> {
     rows.collect()
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
+#[derive(utoipa::IntoParams)]
 pub struct PreconCardCountsParams {
     /// Exact set name, as returned by list_precons (e.g. "Fifth Edition").
     pub set: String,
@@ -1006,7 +1009,7 @@ pub struct PreconCardCountsParams {
     pub precon: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct PreconCardCount {
     pub card_id: i64,
     /// How many physical copies of this card one copy of the precon itself

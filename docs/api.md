@@ -51,7 +51,11 @@ structured filters would be unwieldy in a query string. A minimal request is:
 `crypt` and `library` may contain the same filter objects accepted by their exact
 search tools. Semantic retrieval is canonical-English-only in v1; the operation is
 local and read-only. Invalid bounds return HTTP 400 and a missing model bundle returns
-HTTP 503. OpenAPI 3.1 generation (`utoipa`) and Swagger UI are not yet wired up.
+HTTP 503.
+
+**OpenAPI 3.1 + Swagger UI** (docs/adr/0017-utoipa-for-openapi.md): every REST
+handler is annotated with `utoipa`; the generated spec is served at
+`/api/v1/openapi.json` and an interactive Swagger UI at `/api/v1/docs`.
 
 REST encodes advanced crypt composition compactly in the query string:
 

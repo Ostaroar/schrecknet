@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Deserialize, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DrawSection {
     Crypt,
@@ -22,13 +22,13 @@ impl From<DrawSection> for schrecknet_core::draw::DeckSection {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct DrawCard {
     pub id: u32,
     pub quantity: u16,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct DrawHandParams {
     /// Whether to draw the VTES opening crypt hand (4) or library hand (7).
     pub section: DrawSection,
@@ -39,7 +39,7 @@ pub struct DrawHandParams {
     pub seed: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, utoipa::ToSchema)]
 pub struct DrawHandResult {
     pub section: &'static str,
     pub card_ids: Vec<u32>,
