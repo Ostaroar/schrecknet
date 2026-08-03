@@ -196,6 +196,23 @@ async fn main() {
         )
         .nest_service("/mcp", mcp_service)
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))
+        // Everything that has NOT opted into a policy above — the SPA shell,
+        // the prerendered HTML routes, API JSON — must revalidate. Without
+        // this those responses carried no `Cache-Control` at all, which does
+        // not mean "don't cache": it lets browsers and intermediaries apply
+        // *heuristic* freshness. index.html is the file that names every
+        // hashed asset, so a heuristically cached copy pins a returning
+        // visitor to a previous deploy's entire module graph — observed live,
+        // where a browser kept booting the previous build's bundle for hours
+        // after a deploy. Same failure class as the `/data` incident in
+        // `cache_control_for_mount`'s doc comment (docs/adr/0015).
+        //
+        // `if_not_present`, so the deliberate policies above still win:
+        // /assets and /models/semantic stay `immutable`, /data stays no-cache.
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static(REVALIDATE_CACHE_CONTROL),
+        ))
         // gzip/br/deflate negotiated per Accept-Encoding, applied to every
         // response added above (API JSON, HTML, JS/CSS/wasm alike) — the live
         // site was serving everything uncompressed until this landed.

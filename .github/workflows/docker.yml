@@ -195,6 +195,34 @@ jobs:
           [ "$urls" -gt 700 ] || { echo "::error::sitemap has only $urls URLs, expected >700"; exit 1; }
           echo "prerender OK: $urls sitemap URLs"
 
+      # index.html names every hashed asset, so if it may be cached
+      # heuristically a returning visitor gets pinned to a previous deploy's
+      # whole module graph — observed live. Only content-addressed URLs may be
+      # immutable. This asserts the layer ordering on the wire, which is where
+      # the bug was (the helper's unit tests all passed while HTML shipped with
+      # no Cache-Control at all).
+      - name: HTML revalidates, hashed assets stay immutable
+        run: |
+          set -euo pipefail
+          base=http://127.0.0.1:18190
+          asset=$(curl -fsS "$base/crypt" | grep -o 'main-[A-Za-z0-9_-]*\.js' | head -1)
+          [ -n "$asset" ] || { echo "::error::could not find the main bundle in /crypt"; exit 1; }
+
+          for url in / /crypt /cards/100401 /data/cards.meta.json; do
+            cc=$(curl -fsSI "$base$url" | tr -d '\r' | grep -i '^cache-control:' || true)
+            case "$cc" in
+              *no-cache*) ;;
+              *) echo "::error::$url must revalidate, got '${cc:-<absent>}'"; exit 1 ;;
+            esac
+          done
+
+          cc=$(curl -fsSI "$base/assets/$asset" | tr -d '\r' | grep -i '^cache-control:' || true)
+          case "$cc" in
+            *immutable*) ;;
+            *) echo "::error::/assets/$asset should be immutable, got '${cc:-<absent>}'"; exit 1 ;;
+          esac
+          echo "cache-control matrix OK"
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -281,5 +309,14 @@ jobs:
             || { echo "::error::/cards/100401 is not prerendered (no JSON-LD -- SPA fallback?)"; exit 1; }
           echo "$card" | grep -q '<title>Conditioning' \
             || { echo "::error::/cards/100401 prerendered with the wrong title"; exit 1; }
+
+          # 4. The shell must revalidate. Without this it carried no
+          #    Cache-Control at all, so returning visitors could keep booting a
+          #    previous deploy's asset graph indefinitely.
+          cc=$(curl -fsSI "$base/crypt" | tr -d '\r' | grep -i '^cache-control:' || true)
+          case "$cc" in
+            *no-cache*) ;;
+            *) echo "::error::/crypt must revalidate, got '${cc:-<absent>}'"; exit 1 ;;
+          esac
 
           echo "live smoke check passed ($bytes bytes of card data)"
