@@ -354,6 +354,14 @@ reminder. Account-based sync is still Phase 3 and consumes the same envelope.
   directly), plus a manual check that a fresh English visitor triggers no
   locale request, a persisted `de` visitor renders German on first paint with
   no English flash, and switching to French fetches only then.
+  **Live remeasurement after deploy** (2026-07-30, same `curl -w` methodology
+  against schreck-net.com/crypt): `main.js` 81.6 KB + `dbWorker.js` 66.7 KB +
+  `userDbWorker.js` 67.9 KB + crypt-route chunk 4.6 KB = **220.8 KB**, down
+  from 246.2 KB. Post-deploy live check confirmed 200 card rows rendering from
+  the SQLite worker with no console errors. **Still 21 KB over the 200 KB
+  budget**, and the whole remainder is the duplicated worker glue — see the
+  correction below for why that is not being chased right now. This is the
+  floor reachable without touching the worker load path.
   **Attempted and reverted (2026-07-29, same day): deduplicating the
   `dbWorker.js`/`userDbWorker.js` glue.** Both workers statically import the
   same `@sqlite.org/sqlite-wasm` Emscripten glue via `lib/sqlite.ts`, and
