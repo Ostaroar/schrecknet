@@ -27,7 +27,7 @@ regex = "1.13.1"
 argon2 = "0.5.3"
 # docs/adr/0017-utoipa-for-openapi.md
 utoipa = { version = "5", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "8", features = ["axum"] }
+utoipa-swagger-ui = { version = "8.1", features = ["axum"] }
 
 [dev-dependencies]
 serde_urlencoded = "0.7.1"
