@@ -109,8 +109,106 @@ jobs:
           min-versions-to-keep: 15
           token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
 
-  deploy:
+  # Runs the ACTUAL production image before it is allowed to reach the cluster.
+  # ci.yml's e2e job is a bare runner: debug binary, `npm run build` output, and
+  # no prerender stage — so the distroless runtime, the release build, the baked
+  # SITE_URL and the 829 prerendered card pages all shipped to production with
+  # nothing but "the image built" behind them. This job closes that gap and
+  # gates `deploy`, which is the closest thing to pre-production validation
+  # available without a staging cluster.
+  #
+  # It pulls rather than reusing a `load`ed image because jobs get separate
+  # Docker daemons; exporting a tarball between them would burn the shared
+  # artifact-storage quota this project has already exhausted once.
+  container-e2e:
     needs: build
+    # Same push-to-main gate as `deploy`: PR builds are never pushed, so there
+    # is nothing to pull. PRs are still covered by ci.yml's full e2e job.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the production image
+        run: |
+          set -euo pipefail
+          # Must match docker/metadata-action's `type=sha`, which is the first
+          # 7 characters. Derived from GITHUB_SHA rather than `git rev-parse
+          # --short`, whose length can grow to disambiguate and would then miss.
+          image="ghcr.io/${{ github.repository }}:sha-${GITHUB_SHA:0:7}"
+          echo "testing $image"
+          docker pull "$image"
+          # /data is a VOLUME in the image (app.sqlite lives there); an
+          # anonymous volume keeps this run isolated from anything else.
+          docker run -d --name schrecknet-candidate -p 18190:8000 "$image"
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18190/healthz >/dev/null 2>&1; then
+              echo "container healthy"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::container never became healthy"
+          docker logs schrecknet-candidate || true
+          exit 1
+
+      # Only the image can answer these: they are produced by the Dockerfile's
+      # prerender-build stage, which no other test exercises.
+      - name: Prerendered pages and sitemap are really in the image
+        run: |
+          set -euo pipefail
+          base=http://127.0.0.1:18190
+
+          card=$(curl -fsS "$base/cards/100401")
+          echo "$card" | grep -q 'application/ld+json' \
+            || { echo "::error::/cards/100401 is not prerendered (SPA fallback?)"; exit 1; }
+          echo "$card" | grep -q '<title>Conditioning' \
+            || { echo "::error::/cards/100401 prerendered with the wrong title"; exit 1; }
+
+          # SITE_URL is baked at build time; without it the data build
+          # deliberately emits no sitemap rather than one with a placeholder
+          # domain, so its absence means the build arg went missing.
+          sitemap=$(curl -fsS "$base/sitemap.xml")
+          echo "$sitemap" | grep -q 'https://schreck-net.com/' \
+            || { echo "::error::sitemap.xml missing the real origin (SITE_URL build arg lost?)"; exit 1; }
+          urls=$(echo "$sitemap" | grep -c '<loc>' || true)
+          [ "$urls" -gt 800 ] || { echo "::error::sitemap has only $urls URLs, expected >800"; exit 1; }
+          echo "prerender OK: $urls sitemap URLs"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+
+      # The browser suites, driven against the container instead of a debug
+      # binary they spawn themselves (SCHRECKNET_E2E_BASE_URL). sw-upgrade is
+      # deliberately absent: it swaps the server's static dir between two
+      # builds, which a single baked image cannot do — it stays in ci.yml.
+      - name: Browser suites against the production image
+        env:
+          SCHRECKNET_E2E_BASE_URL: http://127.0.0.1:18190
+          SCHRECKNET_CHROME_CHANNEL: chrome
+        run: |
+          npm run test:mobile
+          npm run test:backup
+          npm run test:semantic
+        working-directory: frontend
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs schrecknet-candidate || true
+
+  deploy:
+    needs: container-e2e
     # Only main pushes -- never PRs (no cluster credentials there, and
     # nothing should touch prod from an untrusted fork) and never tags
     # (a `v*` tag build isn't necessarily what's rolled out to the live

@@ -36,7 +36,7 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { cp, mkdtemp, readFile, readdir, rename, rm, utimes, writeFile } from 'node:fs/promises'
+import { cp, mkdtemp, readFile, readdir, rename, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -70,6 +70,16 @@ const distA = path.join(workdir, 'distA')
 
 /** Text assets are rewritten in place; everything else is only renamed. */
 const TEXT_EXTENSIONS = new Set(['.js', '.css', '.html', '.json', '.webmanifest', '.txt'])
+
+/** Oldest mtime anywhere under `dir`, so build A can be anchored below it. */
+async function oldestMtimeMs(dir) {
+  let oldest = Infinity
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    oldest = Math.min(oldest, entry.isDirectory() ? await oldestMtimeMs(full) : (await stat(full)).mtimeMs)
+  }
+  return Number.isFinite(oldest) ? oldest : Date.now()
+}
 
 /**
  * Builds a plausible "previous build" from the real dist: every content-hashed
@@ -120,7 +130,12 @@ async function synthesizePreviousBuild() {
   // replays A's index.html even though B is on disk, so the swap silently does
   // nothing. A real previous build was genuinely built earlier, so backdating
   // is both the fix and the faithful thing. (Found by this assertion failing.)
-  const stale = new Date(Date.now() - 60 * 60 * 1000)
+  //
+  // Anchored to the CANDIDATE's own mtime rather than to wall-clock: a fixed
+  // "an hour ago" silently inverts as soon as frontend/dist is itself older
+  // than that, making A newer than B and resurrecting the exact 304 bug. (Also
+  // found by this assertion failing, on a dist built ~an hour earlier.)
+  const stale = new Date((await oldestMtimeMs(candidateDist)) - 60 * 60 * 1000)
   const backdate = async (dir) => {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name)

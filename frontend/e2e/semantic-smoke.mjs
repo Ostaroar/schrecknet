@@ -16,30 +16,37 @@ const searchFixturePath = fileURLToPath(
 )
 const searchFixture = JSON.parse(await readFile(searchFixturePath, 'utf8'))
 const port = Number(process.env.SCHRECKNET_E2E_PORT ?? 18180)
-const baseUrl = `http://127.0.0.1:${port}`
+// Attach to an already-running server (the production container in CI) instead
+// of spawning a local debug binary. Note the offline check below cannot kill an
+// attached server, so it drops the browser's connectivity instead — see
+// `goOffline`.
+const attachedBaseUrl = process.env.SCHRECKNET_E2E_BASE_URL?.replace(/\/+$/, '') ?? null
+const baseUrl = attachedBaseUrl ?? `http://127.0.0.1:${port}`
 const serverBinary = path.resolve(
   repoRoot,
   process.env.SCHRECKNET_SERVER_BIN ?? 'target/debug/schrecknet-server',
 )
 const appDb = path.join(tmpdir(), `schrecknet-semantic-e2e-${process.pid}.sqlite`)
 
-const server = spawn(serverBinary, [], {
-  cwd: repoRoot,
-  env: {
-    ...process.env,
-    SCHRECKNET_BIND: `127.0.0.1:${port}`,
-    SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
-    SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
-    SCHRECKNET_MODEL_DIR: path.join(repoRoot, 'dist/models/semantic'),
-    SCHRECKNET_APP_DB: appDb,
-  },
-  stdio: ['ignore', 'pipe', 'pipe'],
-})
+const server = attachedBaseUrl
+  ? null
+  : spawn(serverBinary, [], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        SCHRECKNET_BIND: `127.0.0.1:${port}`,
+        SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
+        SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
+        SCHRECKNET_MODEL_DIR: path.join(repoRoot, 'dist/models/semantic'),
+        SCHRECKNET_APP_DB: appDb,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
 
 let serverStopped = false
 const serverOutput = []
-for (const stream of [server.stdout, server.stderr]) {
-  stream.on('data', (chunk) => {
+for (const stream of [server?.stdout, server?.stderr]) {
+  stream?.on('data', (chunk) => {
     const line = chunk.toString()
     serverOutput.push(line)
     process.stdout.write(line)
@@ -49,7 +56,7 @@ for (const stream of [server.stdout, server.stderr]) {
 async function waitForServer() {
   const deadline = Date.now() + 30_000
   while (Date.now() < deadline) {
-    if (server.exitCode !== null) {
+    if (server && server.exitCode !== null) {
       throw new Error(`server exited before readiness:\n${serverOutput.join('')}`)
     }
     try {
@@ -64,7 +71,7 @@ async function waitForServer() {
 }
 
 async function stopServer() {
-  if (serverStopped) return
+  if (serverStopped || !server) return
   serverStopped = true
   if (server.exitCode === null && server.signalCode === null) {
     server.kill('SIGTERM')
@@ -73,6 +80,21 @@ async function stopServer() {
       new Promise((resolve) => setTimeout(resolve, 5_000)),
     ])
   }
+}
+
+/**
+ * Cuts the page off from the network for the offline assertions. `context` is
+ * assigned inside the try block below, so this is a function rather than a
+ * value — it is only ever called once the browser exists.
+ */
+let offlineContext = null
+async function goOffline() {
+  if (server) {
+    await stopServer()
+    return
+  }
+  assert.ok(offlineContext, 'offline check ran before the browser context existed')
+  await offlineContext.setOffline(true)
 }
 
 async function restSearch(golden) {
@@ -104,6 +126,7 @@ try {
     headless: true,
   })
   const context = await browser.newContext({ serviceWorkers: 'allow' })
+  offlineContext = context
   const page = await context.newPage()
   const pageErrors = []
   const consoleErrors = []
@@ -616,7 +639,12 @@ try {
     `first-use assets ${firstUseBytes} exceed ${fixture.first_use_max_bytes}`,
   )
 
-  await stopServer()
+  // Go offline. When this suite owns the server, killing it is the most honest
+  // simulation — the origin genuinely disappears. Attached to a shared
+  // container we must not kill it (other suites and the rest of this run need
+  // it), so drop the browser's connectivity instead: same observable condition
+  // from the page's point of view, which is what the offline path is about.
+  await goOffline()
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
   await page.waitForSelector('main')
   activeKind = null

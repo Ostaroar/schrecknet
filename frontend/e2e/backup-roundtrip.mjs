@@ -27,24 +27,31 @@ import { chromium } from 'playwright'
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const port = Number(process.env.SCHRECKNET_BACKUP_E2E_PORT ?? 18184)
-const baseUrl = `http://127.0.0.1:${port}`
+// Attach to an already-running server (the production container in CI) instead
+// of spawning a local debug binary. The fixture this test restores lives in the
+// browser's OPFS, not on the server, so nothing here depends on which binary is
+// serving — only that it serves the app.
+const attachedBaseUrl = process.env.SCHRECKNET_E2E_BASE_URL?.replace(/\/+$/, '') ?? null
+const baseUrl = attachedBaseUrl ?? `http://127.0.0.1:${port}`
 const appDb = path.join(tmpdir(), `schrecknet-backup-e2e-${process.pid}.sqlite`)
 
-const server = spawn(
-  path.join(repoRoot, process.env.SCHRECKNET_SERVER_BIN ?? 'target/debug/schrecknet-server'),
-  [],
-  {
-    cwd: repoRoot,
-    env: {
-      ...process.env,
-      SCHRECKNET_BIND: `127.0.0.1:${port}`,
-      SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
-      SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
-      SCHRECKNET_APP_DB: appDb,
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  },
-)
+const server = attachedBaseUrl
+  ? null
+  : spawn(
+      path.join(repoRoot, process.env.SCHRECKNET_SERVER_BIN ?? 'target/debug/schrecknet-server'),
+      [],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          SCHRECKNET_BIND: `127.0.0.1:${port}`,
+          SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
+          SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
+          SCHRECKNET_APP_DB: appDb,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    )
 
 async function waitForServer() {
   const deadline = Date.now() + 30_000
@@ -286,7 +293,7 @@ try {
   console.log('backup round-trip passed')
 } finally {
   if (browser) await browser.close()
-  server.kill('SIGTERM')
+  server?.kill('SIGTERM')
   await rm(appDb, { force: true })
   if (workdir) await rm(workdir, { recursive: true, force: true })
 }

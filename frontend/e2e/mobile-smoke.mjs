@@ -10,19 +10,25 @@ import { chromium } from 'playwright'
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const port = Number(process.env.SCHRECKNET_MOBILE_E2E_PORT ?? 18181)
 const viewportWidth = Number(process.env.SCHRECKNET_MOBILE_WIDTH ?? 360)
-const baseUrl = `http://127.0.0.1:${port}`
+// Attach to an already-running server (the production container in CI) instead
+// of spawning a local debug binary. Everything downstream is unchanged — the
+// suite only ever talks to `baseUrl`.
+const attachedBaseUrl = process.env.SCHRECKNET_E2E_BASE_URL?.replace(/\/+$/, '') ?? null
+const baseUrl = attachedBaseUrl ?? `http://127.0.0.1:${port}`
 const appDb = path.join(tmpdir(), `schrecknet-mobile-e2e-${process.pid}.sqlite`)
-const server = spawn(path.join(repoRoot, process.env.SCHRECKNET_SERVER_BIN ?? 'target/debug/schrecknet-server'), [], {
-  cwd: repoRoot,
-  env: {
-    ...process.env,
-    SCHRECKNET_BIND: `127.0.0.1:${port}`,
-    SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
-    SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
-    SCHRECKNET_APP_DB: appDb,
-  },
-  stdio: ['ignore', 'pipe', 'pipe'],
-})
+const server = attachedBaseUrl
+  ? null
+  : spawn(path.join(repoRoot, process.env.SCHRECKNET_SERVER_BIN ?? 'target/debug/schrecknet-server'), [], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        SCHRECKNET_BIND: `127.0.0.1:${port}`,
+        SCHRECKNET_STATIC_DIR: path.join(repoRoot, 'frontend/dist'),
+        SCHRECKNET_DATA_DIR: path.join(repoRoot, 'dist'),
+        SCHRECKNET_APP_DB: appDb,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
 
 let browser
 async function waitForServer() {
@@ -195,7 +201,7 @@ try {
   console.log(`mobile layout contract passed across ${routes.length + 2} routes at ${viewportWidth}px`)
 } finally {
   await browser?.close()
-  if (server.exitCode === null && server.signalCode === null) {
+  if (server && server.exitCode === null && server.signalCode === null) {
     server.kill('SIGTERM')
     await Promise.race([once(server, 'exit'), new Promise((resolve) => setTimeout(resolve, 5_000))])
   }
