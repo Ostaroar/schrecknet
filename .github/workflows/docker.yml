@@ -171,20 +171,28 @@ jobs:
           set -euo pipefail
           base=http://127.0.0.1:18190
 
-          card=$(curl -fsS "$base/cards/100401")
-          echo "$card" | grep -q 'application/ld+json' \
+          # Written to files rather than piped from a shell variable: `grep -q`
+          # exits at the first match and closes the pipe, which SIGPIPEs the
+          # producing `echo` and, under `set -o pipefail`, fails the step no
+          # matter what the content was.
+          curl -fsS "$base/cards/100401" -o /tmp/card.html
+          grep -q 'application/ld+json' /tmp/card.html \
             || { echo "::error::/cards/100401 is not prerendered (SPA fallback?)"; exit 1; }
-          echo "$card" | grep -q '<title>Conditioning' \
+          grep -q '<title>Conditioning' /tmp/card.html \
             || { echo "::error::/cards/100401 prerendered with the wrong title"; exit 1; }
 
           # SITE_URL is baked at build time; without it the data build
           # deliberately emits no sitemap rather than one with a placeholder
-          # domain, so its absence means the build arg went missing.
-          sitemap=$(curl -fsS "$base/sitemap.xml")
-          echo "$sitemap" | grep -q 'https://schreck-net.com/' \
+          # domain, so a missing origin means the build arg went astray.
+          curl -fsS "$base/sitemap.xml" -o /tmp/sitemap.xml
+          grep -q 'https://schreck-net.com/' /tmp/sitemap.xml \
             || { echo "::error::sitemap.xml missing the real origin (SITE_URL build arg lost?)"; exit 1; }
-          urls=$(echo "$sitemap" | grep -c '<loc>' || true)
-          [ "$urls" -gt 800 ] || { echo "::error::sitemap has only $urls URLs, expected >800"; exit 1; }
+          # Floor, not an exact count: the V5 pool moves as Black Chantry
+          # publishes and as pool corrections land (it was 829 cards when the
+          # prerenderer shipped, 749 today). This catches prerendering
+          # collapsing, without breaking every time the pool changes size.
+          urls=$(grep -c '<loc>' /tmp/sitemap.xml || true)
+          [ "$urls" -gt 700 ] || { echo "::error::sitemap has only $urls URLs, expected >700"; exit 1; }
           echo "prerender OK: $urls sitemap URLs"
 
       - uses: actions/setup-node@v7
