@@ -27,6 +27,11 @@ on:
 
 permissions:
   contents: read
+  # Needed to read image manifests from GHCR. The package is private (the repo
+  # is public, but package visibility is separate), so the tag check below is
+  # an authenticated call — without this it fails "unauthorized", which is
+  # exactly how the first real run of this workflow failed.
+  packages: read
 
 # Share the deploy lane so a rollback can never race a normal deploy over the
 # single-replica, `Recreate`-strategy deployment.
@@ -44,6 +49,13 @@ jobs:
 
       - name: Save kubeconfig
         run: doctl kubernetes cluster kubeconfig save k8s-1-36-0-do-3-fra1-1784797648512
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify the tag exists before touching the cluster
         run: |
