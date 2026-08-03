@@ -142,7 +142,13 @@ jobs:
           # Must match docker/metadata-action's `type=sha`, which is the first
           # 7 characters. Derived from GITHUB_SHA rather than `git rev-parse
           # --short`, whose length can grow to disambiguate and would then miss.
-          image="ghcr.io/${{ github.repository }}:sha-${GITHUB_SHA:0:7}"
+          #
+          # Lowercased because `github.repository` preserves the owner's casing
+          # ("Ostaroar/schrecknet") and Docker rejects uppercase in a reference.
+          # metadata-action does this for us on the push side, which is why the
+          # pushed tag is lowercase while a naive reference here is not.
+          repo=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/${repo}:sha-${GITHUB_SHA:0:7}"
           echo "testing $image"
           docker pull "$image"
           # /data is a VOLUME in the image (app.sqlite lives there); an
