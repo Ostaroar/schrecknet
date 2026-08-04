@@ -707,7 +707,7 @@ const en: UiStrings = {
     inventory: 'inventory',
     limited: 'limited',
     precons: 'precons',
-    twda: 'twd',
+    twda: 'tournaments',
     table: 'table',
     rules: 'rules',
     changelog: 'changelog',

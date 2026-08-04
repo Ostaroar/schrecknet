@@ -943,13 +943,6 @@ impl Caller {
             Self::Session(id) | Self::Token(id) => *id,
         }
     }
-
-    pub fn require_session(&self) -> Result<i64, AccountError> {
-        match self {
-            Self::Session(id) => Ok(*id),
-            Self::Token(_) => Err(AccountError::NotAuthenticated),
-        }
-    }
 }
 
 /// Session cookie first, then bearer token — the one place both credential
