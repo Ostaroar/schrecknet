@@ -112,14 +112,46 @@ export default function LegalPage() {
         <p>
           Decks, Inventar, Formatlisten und Einstellungen werden ausschließlich lokal in Ihrem
           Browser gespeichert (Origin Private File System und localStorage). Diese Daten verlassen
-          Ihr Gerät nicht und sind für uns nicht einsehbar. Sie können sie jederzeit selbst
+          Ihr Gerät nicht und sind für uns nicht einsehbar — sofern Sie keine Synchronisierung
+          über ein Konto aktivieren (siehe Ziffer 4). Sie können die lokalen Daten jederzeit selbst
           löschen, indem Sie die Website-Daten in Ihrem Browser entfernen. Es werden keine Cookies
           zu Tracking- oder Werbezwecken gesetzt; es kommen keine Analyse- oder Werbedienste zum
           Einsatz.
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          4. Semantische Suche (lokales KI-Modell)
+          4. Konto, Passkeys und Synchronisierung (optional)
+        </p>
+        <p>
+          Ein Konto ist optional und ausschließlich dafür da, Decks und Inventar auf ein weiteres
+          Gerät zu übertragen — ohne Konto funktioniert SchreckNet vollständig. Bei der
+          Kontoerstellung speichern wir auf dem Server: einen von Ihnen gewählten Anzeigenamen, das
+          Erstellungsdatum, die kryptografischen öffentlichen Schlüssel Ihrer Passkeys (WebAuthn,
+          keine biometrischen Daten — diese verbleiben auf Ihrem Gerät) sowie einen gesalzenen
+          Hashwert Ihres einmalig angezeigten Wiederherstellungscodes. Es werden keine E-Mail-Adresse
+          und kein Passwort erhoben (Grundsatz der Datenminimierung, Art.&nbsp;5 Abs.&nbsp;1 lit.&nbsp;c
+          DSGVO). Rechtsgrundlage ist Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO (Vertragserfüllung
+          durch Nutzung des Kontos).
+        </p>
+        <p>
+          Aktivieren Sie die Synchronisierung, wird eine vollständige Kopie Ihrer lokalen Decks und
+          Ihres Inventars in Ihrem Browser mit einem aus Ihrem Wiederherstellungscode abgeleiteten
+          Schlüssel verschlüsselt (AES-256-GCM) und erst danach auf den Server übertragen. Der
+          Schlüssel selbst verlässt Ihr Gerät nie. Wir speichern ausschließlich den verschlüsselten
+          Datenblock; ein Zugriff auf dessen Inhalt ist uns technisch nicht möglich. Für
+          MCP/REST-Zugriff ohne Browser können Sie zusätzlich API-Tokens erstellen, die
+          ausschließlich lesenden/schreibenden Zugriff auf diesen verschlüsselten Datenblock
+          erlauben — keine Verwaltung von Passkeys, Tokens oder Kontolöschung.
+        </p>
+        <p>
+          Sie können Ihr Konto und alle zugehörigen Daten (Passkeys, Sitzungen, API-Tokens,
+          synchronisierter Datenblock) jederzeit selbst und endgültig über die Kontoseite löschen
+          (Art.&nbsp;17 DSGVO). Ihre lokalen Decks und Ihr Inventar in diesem Browser sind davon
+          nicht betroffen.
+        </p>
+
+        <p className="text-xs uppercase tracking-wide text-ink-dim">
+          5. Semantische Suche (lokales KI-Modell)
         </p>
         <p>
           Die optionale &bdquo;Semantisch&ldquo;-Suche findet Karten anhand von Begriffen statt
@@ -135,7 +167,7 @@ export default function LegalPage() {
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          5. Spielgruppen (&bdquo;Table&ldquo;-Funktion)
+          6. Spielgruppen (&bdquo;Table&ldquo;-Funktion)
         </p>
         <p>
           Legen Sie eine Spielgruppe an oder tragen Sie Spielergebnisse ein, werden die von Ihnen
@@ -148,7 +180,7 @@ export default function LegalPage() {
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          6. Kartenbilder von Drittanbietern
+          7. Kartenbilder von Drittanbietern
         </p>
         <p>
           Kartenbilder werden direkt von KRCG (static.krcg.org) geladen. Beim Laden eines
@@ -159,7 +191,7 @@ export default function LegalPage() {
         </p>
 
         <p className="text-xs uppercase tracking-wide text-ink-dim">
-          7. Unterstützung über Ko-fi
+          8. Unterstützung über Ko-fi
         </p>
         <p>
           Der Footer enthält einen Link zu einer Spendenseite bei Ko-fi (Ko-fi Labs Ltd.,
@@ -171,7 +203,7 @@ export default function LegalPage() {
           Mitgliedschaften oder kostenpflichtigen Funktionen angeboten.
         </p>
 
-        <p className="text-xs uppercase tracking-wide text-ink-dim">8. Ihre Rechte</p>
+        <p className="text-xs uppercase tracking-wide text-ink-dim">9. Ihre Rechte</p>
         <p>
           Sie haben gegenüber dem Verantwortlichen das Recht auf Auskunft (Art. 15 DSGVO),
           Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18),
@@ -181,7 +213,7 @@ export default function LegalPage() {
           die Informationsfreiheit Baden-Württemberg.
         </p>
 
-        <p className="text-xs text-ink-dim">Stand: Juli 2026</p>
+        <p className="text-xs text-ink-dim">Stand: August 2026</p>
       </LegalSection>
     </div>
   )

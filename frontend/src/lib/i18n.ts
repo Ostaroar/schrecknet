@@ -83,7 +83,6 @@ export interface UiStrings {
     title: string
     signedOutIntro: string
     whatItsFor: string
-    syncNotYet: string
     passkeyNote: string
     displayNameLabel: string
     displayNamePlaceholder: string
@@ -126,6 +125,36 @@ export interface UiStrings {
     newRecoveryCodeIntro: string
     unsupportedBrowser: string
     error: (message: string) => string
+    syncTitle: string
+    syncIntro: string
+    unlockLabel: string
+    unlockButton: string
+    unlocking: string
+    syncNow: string
+    syncing: string
+    neverSynced: string
+    upToDate: (date: string) => string
+    conflictTitle: string
+    conflictIntro: (localDecks: number, localCards: number, remoteLabel: string, remoteDate: string) => string
+    keepThisDevice: string
+    useOtherDevice: string
+    lockSync: string
+    tokensTitle: string
+    tokensNote: string
+    loadingTokens: string
+    createTokenButton: string
+    creatingToken: string
+    tokenCreatedTitle: string
+    tokenCreatedIntro: string
+    tokenCreatedContinue: string
+    unnamedToken: string
+    revokeToken: string
+    revokingToken: string
+    tokenNicknamePrompt: string
+    dangerZoneTitle: string
+    deleteAccountButton: string
+    deletingAccount: string
+    deleteAccountConfirm: string
   }
   help: {
     eyebrow: string
@@ -705,9 +734,8 @@ const en: UiStrings = {
   },
   account: {
     title: 'Account',
-    signedOutIntro: 'Optional. SchreckNet works fully with zero account — this is groundwork for letting your decks follow you across devices later.',
-    whatItsFor: 'An account will eventually do one thing: let your decks and inventory sync to another device. Everything else keeps working exactly the same without one.',
-    syncNotYet: 'Sync is not built yet. Your decks and inventory live only in this browser — with or without an account — so keep taking backups from Data & backup. An account today only reserves your name and your passkeys.',
+    signedOutIntro: 'Optional. SchreckNet works fully with zero account — this is only for whoever wants their decks to follow them across devices.',
+    whatItsFor: 'An account does one thing: it lets your decks and inventory sync to another device, end-to-end encrypted with your recovery code so SchreckNet cannot read them. Everything else keeps working exactly the same without one.',
     passkeyNote: 'No password, no email. Sign in with a passkey — the same technology behind "sign in with Face ID/fingerprint" — stored by your device or password manager (1Password, Bitwarden, iCloud Keychain, Google Password Manager all work, entirely your choice).',
     displayNameLabel: 'Display name',
     displayNamePlaceholder: 'How you’ll be identified — this is also your login name',
@@ -750,6 +778,37 @@ const en: UiStrings = {
     newRecoveryCodeIntro: 'Redeeming a recovery code retires it. Here is your new one — save it the same way.',
     unsupportedBrowser: 'This browser does not support passkeys, so accounts are unavailable here. Everything else on SchreckNet still works.',
     error: (message) => `Something went wrong: ${message}`,
+    syncTitle: 'Sync',
+    syncIntro: 'Encrypted end-to-end with your recovery code — SchreckNet cannot read it. Enter your recovery code once per browser session to unlock syncing.',
+    unlockLabel: 'Recovery code',
+    unlockButton: 'Unlock sync',
+    unlocking: 'Unlocking…',
+    syncNow: 'Sync now',
+    syncing: 'Syncing…',
+    neverSynced: 'Nothing synced yet from any device.',
+    upToDate: (date) => `Up to date — last synced ${date}.`,
+    conflictTitle: 'Choose which data to keep',
+    conflictIntro: (localDecks, localCards, remoteLabel, remoteDate) =>
+      `This device has ${localDecks} deck${localDecks === 1 ? '' : 's'} and ${localCards} inventory card${localCards === 1 ? '' : 's'}. A different sync (${remoteLabel}, ${remoteDate}) also exists. Pick one — the other will be overwritten.`,
+    keepThisDevice: 'Keep this device, overwrite the sync',
+    useOtherDevice: 'Use the other sync, overwrite this device',
+    lockSync: 'Lock sync',
+    tokensTitle: 'API tokens',
+    tokensNote: 'For MCP or REST clients, which have neither a browser nor a passkey. A token can only read/write your encrypted sync data — it cannot manage passkeys, tokens, or delete your account.',
+    loadingTokens: 'Loading tokens…',
+    createTokenButton: 'Create a token',
+    creatingToken: 'Creating…',
+    tokenCreatedTitle: 'Save your new token',
+    tokenCreatedIntro: 'Shown once, never recoverable afterwards. Save it somewhere safe, like a password manager.',
+    tokenCreatedContinue: 'Continue',
+    unnamedToken: 'Unnamed token',
+    revokeToken: 'Revoke',
+    revokingToken: 'Revoking…',
+    tokenNicknamePrompt: 'Label this token (e.g. "my laptop MCP client")',
+    dangerZoneTitle: 'Danger zone',
+    deleteAccountButton: 'Delete account',
+    deletingAccount: 'Deleting…',
+    deleteAccountConfirm: 'Permanently delete this account? This cannot be undone. Your local decks and inventory in this browser are not affected.',
   },
   settings: {
     title: 'Data & backup',

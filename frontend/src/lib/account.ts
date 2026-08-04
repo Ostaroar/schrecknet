@@ -132,3 +132,13 @@ export async function removePasskey(id: number): Promise<void> {
     throw new Error(await response.text().catch(() => `request failed with status ${response.status}`))
   }
 }
+
+/** Permanently deletes the account and everything tied to it (passkeys,
+ * sessions, tokens, sync blob) — server-side hard delete, irreversible.
+ * Does NOT touch local decks/inventory; those are unaffected either way. */
+export async function deleteAccount(): Promise<void> {
+  const response = await fetch('/api/v1/account', { method: 'DELETE' })
+  if (!response.ok) {
+    throw new Error(await response.text().catch(() => `request failed with status ${response.status}`))
+  }
+}

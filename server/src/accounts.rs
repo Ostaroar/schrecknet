@@ -21,6 +21,7 @@ use argon2::{
     Argon2,
 };
 use rusqlite::{Connection, OptionalExtension};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use webauthn_rs::prelude::*;
@@ -803,6 +804,165 @@ pub fn remove_credential(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// API tokens + unified auth resolution (milestone A5)
+//
+// Bearer tokens exist for MCP/REST clients, which have neither a cookie jar
+// nor an authenticator. Deliberately less privileged than a session
+// (docs/accounts-plan.md § 3): a token can read/write the encrypted sync blob
+// and read account info, and nothing else — no credential management, no
+// token management, no account deletion. A leaked token must not be able to
+// escalate into permanent account takeover.
+// ---------------------------------------------------------------------------
+
+const API_TOKEN_BYTES: u32 = 32;
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct ApiTokenSummary {
+    pub id: i64,
+    pub nickname: Option<String>,
+    pub created_at: String,
+    pub last_used_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct NewApiToken {
+    /// Shown exactly once — only its hash is stored, same as a session token.
+    pub token: String,
+    pub id: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct CreateApiTokenParams {
+    #[serde(default)]
+    pub nickname: Option<String>,
+}
+
+pub fn create_api_token(
+    conn: &Connection,
+    user_id: i64,
+    params: &CreateApiTokenParams,
+) -> Result<NewApiToken, AccountError> {
+    let token = random_token(conn, API_TOKEN_BYTES)?;
+    let nickname = params.nickname.as_deref().map(str::trim).filter(|n| !n.is_empty());
+    conn.execute(
+        "INSERT INTO user_api_tokens(token_hash, user_id, nickname, created_at)
+         VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+        rusqlite::params![token_hash(&token), user_id, nickname],
+    )?;
+    Ok(NewApiToken {
+        token,
+        id: conn.last_insert_rowid(),
+    })
+}
+
+pub fn list_api_tokens(
+    conn: &Connection,
+    user_id: i64,
+) -> Result<Vec<ApiTokenSummary>, AccountError> {
+    let mut stmt = conn.prepare(
+        "SELECT rowid, nickname, created_at, last_used_at
+         FROM user_api_tokens WHERE user_id = ?1 ORDER BY created_at, rowid",
+    )?;
+    let rows = stmt.query_map([user_id], |row| {
+        Ok(ApiTokenSummary {
+            id: row.get(0)?,
+            nickname: row.get(1)?,
+            created_at: row.get(2)?,
+            last_used_at: row.get(3)?,
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema, utoipa::ToSchema, utoipa::IntoParams)]
+pub struct RevokeApiTokenParams {
+    /// Token id, as returned by the account's token list in the browser.
+    pub id: i64,
+}
+
+pub fn revoke_api_token(conn: &Connection, user_id: i64, token_id: i64) -> Result<(), AccountError> {
+    let removed = conn.execute(
+        "DELETE FROM user_api_tokens WHERE rowid = ?1 AND user_id = ?2",
+        rusqlite::params![token_id, user_id],
+    )?;
+    if removed == 0 {
+        return Err(AccountError::UnknownCredential);
+    }
+    Ok(())
+}
+
+/// Resolves a bearer token to its user, refreshing `last_used_at`. Expired
+/// tokens (an optional, usually-unset `expires_at`) are never accepted.
+pub fn api_token_user(conn: &Connection, token: &str) -> Result<Option<i64>, AccountError> {
+    let hash = token_hash(token);
+    let row: Option<(i64, Option<String>)> = conn
+        .query_row(
+            "SELECT user_id, expires_at FROM user_api_tokens WHERE token_hash = ?1",
+            [&hash],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((user_id, expires_at)) = row else {
+        return Ok(None);
+    };
+    let now: String = conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |row| {
+        row.get(0)
+    })?;
+    if expires_at.is_some_and(|expiry| expiry <= now) {
+        return Ok(None);
+    }
+    conn.execute(
+        "UPDATE user_api_tokens SET last_used_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE token_hash = ?1",
+        [&hash],
+    )?;
+    Ok(Some(user_id))
+}
+
+/// A resolved caller and how much they're allowed to do — the privilege split
+/// from docs/accounts-plan.md § 3. Every account-management handler (passkeys,
+/// tokens, deletion) must check `Session`, not just "is someone authenticated".
+pub enum Caller {
+    Session(i64),
+    Token(i64),
+}
+
+impl Caller {
+    pub fn user_id(&self) -> i64 {
+        match self {
+            Self::Session(id) | Self::Token(id) => *id,
+        }
+    }
+
+    pub fn require_session(&self) -> Result<i64, AccountError> {
+        match self {
+            Self::Session(id) => Ok(*id),
+            Self::Token(_) => Err(AccountError::NotAuthenticated),
+        }
+    }
+}
+
+/// Session cookie first, then bearer token — the one place both credential
+/// types are accepted, for the sync-blob endpoints both are allowed to use.
+pub fn authenticate(
+    conn: &Connection,
+    session_token: Option<&str>,
+    bearer_token: Option<&str>,
+) -> Result<Caller, AccountError> {
+    if let Some(token) = session_token {
+        if let Some(user_id) = session_user(conn, token)? {
+            return Ok(Caller::Session(user_id));
+        }
+    }
+    if let Some(token) = bearer_token {
+        if let Some(user_id) = api_token_user(conn, token)? {
+            return Ok(Caller::Token(user_id));
+        }
+    }
+    Err(AccountError::NotAuthenticated)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1047,6 +1207,53 @@ mod tests {
                 remaining, 0,
                 "{table} still had rows after the user was deleted"
             );
+        }
+    }
+
+    /// Guardrail 4 (docs/accounts-plan.md § 8): account deletion is a hard
+    /// delete, verified across all five account tables, not just the two A1
+    /// happened to cover before A3/A5 gave the other three anything to hold.
+    #[test]
+    fn deleting_a_user_removes_every_row_across_all_five_account_tables() {
+        let conn = open();
+        let (user_id, _) = insert_user(&conn, "Tremere");
+        insert_fake_credential(&conn, user_id, b"cred");
+        create_session(&conn, user_id).unwrap();
+        create_api_token(&conn, user_id, &CreateApiTokenParams { nickname: None }).unwrap();
+        crate::sync::put_blob(
+            &conn,
+            user_id,
+            &crate::sync::PutSyncBlobParams {
+                expected_version: None,
+                device_label: None,
+                ciphertext: "x".into(),
+                nonce: "y".into(),
+            },
+        )
+        .unwrap();
+
+        conn.execute("DELETE FROM users WHERE id = ?1", [user_id])
+            .unwrap();
+
+        let users_remaining: i64 = conn
+            .query_row("SELECT COUNT(*) FROM users WHERE id = ?1", [user_id], |row| row.get(0))
+            .unwrap();
+        assert_eq!(users_remaining, 0, "users still had a row after its own deletion");
+
+        for table in [
+            "user_credentials",
+            "user_sessions",
+            "user_api_tokens",
+            "user_sync_blobs",
+        ] {
+            let remaining: i64 = conn
+                .query_row(
+                    &format!("SELECT COUNT(*) FROM {table} WHERE user_id = ?1"),
+                    [user_id],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(remaining, 0, "{table} still had rows after the user was deleted");
         }
     }
 

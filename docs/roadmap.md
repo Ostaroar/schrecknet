@@ -248,10 +248,9 @@ Keep control." stays the default, account-free experience — everything shipped
 far (search, decks, inventory, limited format, game-groups) keeps working with zero
 login. Accounts/cloud sync are purely additive on top, for whoever wants their decks
 follow them across devices._
-**Design pass complete (2026-08-04), no implementation yet:**
-[ADR 0019](adr/0019-passkey-only-accounts-no-email.md) fixes the auth decision and
-[docs/accounts-plan.md](accounts-plan.md) holds the data model, auth boundary, sync
-semantics and A1–A6 milestones.
+**Phase 3 complete (A1–A6, 2026-08-04):** [ADR 0019](adr/0019-passkey-only-accounts-no-email.md)
+fixes the auth decision and [docs/accounts-plan.md](accounts-plan.md) holds the data
+model, auth boundary, sync semantics and the full A1–A6 milestone record.
 
 - **Passkeys (WebAuthn) only — no passwords, and therefore no email address at all.**
   Recovery is a one-time Argon2id-hashed recovery code, not a reset mail. This works

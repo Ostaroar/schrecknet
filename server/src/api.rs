@@ -8,8 +8,8 @@ use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Json};
 
 use crate::accounts::{
-    self, AccountError, AddPasskeyFinishParams, LoginFinishParams, LoginStartParams,
-    RecoverStartParams, RegisterFinishParams, RegisterStartParams,
+    self, AccountError, AddPasskeyFinishParams, CreateApiTokenParams, LoginFinishParams,
+    LoginStartParams, RecoverStartParams, RegisterFinishParams, RegisterStartParams,
 };
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams, PreconCardCountsParams};
@@ -22,6 +22,7 @@ use crate::game_groups::{
     PlayerResultInput, UpdateGameParams,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
+use crate::sync::{self, PutSyncBlobParams, SyncError};
 use crate::twda_db::{self, TwdaDeckParams, TwdaSearchParams};
 use crate::AppState;
 
@@ -918,6 +919,203 @@ pub async fn account_remove_passkey(
     .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(response) => response,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Sync (docs/adr/0019, docs/accounts-plan.md milestone A3)
+//
+// Both a session cookie and a bearer token are accepted here — the one place
+// both credential types work, per docs/accounts-plan.md § 3. Everything else
+// account-management stays session-only via `with_session`.
+// ---------------------------------------------------------------------------
+
+fn bearer_token(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::AUTHORIZATION)?
+        .to_str()
+        .ok()?
+        .strip_prefix("Bearer ")
+        .map(str::to_owned)
+}
+
+fn sync_error_response(error: SyncError) -> axum::response::Response {
+    match error {
+        SyncError::NotFound => (StatusCode::NOT_FOUND, "no synced data yet").into_response(),
+        SyncError::TooLarge => (StatusCode::PAYLOAD_TOO_LARGE, error.to_string()).into_response(),
+        SyncError::Conflict { current } => (StatusCode::CONFLICT, Json(current)).into_response(),
+        SyncError::Sqlite(_) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
+}
+
+/// Resolves the caller from either credential type, then runs `f` on the
+/// blocking pool. Sync-specific because it's the one place both are accepted;
+/// account-management handlers use `with_session` instead.
+enum CallerOrSyncError {
+    Unauthenticated,
+    Sync(SyncError),
+}
+
+impl From<rusqlite::Error> for CallerOrSyncError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::Sync(SyncError::from(error))
+    }
+}
+
+async fn with_caller<T, F>(
+    state: AppState,
+    headers: &HeaderMap,
+    f: F,
+) -> Result<T, axum::response::Response>
+where
+    T: Send + 'static,
+    F: FnOnce(&rusqlite::Connection, i64) -> Result<T, SyncError> + Send + 'static,
+{
+    let session = session_token(headers);
+    let bearer = bearer_token(headers);
+    let app_db = state.app_db.clone();
+    let joined = tokio::task::spawn_blocking(move || -> Result<T, CallerOrSyncError> {
+        let conn = game_groups::open(&app_db)?;
+        let caller = accounts::authenticate(&conn, session.as_deref(), bearer.as_deref())
+            .map_err(|_| CallerOrSyncError::Unauthenticated)?;
+        f(&conn, caller.user_id()).map_err(CallerOrSyncError::Sync)
+    })
+    .await;
+
+    match joined {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(CallerOrSyncError::Unauthenticated)) => {
+            Err(account_error_response(AccountError::NotAuthenticated))
+        }
+        Ok(Err(CallerOrSyncError::Sync(error))) => Err(sync_error_response(error)),
+        Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()),
+    }
+}
+
+#[utoipa::path(get, path = "/api/v1/account/sync",
+    responses(
+        (status = 200, description = "The current encrypted sync blob", body = sync::SyncBlob),
+        (status = 401, description = "Not signed in", body = String),
+        (status = 404, description = "No synced data yet", body = String),
+    ),
+    tag = "account")]
+pub async fn get_sync_blob(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    match with_caller(state, &headers, |conn, user_id| sync::get_blob(conn, user_id)).await {
+        Ok(blob) => Json(blob).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(put, path = "/api/v1/account/sync", request_body = PutSyncBlobParams,
+    responses(
+        (status = 200, description = "Stored; the new blob (with its new version)", body = sync::SyncBlob),
+        (status = 401, description = "Not signed in", body = String),
+        (status = 409, description = "Version conflict — another device pushed first; body is the current blob", body = sync::SyncBlob),
+        (status = 413, description = "Ciphertext too large", body = String),
+    ),
+    tag = "account")]
+pub async fn put_sync_blob(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(params): Json<PutSyncBlobParams>,
+) -> impl IntoResponse {
+    match with_caller(state, &headers, move |conn, user_id| {
+        sync::put_blob(conn, user_id, &params)
+    })
+    .await
+    {
+        Ok(blob) => Json(blob).into_response(),
+        Err(response) => response,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// API tokens (milestone A5) — session-only to create/list/revoke, matching
+// docs/accounts-plan.md § 3: a token cannot mint or revoke other tokens.
+// ---------------------------------------------------------------------------
+
+#[utoipa::path(post, path = "/api/v1/account/tokens", request_body = CreateApiTokenParams,
+    responses(
+        (status = 200, description = "The new token — shown once, only its hash is stored", body = accounts::NewApiToken),
+        (status = 401, description = "Not signed in", body = String),
+    ),
+    tag = "account")]
+pub async fn account_create_token(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(params): Json<CreateApiTokenParams>,
+) -> impl IntoResponse {
+    match with_session(state, &headers, move |conn, _, user_id| {
+        accounts::create_api_token(conn, user_id, &params)
+    })
+    .await
+    {
+        Ok(token) => Json(token).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(get, path = "/api/v1/account/tokens",
+    responses(
+        (status = 200, description = "API tokens on this account (never the token values themselves)", body = Vec<accounts::ApiTokenSummary>),
+        (status = 401, description = "Not signed in", body = String),
+    ),
+    tag = "account")]
+pub async fn account_list_tokens(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    match with_session(state, &headers, |conn, _, user_id| {
+        accounts::list_api_tokens(conn, user_id)
+    })
+    .await
+    {
+        Ok(tokens) => Json(tokens).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(delete, path = "/api/v1/account/tokens/{id}",
+    params(("id" = i64, Path, description = "Token id, as returned by the list endpoint")),
+    responses(
+        (status = 204, description = "Revoked"),
+        (status = 401, description = "Not signed in", body = String),
+        (status = 404, description = "No such token on this account", body = String),
+    ),
+    tag = "account")]
+pub async fn account_revoke_token(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    match with_session(state, &headers, move |conn, _, user_id| {
+        accounts::revoke_api_token(conn, user_id, id)
+    })
+    .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(response) => response,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Account deletion (milestone A6) — session-only, no MCP mirror. A hard
+// delete a bearer token could trigger would be exactly the kind of
+// irreversible action a leaked token must not be able to do.
+// ---------------------------------------------------------------------------
+
+#[utoipa::path(delete, path = "/api/v1/account",
+    responses(
+        (status = 204, description = "Account and all its data (passkeys, sessions, tokens, sync blob) permanently deleted"),
+        (status = 401, description = "Not signed in", body = String),
+    ),
+    tag = "account")]
+pub async fn delete_account(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    match with_session(state, &headers, |conn, _, user_id| {
+        conn.execute("DELETE FROM users WHERE id = ?1", [user_id])?;
+        Ok::<(), AccountError>(())
+    })
+    .await
+    {
+        Ok(()) => with_cookie(StatusCode::NO_CONTENT.into_response(), &cleared_session_cookie()),
         Err(response) => response,
     }
 }

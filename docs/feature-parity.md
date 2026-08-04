@@ -297,16 +297,20 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       own hard/soft claiming algorithm (see inventory-plan.md § 1a)
 
 ## Accounts (`/account`)
-_Design complete, unimplemented — [ADR 0019](adr/0019-passkey-only-accounts-no-email.md)
+_Complete (A1-A6, 2026-08-04) — [ADR 0019](adr/0019-passkey-only-accounts-no-email.md)
 + [docs/accounts-plan.md](accounts-plan.md). **Deliberate divergence from vdb:** vdb uses
 username + password with optional email reset; SchreckNet uses passkeys only and stores
 no email address, because its server is a replica (decks live in the browser and ADR 0016
 backs them up) rather than the source of truth. Same capability — an account that syncs
 your decks — reached without mail infrastructure or personal data._
-- ☐ Register: display name + passkey; one-time recovery code (no email, by design)
-- ☐ Login / logout (passkey ceremony); recovery code redeems to register a new passkey
-- ☐ Manage passkeys (add/rename/remove); delete account (hard delete)
-- ☐ Encrypted sync of decks + inventory (ADR 0016 envelope, user-resolved conflicts)
+- ☑ Register: display name + passkey; one-time recovery code (no email, by design)
+- ☑ Login / logout (passkey ceremony); recovery code redeems to register a new passkey
+- ☑ Manage passkeys (add/rename/remove, last one refused); API tokens for MCP/REST
+      (deliberately less privileged than a session — sync only, no management); delete
+      account (hard delete, verified by test across all five account tables)
+- ☑ Encrypted sync of decks + inventory — the ADR 0016 envelope, AES-256-GCM in the
+      browser with an HKDF-derived key from the recovery code (server never has the key),
+      user-resolved conflicts (optimistic-concurrency version check, not last-write-wins)
 
 ## SchreckNet additions beyond VDB parity
 - ☑ Offline semantic card search — additive local concept retrieval, never a

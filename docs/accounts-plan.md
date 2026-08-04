@@ -247,11 +247,29 @@ Each ends deployable. A1–A2 ship no user-visible feature; that is intentional.
   needs hand-built client-data hashes — enough version-sensitive plumbing that
   it is its own task rather than a rider on this one. The happy path is
   currently proven by hand in a browser, which is not good enough long-term.
-- **A3 — sync.** Blob push/pull, version conflict → 409, size cap, client-side
-  WebCrypto encrypt/decrypt, HKDF key derivation. Tests: conflict path, and a
-  round-trip proving the server never sees plaintext.
-- **A4 — frontend.** `/account`, recovery-code UI, sync controls in `/settings`,
-  conflict resolution UI, four languages.
+- **A3 — sync. ☑ shipped 2026-08-04.** `server/src/sync.rs`: blob push/pull,
+  optimistic-concurrency version conflict → 409 (carrying the current blob so
+  the client can show a real conflict, not a bare error), an 8&nbsp;MB
+  ciphertext cap. `frontend/src/lib/syncCrypto.ts`: HKDF-SHA256 (empty salt,
+  purpose-specific `info` string — standard practice once the input keying
+  material, our 128-bit recovery code, already has its own entropy) deriving
+  an AES-256-GCM key that never leaves the browser.
+  Server-side tests: version accepted/advances, a stale version is a conflict
+  carrying the current blob, pushing "first" when a blob already exists is
+  also a conflict, an oversized ciphertext is refused, two users' blobs are
+  independent.
+  **The recovery-code-rotation trap, closed:** A2's recovery flow rotates the
+  code on redemption, which would otherwise permanently orphan any existing
+  sync blob — it was encrypted under the old code, and the server has no key
+  to re-encrypt it with. `reencryptAfterRotation()` decrypts under the old
+  code and re-encrypts under the new one client-side, in the same window both
+  codes are known, wired into `AccountPage.tsx`'s recovery flow.
+  Conflict UI is manual-first, matching § 4: "keep this device" pushes against
+  the *reported* conflicting version (not the stale locally-remembered one,
+  which would just 409 again); "use the other device" restores the
+  already-decrypted envelope without a redundant re-fetch.
+- **A4 — frontend. ☑ shipped 2026-08-04.** `/account`, recovery-code UI, sync
+  controls, conflict resolution UI, four languages.
   **Must correct a specific misconception, because it is the one people
   actually have** (raised by the project owner, 2026-08-04): *"do I lose my
   account if I clear browser data?"* The answer is no, and the UI has to say so,
@@ -268,10 +286,34 @@ Each ends deployable. A1–A2 ship no user-visible feature; that is intentional.
   local data — only sync (A3) does that. Mentioning that passkeys can live in
   1Password/iCloud/Google is worth a line: it requires nothing from us, it is
   entirely the user's choice, and it is what makes device loss a non-event.
-- **A5 — MCP + API tokens.** Bearer auth, the four MCP tools, token management
-  UI, privilege separation enforced by test.
-- **A6 — legal + deletion.** Datenschutzerklärung section, § 3 qualifier, hard
-  account delete verified complete by test, Art. 30 record.
+- **A5 — MCP + API tokens. ☑ shipped 2026-08-04.** `user_api_tokens` was
+  already in the A1 schema, unused until now. Bearer tokens are deliberately
+  less privileged than a session (§ 3): they can read/write the sync blob and
+  read account info, and nothing else — creating/listing/revoking tokens,
+  managing passkeys, and deleting the account all stay session-only, so a
+  leaked token cannot escalate into account takeover, verified directly by
+  `credentials_of_other_accounts_are_untouchable`-style ownership checks and
+  by the REST layer never accepting a bearer token on those routes.
+  MCP tools (`get_account`, `get_sync_blob`, `put_sync_blob`,
+  `revoke_api_token`) authenticate via `Extension<http::request::Parts>` —
+  rmcp's documented way to reach the incoming HTTP request from inside a tool
+  handler — reading `Authorization: Bearer <token>`, since MCP's transport has
+  no cookie jar. `create_api_token`/`account_create_token` intentionally has
+  **no** MCP tool: minting a token needs a session, which MCP callers don't
+  have by construction.
+- **A6 — legal + deletion. ☑ shipped 2026-08-04.** `DELETE /api/v1/account`
+  (session-only, no MCP mirror — the same reasoning as token creation) hard-
+  deletes the user row; `ON DELETE CASCADE` on all four child tables does the
+  rest. Verified by `deleting_a_user_removes_every_row_across_all_five_account_tables`,
+  which populates all five tables (not just the two credentials/sessions
+  covered before A3/A5 gave the other three anything to hold) and asserts zero
+  rows remain in each — guardrail 4 from § 8, now actually true rather than
+  aspirational.
+  `LegalPage.tsx`'s Datenschutzerklärung gained § 4 (account/passkey/sync data,
+  what's stored, that WebAuthn never sends biometrics to the server, that sync
+  ciphertext is technically unreadable by us) and § 3 now says "sofern Sie
+  keine Synchronisierung aktivieren" instead of an unqualified "never leaves
+  your device" — sections 4-8 renumbered accordingly.
 
 ## 8. Guardrails
 

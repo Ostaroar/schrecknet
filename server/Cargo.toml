@@ -33,6 +33,10 @@ webauthn-rs = "0.5.5"
 # direct dependency for session-token hashing (same reasoning as `tower`
 # above, not a new addition to the dependency tree).
 sha2 = "0.10"
+# Already in the build graph via axum/rmcp; promoted to a direct dependency to
+# name http::request::Parts explicitly (MCP tools read the bearer token from
+# it via rmcp's Extension<Parts> extractor — same reasoning as `tower` above).
+http = "1"
 # docs/adr/0017-utoipa-for-openapi.md
 utoipa = { version = "5", features = ["axum_extras"] }
 # 8.1.1 is yanked; pin >=9.0.2 (matches our axum 0.8, same utoipa 5.x pairing).

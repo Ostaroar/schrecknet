@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use rmcp::handler::server::tool::Extension;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{
     ListResourceTemplatesResult, ListResourcesResult, PaginatedRequestParams,
@@ -13,6 +14,7 @@ use rmcp::model::{
 use rmcp::service::RequestContext;
 use rmcp::{tool, tool_handler, tool_router, RoleServer, ServerHandler};
 
+use crate::accounts::{self, AccountError, RevokeApiTokenParams};
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams};
 use crate::deck_tools::{
@@ -24,6 +26,7 @@ use crate::game_groups::{
     UpdateGameParams,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
+use crate::sync::{self, PutSyncBlobParams};
 use crate::twda_db::{self, TwdaDeckParams, TwdaSearchParams};
 
 #[derive(Clone)]
@@ -250,6 +253,84 @@ impl SchreckNetMcp {
         json_result(twda_db::get_deck(&conn, &params))
     }
 
+    /// Bearer-token auth for MCP — there is no cookie jar on this transport, so
+    /// only API tokens work here, never sessions (docs/accounts-plan.md § 3).
+    /// `Extension<Parts>` is rmcp's documented way to reach the incoming HTTP
+    /// request from inside a tool handler.
+    fn authenticated_user(&self, parts: &http::request::Parts) -> Result<i64, rmcp::ErrorData> {
+        let token = parts
+            .headers
+            .get(http::header::AUTHORIZATION)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.strip_prefix("Bearer "))
+            .ok_or_else(|| rmcp::ErrorData::invalid_params("missing bearer token", None))?;
+        let conn = self.open_app()?;
+        accounts::api_token_user(&conn, token)
+            .map_err(account_error)?
+            .ok_or_else(|| rmcp::ErrorData::invalid_params("invalid or revoked token", None))
+    }
+
+    #[tool(
+        description = "Get the signed-in account's display name, creation date, and passkey \
+        count. Authenticate with an API token (Authorization: Bearer <token>), created at \
+        /account in the browser — there is no MCP registration/login, since that needs a \
+        browser-resident passkey authenticator."
+    )]
+    async fn get_account(
+        &self,
+        Extension(parts): Extension<http::request::Parts>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let user_id = self.authenticated_user(&parts)?;
+        let conn = self.open_app()?;
+        account_result(accounts::account_info(&conn, user_id), account_error)
+    }
+
+    #[tool(
+        description = "Get the signed-in account's encrypted sync blob (docs/adr/0019). The \
+        server cannot decrypt this — it is AES-GCM ciphertext encrypted in the browser. Returns \
+        an error if nothing has been synced yet."
+    )]
+    async fn get_sync_blob(
+        &self,
+        Extension(parts): Extension<http::request::Parts>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let user_id = self.authenticated_user(&parts)?;
+        let conn = self.open_app()?;
+        account_result(sync::get_blob(&conn, user_id), sync_error)
+    }
+
+    #[tool(
+        description = "Push an encrypted sync blob for the signed-in account. `expected_version` \
+        must match the server's current version (omit only for the very first push), or this is \
+        refused as a conflict — optimistic concurrency, so two devices can never silently \
+        overwrite each other."
+    )]
+    async fn put_sync_blob(
+        &self,
+        Extension(parts): Extension<http::request::Parts>,
+        Parameters(params): Parameters<PutSyncBlobParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let user_id = self.authenticated_user(&parts)?;
+        let conn = self.open_app()?;
+        account_result(sync::put_blob(&conn, user_id, &params), sync_error)
+    }
+
+    #[tool(
+        description = "Revoke one of the signed-in account's own API tokens by id (as returned \
+        by the account's token list in the browser). A token can revoke other tokens but not \
+        itself-only actions like creating tokens, managing passkeys, or deleting the account — \
+        those stay session-only (docs/accounts-plan.md § 3)."
+    )]
+    async fn revoke_api_token(
+        &self,
+        Extension(parts): Extension<http::request::Parts>,
+        Parameters(params): Parameters<RevokeApiTokenParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let user_id = self.authenticated_user(&parts)?;
+        let conn = self.open_app()?;
+        account_result(accounts::revoke_api_token(&conn, user_id, params.id), account_error)
+    }
+
     #[tool(
         description = "Create a private game group for tracking casual play with a group of \
         friends — no accounts, just a random shareable code and optional write passphrase. \
@@ -370,6 +451,46 @@ fn game_group_error(error: GameGroupError) -> rmcp::ErrorData {
         | GameGroupError::PasswordHash
         | GameGroupError::Sqlite(_) => rmcp::ErrorData::internal_error(error.to_string(), None),
     }
+}
+
+fn account_error(error: AccountError) -> rmcp::ErrorData {
+    match error {
+        AccountError::DisplayNameInvalid
+        | AccountError::UnknownCeremony
+        | AccountError::NoCredentials
+        | AccountError::LastPasskey
+        | AccountError::UnknownUser
+        | AccountError::UnknownCredential
+        | AccountError::CredentialRejected
+        | AccountError::NotAuthenticated
+        | AccountError::RecoveryCodeRejected
+        | AccountError::TooManyAttempts
+        | AccountError::DisplayNameTaken => rmcp::ErrorData::invalid_params(error.to_string(), None),
+        AccountError::Sqlite(_) | AccountError::PasswordHash | AccountError::Serialization => {
+            rmcp::ErrorData::internal_error(error.to_string(), None)
+        }
+    }
+}
+
+fn sync_error(error: crate::sync::SyncError) -> rmcp::ErrorData {
+    match error {
+        crate::sync::SyncError::NotFound => {
+            rmcp::ErrorData::resource_not_found(error.to_string(), None)
+        }
+        crate::sync::SyncError::TooLarge | crate::sync::SyncError::Conflict { .. } => {
+            rmcp::ErrorData::invalid_params(error.to_string(), None)
+        }
+        crate::sync::SyncError::Sqlite(_) => rmcp::ErrorData::internal_error(error.to_string(), None),
+    }
+}
+
+/// Like `json_result`, for the account/sync service functions whose error
+/// type is domain-specific rather than a bare `rusqlite::Error`.
+fn account_result<T: serde::Serialize, E>(
+    result: Result<T, E>,
+    to_error: impl FnOnce(E) -> rmcp::ErrorData,
+) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+    json_value(&result.map_err(to_error)?)
 }
 
 fn json_result<T: serde::Serialize>(

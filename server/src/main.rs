@@ -11,6 +11,7 @@ mod draw_hand;
 mod game_groups;
 mod mcp;
 mod semantic_search;
+mod sync;
 mod twda_db;
 mod user_db;
 
@@ -74,6 +75,12 @@ use utoipa_swagger_ui::SwaggerUi;
         api::account_list_passkeys,
         api::account_rename_passkey,
         api::account_remove_passkey,
+        api::get_sync_blob,
+        api::put_sync_blob,
+        api::account_create_token,
+        api::account_list_tokens,
+        api::account_revoke_token,
+        api::delete_account,
     )
 )]
 struct ApiDoc;
@@ -240,7 +247,10 @@ async fn main() {
             post(api::account_login_finish),
         )
         .route("/api/v1/account/logout", post(api::account_logout))
-        .route("/api/v1/account", get(api::get_account))
+        .route(
+            "/api/v1/account",
+            get(api::get_account).delete(api::delete_account),
+        )
         .route(
             "/api/v1/account/recover/start",
             post(api::account_recover_start),
@@ -257,6 +267,18 @@ async fn main() {
         .route(
             "/api/v1/account/passkeys/{id}",
             delete(api::account_remove_passkey).put(api::account_rename_passkey),
+        )
+        .route(
+            "/api/v1/account/sync",
+            get(api::get_sync_blob).put(api::put_sync_blob),
+        )
+        .route(
+            "/api/v1/account/tokens",
+            get(api::account_list_tokens).post(api::account_create_token),
+        )
+        .route(
+            "/api/v1/account/tokens/{id}",
+            delete(api::account_revoke_token),
         )
         .route("/api/v1/groups", post(api::create_game_group))
         .route("/api/v1/groups/{code}", get(api::get_game_group))
