@@ -21,10 +21,11 @@ const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 /// the fetch. The real V5 gate is the card-membership check in `main.rs`.
 const DATE_FROM: &str = "2020-01-01";
 
+/// Card names aren't kept — we resolve them from our own `cards` table
+/// (same ids, see the module doc comment), not from what TWDA calls them.
 #[derive(Debug, Deserialize)]
 pub struct TwdaCardCount {
     pub id: i64,
-    pub name: String,
     pub count: i64,
 }
 
