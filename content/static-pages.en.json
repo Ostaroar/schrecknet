@@ -37,6 +37,15 @@
     "lead": "Product milestones for the V5 card-research and deckbuilding workbench.",
     "entries": [
       {
+        "date": "2026-08-04",
+        "title": "JOL deck imports actually work now",
+        "summary": "Pasting a deck list exported from JOL now resolves every card correctly instead of leaving a stray \"x\" stuck onto card names.",
+        "items": [
+          "JOL's own \"4 x Card Name\" spacing (space before the x) is now parsed the same as Lackey's \"4x Card Name\" — verified against a real JOL export.",
+          "Deck and inventory text import both use the same fix, so nothing needs re-checking twice."
+        ]
+      },
+      {
         "date": "2026-07-23",
         "title": "Private playgroups & leaderboards",
         "summary": "Track casual games with your regular playgroup and see a shared leaderboard — no account needed.",
