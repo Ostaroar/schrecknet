@@ -34,7 +34,10 @@ use utoipa_swagger_ui::SwaggerUi;
 /// request/response schemas transitively, so they don't need repeating here.
 #[derive(OpenApi)]
 #[openapi(
-    info(title = "SchreckNet API", description = "REST mirror of the MCP tools — see /mcp for the primary machine API."),
+    info(
+        title = "SchreckNet API",
+        description = "REST mirror of the MCP tools — see /mcp for the primary machine API."
+    ),
     paths(
         api::search_crypt,
         api::search_library,
