@@ -259,6 +259,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
@@ -266,11 +268,26 @@ jobs:
       - name: Save kubeconfig
         run: doctl kubernetes cluster kubeconfig save k8s-1-36-0-do-3-fra1-1784797648512
 
-      # imagePullPolicy: Always + a rollout restart is enough here -- the
-      # deployment always tracks the `:main` tag (k8s/deployment.yaml), so
-      # there's no image reference to bump, just a pod to recreate.
+      # `apply` first, so a manifest change (env vars, probes, resources) takes
+      # effect on the deploy that introduced it. Before this, manifests were
+      # applied by hand only at bootstrap, so an edited deployment.yaml sat
+      # inert in git until someone remembered -- which is exactly how the
+      # passkey relying-party config (docs/adr/0019) would have shipped
+      # silently misconfigured.
+      #
+      # It also repairs the `rollout undo` trap documented in k8s/README.md:
+      # a rollback pins an immutable `sha-` tag into the pod template, which
+      # used to make every later `rollout restart` a silent no-op until someone
+      # un-pinned it by hand. `apply` restores the `:main` tag, so the next
+      # push to main genuinely deploys again. Rolling back therefore holds
+      # until the next push to main -- land the fix, don't just roll back.
+      #
+      # `rollout restart` is still needed after it: when only the image
+      # *contents* changed, the manifest is byte-identical and `apply` is a
+      # no-op, so nothing would recreate the pod.
       - name: Roll out schreck-net.com
         run: |
+          kubectl apply -f k8s/deployment.yaml
           kubectl -n schrecknet rollout restart deployment/schrecknet-server
           kubectl -n schrecknet rollout status deployment/schrecknet-server --timeout=120s
 

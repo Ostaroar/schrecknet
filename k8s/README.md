@@ -78,17 +78,11 @@ kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-**Editing `deployment.yaml` later needs a manual re-apply.** The CI deploy job
-only runs `rollout restart` — it tracks the mutable `:main` image tag and never
-applies manifests — so a changed env var or resource limit does nothing until
-someone runs `kubectl apply -f k8s/deployment.yaml` again.
-
-That currently matters for the passkey relying-party settings
-(`SCHRECKNET_RP_ID` / `SCHRECKNET_RP_ORIGIN`, docs/adr/0019). WebAuthn compares
-them against the origin the browser is on; the code defaults to
-`localhost:8000` for local dev, so **until the manifest is re-applied, passkey
-registration and login on the live site will fail the origin check** while
-every other endpoint keeps working normally.
+**`deployment.yaml` edits deploy themselves.** `docker.yml`'s deploy job runs
+`kubectl apply -f k8s/deployment.yaml` before each rollout, so a changed env
+var, probe or resource limit takes effect on the push that introduced it. The
+other manifests here (namespace, PVC, ingress, cluster-issuer) are still
+bootstrap-only and need a manual `kubectl apply` when edited.
 
 Check rollout and certificate:
 
@@ -139,10 +133,13 @@ Two traps worth knowing before you need them:
   the mutable tag `:main` (`deployment.yaml`) with `imagePullPolicy: Always`, so
   every revision points at the same reference and undoing just re-pulls the same
   bad image. A rollback has to change the image reference.
-- **A pinned deployment makes later deploys silent no-ops.** After a rollback the
-  deployment names `…:sha-<short>`, so `docker.yml`'s push-to-main
-  `rollout restart` restarts the pod but keeps serving the pinned image — the
-  deploy job goes green while changing nothing. Un-pin once the fix has landed:
+- **A rollback only holds until the next push to main.** After a rollback the
+  deployment names `…:sha-<short>`, but `docker.yml`'s deploy job now runs
+  `kubectl apply -f k8s/deployment.yaml` before restarting, which restores the
+  `:main` tag. That is deliberate — it used to be the opposite trap, where a
+  pinned deployment made every later deploy a silent green no-op — but it means
+  **a rollback is not a place to sit**: land the fix, don't just roll back. To
+  un-pin manually without waiting for a deploy:
 
 ```bash
 kubectl -n schrecknet set image deployment/schrecknet-server \

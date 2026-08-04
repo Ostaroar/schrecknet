@@ -226,9 +226,27 @@ Each ends deployable. A1–A2 ship no user-visible feature; that is intentional.
   **Not yet covered:** a full ceremony round-trip needs a virtual authenticator
   (`webauthn-authenticator-rs` as a dev-dependency) — worth adding in A2 rather
   than leaving the happy path untested forever.
-- **A2 — recovery code + credential management.** Generate/hash/redeem, add and
-  remove passkeys, "last passkey" guard (removing it must require the recovery
-  code to be re-shown or the action refused).
+- **A2 — recovery code + credential management. ☑ shipped 2026-08-04.**
+  Redeem a recovery code to register a replacement passkey (locked-out path, no
+  session needed); add a passkey from a live session (the "second device" path,
+  and the one users should reach for *before* they need the code); list, rename
+  and remove passkeys, with removal of the last one refused.
+  Redeeming **rotates** the recovery code, so a used one is never valid twice.
+  Recovery attempts are throttled per display name — not because 128 random bits
+  are guessable, but because verifying one costs a full Argon2id hash, which
+  makes an unthrottled endpoint a cheap CPU-exhaustion lever.
+  One `passkeys/finish` endpoint completes both add paths: the server-side
+  ceremony already records which account it is for and how it was authorised,
+  so a client-supplied hint would be strictly weaker.
+  Tests additionally cover recovery-code verify/reject, the throttle being
+  per-account, the last-passkey guard, cross-account credential isolation
+  (row ids are global, so passing someone else's must fail on ownership),
+  rename/clear, and `ON DELETE CASCADE` actually firing.
+  **Still deferred: the full ceremony round-trip test.** `webauthn-authenticator-rs`
+  exposes only the low-level `AuthenticatorBackendHashedClientData` trait, which
+  needs hand-built client-data hashes — enough version-sensitive plumbing that
+  it is its own task rather than a rider on this one. The happy path is
+  currently proven by hand in a browser, which is not good enough long-term.
 - **A3 — sync.** Blob push/pull, version conflict → 409, size cap, client-side
   WebCrypto encrypt/decrypt, HKDF key derivation. Tests: conflict path, and a
   round-trip proving the server never sees plaintext.

@@ -68,6 +68,12 @@ use utoipa_swagger_ui::SwaggerUi;
         api::account_login_finish,
         api::account_logout,
         api::get_account,
+        api::account_recover_start,
+        api::account_add_passkey_start,
+        api::account_add_passkey_finish,
+        api::account_list_passkeys,
+        api::account_rename_passkey,
+        api::account_remove_passkey,
     )
 )]
 struct ApiDoc;
@@ -235,6 +241,26 @@ async fn main() {
         )
         .route("/api/v1/account/logout", post(api::account_logout))
         .route("/api/v1/account", get(api::get_account))
+        .route(
+            "/api/v1/account/recover/start",
+            post(api::account_recover_start),
+        )
+        .route(
+            "/api/v1/account/passkeys/start",
+            post(api::account_add_passkey_start),
+        )
+        .route(
+            "/api/v1/account/passkeys/finish",
+            post(api::account_add_passkey_finish),
+        )
+        .route(
+            "/api/v1/account/passkeys",
+            get(api::account_list_passkeys),
+        )
+        .route(
+            "/api/v1/account/passkeys/{id}",
+            delete(api::account_remove_passkey).put(api::account_rename_passkey),
+        )
         .route("/api/v1/groups", post(api::create_game_group))
         .route("/api/v1/groups/{code}", get(api::get_game_group))
         .route(

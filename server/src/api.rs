@@ -8,8 +8,8 @@ use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Json};
 
 use crate::accounts::{
-    self, AccountError, LoginFinishParams, LoginStartParams, RegisterFinishParams,
-    RegisterStartParams,
+    self, AccountError, AddPasskeyFinishParams, LoginFinishParams, LoginStartParams,
+    RecoverStartParams, RegisterFinishParams, RegisterStartParams,
 };
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams, PreconCardCountsParams};
@@ -585,12 +585,14 @@ fn account_error_response(error: AccountError) -> axum::response::Response {
     let status = match error {
         AccountError::DisplayNameInvalid
         | AccountError::UnknownCeremony
-        | AccountError::NoCredentials => StatusCode::BAD_REQUEST,
+        | AccountError::NoCredentials
+        | AccountError::LastPasskey => StatusCode::BAD_REQUEST,
         AccountError::DisplayNameTaken => StatusCode::CONFLICT,
-        AccountError::UnknownUser => StatusCode::NOT_FOUND,
-        AccountError::CredentialRejected | AccountError::NotAuthenticated => {
-            StatusCode::UNAUTHORIZED
-        }
+        AccountError::UnknownUser | AccountError::UnknownCredential => StatusCode::NOT_FOUND,
+        AccountError::CredentialRejected
+        | AccountError::NotAuthenticated
+        | AccountError::RecoveryCodeRejected => StatusCode::UNAUTHORIZED,
+        AccountError::TooManyAttempts => StatusCode::TOO_MANY_REQUESTS,
         AccountError::Sqlite(_) | AccountError::PasswordHash | AccountError::Serialization => {
             StatusCode::INTERNAL_SERVER_ERROR
         }
@@ -751,6 +753,167 @@ pub async fn get_account(State(state): State<AppState>, headers: HeaderMap) -> i
     .await
     {
         Ok(info) => Json(info).into_response(),
+        Err(response) => response,
+    }
+}
+
+/// Resolves the session cookie to a user id inside the blocking closure, so
+/// callers get `user_id` without each one repeating the lookup.
+async fn with_session<T, F>(state: AppState, headers: &HeaderMap, f: F) -> Result<T, axum::response::Response>
+where
+    T: Send + 'static,
+    F: FnOnce(&rusqlite::Connection, &accounts::AccountsService, i64) -> Result<T, AccountError>
+        + Send
+        + 'static,
+{
+    let Some(token) = session_token(headers) else {
+        return Err(account_error_response(AccountError::NotAuthenticated));
+    };
+    run_account(state, move |conn, service| {
+        let user_id =
+            accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
+        f(conn, service, user_id)
+    })
+    .await
+}
+
+#[utoipa::path(post, path = "/api/v1/account/recover/start", request_body = RecoverStartParams,
+    responses(
+        (status = 200, description = "Recovery code accepted; register a replacement passkey", body = accounts::CeremonyChallenge),
+        (status = 401, description = "Recovery code rejected", body = String),
+        (status = 429, description = "Too many attempts", body = String),
+    ),
+    tag = "account")]
+pub async fn account_recover_start(
+    State(state): State<AppState>,
+    Json(params): Json<RecoverStartParams>,
+) -> impl IntoResponse {
+    match run_account(state, move |conn, service| {
+        accounts::recover_start(conn, service, &params)
+    })
+    .await
+    {
+        Ok(challenge) => Json(challenge).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/account/passkeys/start",
+    responses(
+        (status = 200, description = "Register an additional passkey for the signed-in account", body = accounts::CeremonyChallenge),
+        (status = 401, description = "Not signed in", body = String),
+    ),
+    tag = "account")]
+pub async fn account_add_passkey_start(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    match with_session(state, &headers, |conn, service, user_id| {
+        accounts::add_passkey_start(conn, service, user_id)
+    })
+    .await
+    {
+        Ok(challenge) => Json(challenge).into_response(),
+        Err(response) => response,
+    }
+}
+
+/// Completes **either** add-passkey path — recovery or signed-in. No session is
+/// required and none is checked here: the ceremony stored server-side already
+/// records which account it belongs to and how it was authorised, so trusting a
+/// client-supplied hint would be strictly weaker.
+#[utoipa::path(post, path = "/api/v1/account/passkeys/finish", request_body = AddPasskeyFinishParams,
+    responses(
+        (status = 200, description = "Passkey added; a rotated recovery code is returned if one was redeemed", body = accounts::AddPasskeyResult),
+        (status = 401, description = "Passkey verification failed", body = String),
+    ),
+    tag = "account")]
+pub async fn account_add_passkey_finish(
+    State(state): State<AppState>,
+    Json(params): Json<AddPasskeyFinishParams>,
+) -> impl IntoResponse {
+    match run_account(state, move |conn, service| {
+        accounts::add_passkey_finish(conn, service, &params)
+    })
+    .await
+    {
+        Ok(result) => {
+            let cookie = session_cookie(&result.session_token);
+            with_cookie(Json(result).into_response(), &cookie)
+        }
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(get, path = "/api/v1/account/passkeys",
+    responses(
+        (status = 200, description = "Passkeys registered on this account", body = Vec<accounts::CredentialSummary>),
+        (status = 401, description = "Not signed in", body = String),
+    ),
+    tag = "account")]
+pub async fn account_list_passkeys(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    match with_session(state, &headers, |conn, _, user_id| {
+        accounts::list_credentials(conn, user_id)
+    })
+    .await
+    {
+        Ok(credentials) => Json(credentials).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+pub struct RenamePasskeyBody {
+    #[serde(default)]
+    pub nickname: Option<String>,
+}
+
+#[utoipa::path(put, path = "/api/v1/account/passkeys/{id}",
+    params(("id" = i64, Path, description = "Passkey row id, as returned by the list endpoint")),
+    request_body = RenamePasskeyBody,
+    responses(
+        (status = 204, description = "Renamed"),
+        (status = 404, description = "No such passkey on this account", body = String),
+    ),
+    tag = "account")]
+pub async fn account_rename_passkey(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+    Json(body): Json<RenamePasskeyBody>,
+) -> impl IntoResponse {
+    match with_session(state, &headers, move |conn, _, user_id| {
+        accounts::rename_credential(conn, user_id, id, body.nickname.as_deref())
+    })
+    .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(delete, path = "/api/v1/account/passkeys/{id}",
+    params(("id" = i64, Path, description = "Passkey row id, as returned by the list endpoint")),
+    responses(
+        (status = 204, description = "Removed"),
+        (status = 400, description = "Refused: this is the account's only passkey", body = String),
+        (status = 404, description = "No such passkey on this account", body = String),
+    ),
+    tag = "account")]
+pub async fn account_remove_passkey(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    match with_session(state, &headers, move |conn, _, user_id| {
+        accounts::remove_credential(conn, user_id, id)
+    })
+    .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(response) => response,
     }
 }
