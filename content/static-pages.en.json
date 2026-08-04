@@ -38,6 +38,17 @@
     "entries": [
       {
         "date": "2026-08-04",
+        "title": "Optional account: sync your decks and inventory",
+        "summary": "Sign in with a passkey to sync your decks and inventory across devices, end-to-end encrypted with your recovery code so SchreckNet cannot read them. Everything still works fully without an account.",
+        "items": [
+          "No password, no email — sign in with a passkey (Face ID, fingerprint, or a security key), backed by your device or password manager.",
+          "Sync is client-side encrypted; the server only ever stores ciphertext, and conflicting edits from two devices are flagged instead of silently overwritten.",
+          "API tokens let you use the MCP/REST sync endpoints from other tools, deliberately scoped to sync only — they can't manage your passkeys or delete your account.",
+          "Delete your account at any time; it's a real, permanent deletion, and your local decks are unaffected either way."
+        ]
+      },
+      {
+        "date": "2026-08-04",
         "title": "JOL deck imports actually work now",
         "summary": "Pasting a deck list exported from JOL now resolves every card correctly instead of leaving a stray \"x\" stuck onto card names.",
         "items": [
