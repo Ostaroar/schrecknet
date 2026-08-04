@@ -42,8 +42,9 @@ const es: UiStrings = {
   },
   account: {
     title: 'Cuenta',
-    signedOutIntro: 'Opcional. SchreckNet funciona por completo sin cuenta — esto es solo para quien quiera que sus mazos le sigan entre dispositivos.',
-    whatItsFor: 'Una cuenta hace una sola cosa: permite sincronizar tus mazos e inventario con otro dispositivo. Todo lo demás sigue funcionando igual sin ella.',
+    signedOutIntro: 'Opcional. SchreckNet funciona por completo sin cuenta — esto es la base para que más adelante tus mazos te sigan entre dispositivos.',
+    whatItsFor: 'Una cuenta hará en el futuro una sola cosa: sincronizar tus mazos e inventario con otro dispositivo. Todo lo demás sigue funcionando igual sin ella.',
+    syncNotYet: 'La sincronización aún no está construida. Tus mazos e inventario siguen viviendo solo en este navegador — con o sin cuenta — así que sigue haciendo copias desde «Datos y copia de seguridad». Hoy una cuenta solo reserva tu nombre y tus passkeys.',
     passkeyNote: 'Sin contraseña, sin correo. Inicia sesión con una passkey — la misma tecnología que "iniciar sesión con Face ID/huella" — guardada por tu dispositivo o gestor de contraseñas (1Password, Bitwarden, llavero de iCloud, Gestor de contraseñas de Google, todos funcionan, a tu elección).',
     displayNameLabel: 'Nombre visible',
     displayNamePlaceholder: 'Cómo te identificarán — también es tu nombre de acceso',

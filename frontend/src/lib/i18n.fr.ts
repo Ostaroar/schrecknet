@@ -42,8 +42,9 @@ const fr: UiStrings = {
   },
   account: {
     title: 'Compte',
-    signedOutIntro: "Optionnel. SchreckNet fonctionne entièrement sans compte — ceci ne sert qu'à celles et ceux qui veulent que leurs decks les suivent d'un appareil à l'autre.",
-    whatItsFor: "Un compte fait une seule chose : il permet à vos decks et à votre inventaire de se synchroniser sur un autre appareil. Tout le reste continue de fonctionner exactement pareil sans lui.",
+    signedOutIntro: "Optionnel. SchreckNet fonctionne entièrement sans compte — ceci prépare le terrain pour que vos decks vous suivent plus tard d'un appareil à l'autre.",
+    whatItsFor: "Un compte fera à terme une seule chose : permettre à vos decks et à votre inventaire de se synchroniser sur un autre appareil. Tout le reste continue de fonctionner exactement pareil sans lui.",
+    syncNotYet: "La synchronisation n'est pas encore construite. Vos decks et votre inventaire vivent toujours uniquement dans ce navigateur — avec ou sans compte — continuez donc à faire des sauvegardes depuis « Données et sauvegarde ». Aujourd'hui, un compte ne réserve que votre nom et vos passkeys.",
     passkeyNote: "Pas de mot de passe, pas d'e-mail. Connexion par passkey — la même technologie que « se connecter avec Face ID/empreinte » — stockée par votre appareil ou votre gestionnaire de mots de passe (1Password, Bitwarden, trousseau iCloud, gestionnaire de mots de passe Google fonctionnent tous, à votre choix).",
     displayNameLabel: "Nom affiché",
     displayNamePlaceholder: "Comment vous serez identifié·e — c'est aussi votre identifiant de connexion",

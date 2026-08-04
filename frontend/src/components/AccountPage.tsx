@@ -142,6 +142,11 @@ function SignedOut({ ui }: { ui: ReturnType<typeof useUiStrings>['account'] }) {
           <p>{ui.passkeyNote}</p>
         </div>
       )}
+      {mode !== 'recover' && (
+        <p className="rounded-lg border border-gold bg-surface p-3 text-sm text-ink">
+          {ui.syncNotYet}
+        </p>
+      )}
 
       <form onSubmit={onSubmit} className="grid gap-3">
         <label className="grid gap-1 text-sm text-ink">
@@ -312,6 +317,10 @@ function SignedIn({
           {busy === 'logout' ? ui.loggingOut : ui.logout}
         </button>
       </div>
+
+      <p className="rounded-lg border border-gold bg-surface p-3 text-sm text-ink">
+        {ui.syncNotYet}
+      </p>
 
       <section className="grid gap-2 rounded-lg border border-line bg-surface p-4">
         <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.dataSafetyTitle}</h2>

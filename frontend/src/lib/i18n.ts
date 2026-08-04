@@ -83,6 +83,7 @@ export interface UiStrings {
     title: string
     signedOutIntro: string
     whatItsFor: string
+    syncNotYet: string
     passkeyNote: string
     displayNameLabel: string
     displayNamePlaceholder: string
@@ -704,8 +705,9 @@ const en: UiStrings = {
   },
   account: {
     title: 'Account',
-    signedOutIntro: 'Optional. SchreckNet works fully with zero account — this is only for whoever wants their decks to follow them across devices.',
-    whatItsFor: 'An account does one thing: it lets your decks and inventory sync to another device. Everything else keeps working exactly the same without one.',
+    signedOutIntro: 'Optional. SchreckNet works fully with zero account — this is groundwork for letting your decks follow you across devices later.',
+    whatItsFor: 'An account will eventually do one thing: let your decks and inventory sync to another device. Everything else keeps working exactly the same without one.',
+    syncNotYet: 'Sync is not built yet. Your decks and inventory live only in this browser — with or without an account — so keep taking backups from Data & backup. An account today only reserves your name and your passkeys.',
     passkeyNote: 'No password, no email. Sign in with a passkey — the same technology behind "sign in with Face ID/fingerprint" — stored by your device or password manager (1Password, Bitwarden, iCloud Keychain, Google Password Manager all work, entirely your choice).',
     displayNameLabel: 'Display name',
     displayNamePlaceholder: 'How you’ll be identified — this is also your login name',

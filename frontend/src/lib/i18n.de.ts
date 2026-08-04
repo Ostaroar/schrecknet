@@ -45,8 +45,9 @@ const de: UiStrings = {
   },
   account: {
     title: 'Konto',
-    signedOutIntro: 'Optional. SchreckNet funktioniert komplett ohne Konto — das hier ist nur für alle, deren Decks über mehrere Geräte hinweg synchronisiert werden sollen.',
-    whatItsFor: 'Ein Konto macht genau eine Sache: Es lässt deine Decks und dein Inventar auf ein anderes Gerät synchronisieren. Alles andere funktioniert genauso gut ohne.',
+    signedOutIntro: 'Optional. SchreckNet funktioniert komplett ohne Konto — das hier ist die Vorarbeit dafür, dass deine Decks dich später über mehrere Geräte hinweg begleiten.',
+    whatItsFor: 'Ein Konto wird später genau eine Sache machen: deine Decks und dein Inventar auf ein anderes Gerät synchronisieren. Alles andere funktioniert genauso gut ohne.',
+    syncNotYet: 'Die Synchronisierung ist noch nicht gebaut. Deine Decks und dein Inventar liegen weiterhin ausschließlich in diesem Browser — mit oder ohne Konto. Lege also weiterhin Backups unter „Daten & Backup“ an. Ein Konto sichert dir heute nur deinen Namen und deine Passkeys.',
     passkeyNote: 'Kein Passwort, keine E-Mail. Anmeldung per Passkey — dieselbe Technik wie „Anmelden mit Face ID/Fingerabdruck" — gespeichert von deinem Gerät oder Passwort-Manager (1Password, Bitwarden, iCloud-Schlüsselbund, Google Passwortmanager funktionieren alle, ganz nach Wahl).',
     displayNameLabel: 'Anzeigename',
     displayNamePlaceholder: 'Damit wirst du identifiziert — das ist gleichzeitig dein Login-Name',
