@@ -109,6 +109,18 @@ export default function App() {
           <span className="hidden rounded-full border border-line px-3 py-0.5 text-xs text-ink-muted sm:inline">
           {meta ? ui.header.cardCounts(meta.crypt, meta.library) : ui.header.v5Only}
           </span>
+          <button
+            type="button"
+            onClick={() => navigate({ page: 'account' })}
+            aria-label={ui.footer.account}
+            title={ui.footer.account}
+            className={
+              'grid size-7 place-items-center rounded-lg text-base leading-none transition ' +
+              (route.page === 'account' ? 'bg-raised ring-1 ring-blood-hi' : 'opacity-60 hover:opacity-100')
+            }
+          >
+            👤
+          </button>
         </div>
       </header>
 
