@@ -1,6 +1,8 @@
 # Inventory Management — Design & Dev Plan (for agents)
 
-Status: **planned** (2026-07-22). This document is the working spec for the inventory
+Status: **shipped** — local milestones I1–I5 are complete (see roadmap.md Phase 2.5).
+Only I6, server-side sync, remains and is Phase 3 work gated on accounts.
+Originally written 2026-07-22. This document is the working spec for the inventory
 (collection) feature: what to build, in which order, and how it touches every existing
 feature. Follow it milestone-by-milestone; each milestone is a self-contained vertical
 slice with its own DoD. Update this file and `docs/feature-parity.md` as slices land.

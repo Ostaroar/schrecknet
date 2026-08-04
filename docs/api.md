@@ -91,9 +91,14 @@ The response contains `card_ids` in draw order and echoes the decimal seed.
 
 ## Design rule
 
-Every capability ships in **both** surfaces or neither. Today that means
-`server/src/cards_db.rs` (the one service function) called identically from
-`server/src/mcp.rs` (MCP adapter) and `server/src/api.rs` (REST adapter) — this
-splits into a proper `server/src/service/` module once there's more than one
-capability to organize. Adding a feature without exposing it through MCP is a
-review blocker (see AGENTS.md).
+Every capability ships in **both** surfaces or neither. Service functions live in
+flat modules under `server/src/` — `cards_db.rs`, `card_detail.rs`, `deck_tools.rs`,
+`draw_hand.rs`, `semantic_search.rs`, `game_groups.rs`, `twda_db.rs`, `accounts.rs` —
+each called identically from `server/src/mcp.rs` (MCP adapter) and
+`server/src/api.rs` (REST adapter). Adding a feature without exposing it through MCP
+is a review blocker (see AGENTS.md).
+
+The one recorded exception is the WebAuthn ceremony endpoints, which are
+browser-only because a ceremony needs a browser-resident authenticator — a transport
+limitation rather than a capability shipped on one surface alone. See
+docs/accounts-plan.md § 5.

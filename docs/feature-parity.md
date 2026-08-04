@@ -319,9 +319,9 @@ your decks — reached without mail infrastructure or personal data._
       loading the model
 - ☑ Game groups: private, code-gated playgroup game log + leaderboard — owner-requested
       (2026-07-23), explicitly scoped as private/non-public so it stays clear of the
-      tournament/community-data exclusion (same tier as the seating randomizer). Core
-      (create/join a group, log games, leaderboard) shipped 2026-07-23; localization,
-      seating chain, edit/delete, and archetype tie-in remain optional follow-ups. See
+      tournament/community-data exclusion. Complete: create/join a group, log games,
+      leaderboard, localization (en/es/fr/de), circular seating with predator/prey
+      display, atomic edit/delete, and archetype-performance tie-in. See
       [docs/game-groups-plan.md](game-groups-plan.md); tracked in roadmap.md Phase 6
 - ☑ SEO / GEO / AEO — owner-requested (2026-07-23), ahead of shipping on a
       DigitalOcean Kubernetes Basic node pool. Not a vdb-parity item (vdb.im has no

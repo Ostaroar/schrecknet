@@ -59,7 +59,9 @@ marked ✎ specifically need that verification.
 1. **Domain logic goes in `core/` (Rust), never duplicated in TS.** If the browser and
    server both need it, it belongs in `core/`. TS may orchestrate, not re-implement.
 2. **Every user-facing capability ships through MCP + REST or not at all.** Handlers
-   live in `server/src/service/`; MCP and REST are thin adapters over the same service.
+   live in flat modules under `server/src/` (`cards_db.rs`, `deck_tools.rs`,
+   `game_groups.rs`, `twda_db.rs`, `accounts.rs`, …); MCP (`mcp.rs`) and REST
+   (`api.rs`) are thin adapters over the same service functions.
 3. **SQLite only.** No ORM; hand-written SQL through the typed data layer. One shared
    migration set for browser `user.sqlite` and server `app.sqlite`.
 4. **Offline-first.** Card search, deck editing, stats, draw sim, diff, proxies must

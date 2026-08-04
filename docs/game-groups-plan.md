@@ -19,9 +19,8 @@ recommendation engine built on tournament co-occurrence data. Those are all abou
 This feature is different in kind, not just degree: it's a **private, opt-in log for
 one specific friend group's own casual games**, gated behind a random code nobody else
 has, with no ranking against the outside world, no publication, and no tournament
-structure (rounds, judges, prizes). The closest existing precedent in this codebase is
-the table-seating randomizer (`#/seating`) — also a casual, local social-play utility
-that sits near the excluded category's *name* without being the excluded *thing*.
+structure (rounds, judges, prizes) — a casual, local social-play utility that sits near
+the excluded category's *name* without being the excluded *thing*.
 **Decision: build it, framed explicitly as a private group tool, never a public
 archive** — no leaderboard-across-groups, no global rankings, no discovery of other
 groups' codes.

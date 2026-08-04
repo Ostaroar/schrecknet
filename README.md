@@ -31,8 +31,9 @@ parity checklist measures against.
 - 🐳 **Docker** — single container built and published to GHCR by GitHub Actions.
 - 🎨 **Modern UI** — React 19 + TypeScript + Tailwind CSS 4 PWA, dark-first design.
   Losing no VDB capability is the explicit goal; the
-  [parity checklist](docs/feature-parity.md) tracks it honestly — 70 items done,
-  12 open, 26 still to verify against vdb.im.
+  [parity checklist](docs/feature-parity.md) tracks it honestly — see that file for
+  the current done/open/to-verify counts (they move often enough that a number here
+  goes stale faster than the checklist itself).
 
 ## Status
 
