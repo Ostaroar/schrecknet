@@ -618,9 +618,7 @@ where
     match joined {
         Ok(Ok(value)) => Ok(value),
         Ok(Err(error)) => Err(account_error_response(error)),
-        Err(error) => {
-            Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response())
-        }
+        Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()),
     }
 }
 
@@ -699,7 +697,8 @@ pub async fn account_login_finish(
 ) -> impl IntoResponse {
     match run_account(state, move |conn, service| {
         let token = accounts::login_finish(conn, service, &params)?;
-        let user_id = accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
+        let user_id =
+            accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
         Ok((accounts::account_info(conn, user_id)?, token))
     })
     .await
@@ -715,7 +714,10 @@ pub async fn account_login_finish(
 #[utoipa::path(post, path = "/api/v1/account/logout",
     responses((status = 204, description = "Signed out; session cookie cleared")),
     tag = "account")]
-pub async fn account_logout(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+pub async fn account_logout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
     // Clearing the cookie is unconditional: a caller with no (or an unknown)
     // session still ends up signed out, which is the only outcome they wanted.
     if let Some(token) = session_token(&headers) {
@@ -725,7 +727,10 @@ pub async fn account_logout(State(state): State<AppState>, headers: HeaderMap) -
             return response;
         }
     }
-    with_cookie(StatusCode::NO_CONTENT.into_response(), &cleared_session_cookie())
+    with_cookie(
+        StatusCode::NO_CONTENT.into_response(),
+        &cleared_session_cookie(),
+    )
 }
 
 #[utoipa::path(get, path = "/api/v1/account",
@@ -739,7 +744,8 @@ pub async fn get_account(State(state): State<AppState>, headers: HeaderMap) -> i
         return account_error_response(AccountError::NotAuthenticated);
     };
     match run_account(state, move |conn, _| {
-        let user_id = accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
+        let user_id =
+            accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
         accounts::account_info(conn, user_id)
     })
     .await

@@ -225,7 +225,10 @@ async fn main() {
             "/api/v1/account/register/finish",
             post(api::account_register_finish),
         )
-        .route("/api/v1/account/login/start", post(api::account_login_start))
+        .route(
+            "/api/v1/account/login/start",
+            post(api::account_login_start),
+        )
         .route(
             "/api/v1/account/login/finish",
             post(api::account_login_finish),

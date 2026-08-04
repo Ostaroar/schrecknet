@@ -56,17 +56,13 @@ impl std::fmt::Display for AccountError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Sqlite(error) => error.fmt(formatter),
-            Self::DisplayNameInvalid => {
-                formatter.write_str("display name must be 1-64 characters")
-            }
+            Self::DisplayNameInvalid => formatter.write_str("display name must be 1-64 characters"),
             Self::DisplayNameTaken => formatter.write_str("that display name is already taken"),
             Self::UnknownCeremony => {
                 formatter.write_str("this sign-in attempt expired or was already used, start again")
             }
             Self::UnknownUser => formatter.write_str("no account with that display name"),
-            Self::NoCredentials => {
-                formatter.write_str("that account has no passkeys registered")
-            }
+            Self::NoCredentials => formatter.write_str("that account has no passkeys registered"),
             Self::CredentialRejected => formatter.write_str("passkey verification failed"),
             Self::NotAuthenticated => formatter.write_str("not signed in"),
             Self::PasswordHash => formatter.write_str("could not secure the recovery code"),
@@ -111,11 +107,7 @@ pub struct AccountsService {
 /// was still fresh, so a challenge can never be retried. Split out as a free
 /// generic function purely so the expiry/single-use rules are unit-testable
 /// without constructing a real WebAuthn ceremony.
-fn take_if_fresh<T>(
-    map: &mut HashMap<String, (T, Instant)>,
-    id: &str,
-    now: Instant,
-) -> Option<T> {
+fn take_if_fresh<T>(map: &mut HashMap<String, (T, Instant)>, id: &str, now: Instant) -> Option<T> {
     let (value, expires_at) = map.remove(id)?;
     if now >= expires_at {
         return None;
@@ -222,8 +214,7 @@ pub fn register_start(
     // WebAuthn wants a stable opaque user handle. Generated here rather than
     // derived from the (not yet assigned) row id.
     let handle_bytes: Vec<u8> = conn.query_row("SELECT randomblob(16)", [], |row| row.get(0))?;
-    let user_handle =
-        Uuid::from_slice(&handle_bytes).map_err(|_| AccountError::Serialization)?;
+    let user_handle = Uuid::from_slice(&handle_bytes).map_err(|_| AccountError::Serialization)?;
 
     let (challenge, state) = service
         .webauthn
@@ -427,11 +418,11 @@ pub struct AccountInfo {
 
 /// Lowercase hex of `bytes` random bytes, from SQLite's CSPRNG.
 fn random_token(conn: &Connection, bytes: u32) -> Result<String, AccountError> {
-    Ok(conn.query_row(
-        "SELECT lower(hex(randomblob(?1)))",
-        [bytes],
-        |row| row.get(0),
-    )?)
+    Ok(
+        conn.query_row("SELECT lower(hex(randomblob(?1)))", [bytes], |row| {
+            row.get(0)
+        })?,
+    )
 }
 
 fn hash_secret(conn: &Connection, secret: &str) -> Result<String, AccountError> {
@@ -456,11 +447,7 @@ fn create_session(conn: &Connection, user_id: i64) -> Result<String, AccountErro
                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?3),
                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
-        rusqlite::params![
-            token_hash(&token),
-            user_id,
-            format!("+{SESSION_DAYS} days")
-        ],
+        rusqlite::params![token_hash(&token), user_id, format!("+{SESSION_DAYS} days")],
     )?;
     Ok(token)
 }
@@ -545,7 +532,10 @@ mod tests {
 
     #[test]
     fn display_names_are_trimmed_and_bounded() {
-        assert_eq!(normalized_display_name("  Nosferatu  ").unwrap(), "Nosferatu");
+        assert_eq!(
+            normalized_display_name("  Nosferatu  ").unwrap(),
+            "Nosferatu"
+        );
         assert!(matches!(
             normalized_display_name("   "),
             Err(AccountError::DisplayNameInvalid)
