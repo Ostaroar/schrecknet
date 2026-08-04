@@ -175,8 +175,17 @@ identity-proving value and the decryption key are independent (ADR 0019 § 5).
   most. Whole-payload replace with an explicit conflict prompt is the right
   size; revisit only if real users report real conflict pain.
 - **Size cap** (~8 MB) rejected loudly rather than truncated.
-- Sync is **manual-first** (an explicit button, plus on login). Background
-  auto-sync is a later refinement, not v1 — it multiplies conflicts.
+- Sync unlock persists across reloads (the derived, non-extractable CryptoKey
+  is stored in IndexedDB via `syncKeyStore.ts`, not the recovery code itself)
+  and a background loop pushes automatically every 2 minutes while unlocked
+  (`sync.ts::startAutoSync`). Originally shipped as "manual-first" (an
+  explicit button per page load); real usage showed that re-entering the
+  recovery code on every reload was the friction that mattered, not the
+  concept of a manual step. Auto-sync only ever pushes, never pulls — an
+  actual conflict (remote changed on another device) still always surfaces
+  the manual "keep this device" / "use the other device" choice, exactly as
+  before; this only removes the busywork of clicking "Sync now" for the
+  common case where nothing conflicts.
 
 ## 5. Capability shape (MCP + REST)
 

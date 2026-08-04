@@ -48,6 +48,12 @@ export default function App() {
     getCardsMeta().then(setMeta).catch(() => setMeta(null))
   }, [])
 
+  useEffect(() => {
+    // Dynamic import keeps sync.ts (and its backup/crypto deps) out of the
+    // main bundle — only loaded once, app-wide, not per-route like AccountPage.
+    import('./lib/sync').then((m) => m.startAutoSync()).catch(() => {})
+  }, [])
+
   const wide =
     route.page === 'crypt' ||
     route.page === 'library' ||

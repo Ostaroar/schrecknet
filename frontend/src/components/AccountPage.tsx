@@ -31,6 +31,7 @@ import {
   acceptRemote,
   pushLocal,
   reencryptAfterRotation,
+  restoreUnlock,
   unlock as unlockSync,
   SyncConflictError,
   type SyncState,
@@ -246,6 +247,15 @@ function SyncSection({ ui }: { ui: ReturnType<typeof useUiStrings>['account'] })
   const [error, setError] = useState('')
   const [state, setState] = useState<SyncState | null>(null)
 
+  useEffect(() => {
+    // App-level startAutoSync() may still be restoring the persisted key when
+    // this page mounts — re-check once, on mount only (not on every
+    // `unlocked` transition, which would race the async clear in lockSync()
+    // and could re-restore a key that's mid-deletion right after locking).
+    if (!isUnlocked()) restoreUnlock().then((ok) => ok && setUnlocked(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function onUnlock(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -379,7 +389,7 @@ function SyncSection({ ui }: { ui: ReturnType<typeof useUiStrings>['account'] })
           <button
             type="button"
             onClick={() => {
-              lockSync()
+              void lockSync()
               setUnlocked(false)
               setState(null)
             }}

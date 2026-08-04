@@ -2,10 +2,12 @@
 // ADR 0016 backup envelope, client-side encryption (syncCrypto.ts), and the
 // REST endpoints into push/pull operations the UI can call directly.
 //
-// The recovery code is never stored — not in localStorage, not in
-// sessionStorage. It's held in memory only, for the current page load, via
-// `setUnlockedCode`. Reloading the page forgets it; that's deliberate
-// (manual-first sync, docs/accounts-plan.md § 4).
+// The recovery code itself is never stored — not in localStorage, not in
+// sessionStorage. The *derived* key is a non-extractable CryptoKey (see
+// deriveSyncKey), so persisting it via syncKeyStore.ts across reloads never
+// exposes it as bytes; it just means "unlock" only has to happen once per
+// browser instead of once per page load. See startAutoSync() below for the
+// background push loop this enables.
 
 import {
   createBackup,
@@ -15,6 +17,7 @@ import {
   type BackupEnvelope,
 } from './backup'
 import { decryptEnvelope, deriveSyncKey, encryptEnvelope } from './syncCrypto'
+import { saveSyncKey, loadSyncKey, clearSyncKey } from './syncKeyStore'
 
 export interface SyncBlob {
   version: number
@@ -34,16 +37,18 @@ export type SyncState =
       remote: { blob: SyncBlob; envelope: BackupEnvelope }
     }
 
-// In-memory only — see the module comment. A module-level singleton is fine
-// here: there is exactly one browser tab's worth of "am I unlocked" state.
+// A module-level singleton is fine here: there is exactly one browser tab's
+// worth of "am I unlocked" state. Persisted to IndexedDB (syncKeyStore.ts)
+// so it survives reloads — see restoreUnlock().
 let unlockedKey: CryptoKey | null = null
 
 export function isUnlocked(): boolean {
   return unlockedKey !== null
 }
 
-export function lock(): void {
+export async function lock(): Promise<void> {
   unlockedKey = null
+  await clearSyncKey().catch(() => {})
 }
 
 /** Throws if the code is wrong AND a remote blob already exists (caught by
@@ -56,6 +61,18 @@ export async function unlock(recoveryCode: string): Promise<void> {
     await decryptEnvelope(remote.ciphertext, remote.nonce, key) // throws if wrong
   }
   unlockedKey = key
+  await saveSyncKey(key).catch(() => {})
+}
+
+/** Restores a persisted unlock from a previous page load, if any — call once
+ * at app startup (see startAutoSync). Never verifies against the remote
+ * blob; a key that was good enough to save is trusted on this device. */
+export async function restoreUnlock(): Promise<boolean> {
+  if (unlockedKey) return true
+  const key = await loadSyncKey().catch(() => null)
+  if (!key) return false
+  unlockedKey = key
+  return true
 }
 
 async function asJson<T>(response: Response): Promise<T> {
@@ -188,5 +205,36 @@ export async function reencryptAfterRotation(
   const blob = await asJson<SyncBlob>(response)
   rememberVersion(blob.version)
   unlockedKey = newKey
+  await saveSyncKey(newKey).catch(() => {})
   return true
+}
+
+let autoSyncTimer: ReturnType<typeof setInterval> | null = null
+
+/** Best-effort background push while unlocked — captures local edits without
+ * a manual "Sync now" click. Only ever pushes, never pulls: pulling could
+ * silently overwrite local data, so an actual conflict (remote changed on
+ * another device) is left for the Account page's own conflict UI instead of
+ * being auto-resolved here. Any other failure (offline, locked) is swallowed
+ * silently; this is a convenience loop, not the source of truth. */
+async function autoSyncTick(): Promise<void> {
+  if (!unlockedKey) return
+  try {
+    const result = await checkSyncState()
+    if (result.kind !== 'conflict') {
+      await pushLocal(navigator.userAgent.slice(0, 40))
+    }
+  } catch {
+    // best-effort
+  }
+}
+
+/** Call once at app startup. Restores a persisted unlock (if any) and starts
+ * the background auto-sync loop; a no-op (still unlocked or not) if never
+ * unlocked on this device. Safe to call more than once — later calls are no-ops. */
+export async function startAutoSync(): Promise<void> {
+  await restoreUnlock()
+  if (autoSyncTimer) return
+  await autoSyncTick()
+  autoSyncTimer = setInterval(autoSyncTick, 2 * 60 * 1000)
 }
