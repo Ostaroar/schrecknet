@@ -1,10 +1,16 @@
 //! REST mirror of the MCP tools (AGENTS.md hard rule #2). Same `cards_db`
 //! calls as `mcp.rs::search_crypt` — this is the thin HTTP adapter.
 
+use std::sync::Arc;
+
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Json};
 
+use crate::accounts::{
+    self, AccountError, LoginFinishParams, LoginStartParams, RegisterFinishParams,
+    RegisterStartParams,
+};
 use crate::card_detail::{self, GetCardByNameParams, GetCardParams};
 use crate::cards_db::{self, CryptSearchParams, LibrarySearchParams, PreconCardCountsParams};
 use crate::deck_tools::{
@@ -520,5 +526,225 @@ where
         Ok(Ok(None)) => (StatusCode::NOT_FOUND, "group not found").into_response(),
         Ok(Err(error)) => game_group_error_response(error),
         Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Passkey accounts (docs/adr/0019, docs/accounts-plan.md milestone A1)
+//
+// Browser-only by design: a WebAuthn ceremony needs a browser-resident
+// authenticator, so these have no MCP mirror. The authenticated *data*
+// capabilities arrive on both surfaces in A5 via bearer tokens.
+// ---------------------------------------------------------------------------
+
+/// `__Host-` requires Secure + Path=/ + no Domain, which pins the cookie to
+/// exactly this origin — the strongest cookie scoping available. Strictly
+/// necessary for a login the user asked for, so no consent banner (ADR 0019 § 6).
+const SESSION_COOKIE: &str = "__Host-schrecknet_session";
+const SESSION_MAX_AGE_SECONDS: i64 = 30 * 24 * 60 * 60;
+
+fn session_cookie(token: &str) -> String {
+    format!(
+        "{SESSION_COOKIE}={token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={SESSION_MAX_AGE_SECONDS}"
+    )
+}
+
+fn cleared_session_cookie() -> String {
+    format!("{SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0")
+}
+
+fn session_token(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::COOKIE)?
+        .to_str()
+        .ok()?
+        .split(';')
+        .filter_map(|part| part.trim().split_once('='))
+        .find(|(name, _)| *name == SESSION_COOKIE)
+        .map(|(_, value)| value.to_owned())
+}
+
+/// Attaches `Set-Cookie` to an already-built JSON response.
+fn with_cookie(mut response: axum::response::Response, cookie: &str) -> axum::response::Response {
+    match HeaderValue::from_str(cookie) {
+        Ok(value) => {
+            response.headers_mut().insert(header::SET_COOKIE, value);
+            response
+        }
+        // Unreachable: every byte we put in a cookie is hex or fixed ASCII.
+        // Failing closed beats emitting a session the browser never stores.
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "could not issue session").into_response(),
+    }
+}
+
+/// Note on `UnknownUser`: this distinguishes "no such display name" from other
+/// failures, i.e. display names are enumerable. Accepted — a display name here
+/// is a username, not an email address, and WebAuthn's non-discoverable flow has
+/// to name the credentials it is offering anyway.
+fn account_error_response(error: AccountError) -> axum::response::Response {
+    let status = match error {
+        AccountError::DisplayNameInvalid
+        | AccountError::UnknownCeremony
+        | AccountError::NoCredentials => StatusCode::BAD_REQUEST,
+        AccountError::DisplayNameTaken => StatusCode::CONFLICT,
+        AccountError::UnknownUser => StatusCode::NOT_FOUND,
+        AccountError::CredentialRejected | AccountError::NotAuthenticated => {
+            StatusCode::UNAUTHORIZED
+        }
+        AccountError::Sqlite(_) | AccountError::PasswordHash | AccountError::Serialization => {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    };
+    (status, error.to_string()).into_response()
+}
+
+/// Runs `f` against `app.sqlite` on the blocking pool with the accounts service
+/// in hand — the account equivalent of `run_app`.
+async fn run_account<T, F>(state: AppState, f: F) -> Result<T, axum::response::Response>
+where
+    T: Send + 'static,
+    F: FnOnce(&rusqlite::Connection, &accounts::AccountsService) -> Result<T, AccountError>
+        + Send
+        + 'static,
+{
+    let app_db = state.app_db.clone();
+    let service = Arc::clone(&state.accounts);
+    let joined = tokio::task::spawn_blocking(move || -> Result<T, AccountError> {
+        let conn = game_groups::open(&app_db)?;
+        f(&conn, &service)
+    })
+    .await;
+
+    match joined {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(error)) => Err(account_error_response(error)),
+        Err(error) => {
+            Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response())
+        }
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/account/register/start", request_body = RegisterStartParams,
+    responses(
+        (status = 200, description = "WebAuthn creation challenge", body = accounts::CeremonyChallenge),
+        (status = 409, description = "Display name already taken", body = String),
+    ),
+    tag = "account")]
+pub async fn account_register_start(
+    State(state): State<AppState>,
+    Json(params): Json<RegisterStartParams>,
+) -> impl IntoResponse {
+    match run_account(state, move |conn, service| {
+        accounts::register_start(conn, service, &params)
+    })
+    .await
+    {
+        Ok(challenge) => Json(challenge).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/account/register/finish", request_body = RegisterFinishParams,
+    responses(
+        (status = 200, description = "Account created; recovery code returned once", body = accounts::RegisterFinishResult),
+        (status = 401, description = "Passkey verification failed", body = String),
+    ),
+    tag = "account")]
+pub async fn account_register_finish(
+    State(state): State<AppState>,
+    Json(params): Json<RegisterFinishParams>,
+) -> impl IntoResponse {
+    match run_account(state, move |conn, service| {
+        accounts::register_finish(conn, service, &params)
+    })
+    .await
+    {
+        Ok(result) => {
+            let cookie = session_cookie(&result.session_token);
+            with_cookie(Json(result).into_response(), &cookie)
+        }
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/account/login/start", request_body = LoginStartParams,
+    responses(
+        (status = 200, description = "WebAuthn request challenge", body = accounts::CeremonyChallenge),
+        (status = 404, description = "No account with that display name", body = String),
+    ),
+    tag = "account")]
+pub async fn account_login_start(
+    State(state): State<AppState>,
+    Json(params): Json<LoginStartParams>,
+) -> impl IntoResponse {
+    match run_account(state, move |conn, service| {
+        accounts::login_start(conn, service, &params)
+    })
+    .await
+    {
+        Ok(challenge) => Json(challenge).into_response(),
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/account/login/finish", request_body = LoginFinishParams,
+    responses(
+        (status = 200, description = "Signed in; session cookie set", body = accounts::AccountInfo),
+        (status = 401, description = "Passkey verification failed", body = String),
+    ),
+    tag = "account")]
+pub async fn account_login_finish(
+    State(state): State<AppState>,
+    Json(params): Json<LoginFinishParams>,
+) -> impl IntoResponse {
+    match run_account(state, move |conn, service| {
+        let token = accounts::login_finish(conn, service, &params)?;
+        let user_id = accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
+        Ok((accounts::account_info(conn, user_id)?, token))
+    })
+    .await
+    {
+        Ok((info, token)) => {
+            let cookie = session_cookie(&token);
+            with_cookie(Json(info).into_response(), &cookie)
+        }
+        Err(response) => response,
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/account/logout",
+    responses((status = 204, description = "Signed out; session cookie cleared")),
+    tag = "account")]
+pub async fn account_logout(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    // Clearing the cookie is unconditional: a caller with no (or an unknown)
+    // session still ends up signed out, which is the only outcome they wanted.
+    if let Some(token) = session_token(&headers) {
+        if let Err(response) =
+            run_account(state, move |conn, _| accounts::logout(conn, &token)).await
+        {
+            return response;
+        }
+    }
+    with_cookie(StatusCode::NO_CONTENT.into_response(), &cleared_session_cookie())
+}
+
+#[utoipa::path(get, path = "/api/v1/account",
+    responses(
+        (status = 200, description = "The signed-in account", body = accounts::AccountInfo),
+        (status = 401, description = "Not signed in", body = String),
+    ),
+    tag = "account")]
+pub async fn get_account(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let Some(token) = session_token(&headers) else {
+        return account_error_response(AccountError::NotAuthenticated);
+    };
+    match run_account(state, move |conn, _| {
+        let user_id = accounts::session_user(conn, &token)?.ok_or(AccountError::NotAuthenticated)?;
+        accounts::account_info(conn, user_id)
+    })
+    .await
+    {
+        Ok(info) => Json(info).into_response(),
+        Err(response) => response,
     }
 }

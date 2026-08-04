@@ -2,6 +2,7 @@
 //! REST (/api/v1) and MCP (/mcp) call the same `cards_db` service functions
 //! (AGENTS.md hard rule #2) — neither surface ships a capability alone.
 
+mod accounts;
 mod api;
 mod card_detail;
 mod cards_db;
@@ -61,6 +62,12 @@ use utoipa_swagger_ui::SwaggerUi;
         api::update_group_game,
         api::search_twda_decks,
         api::get_twda_deck,
+        api::account_register_start,
+        api::account_register_finish,
+        api::account_login_start,
+        api::account_login_finish,
+        api::account_logout,
+        api::get_account,
     )
 )]
 struct ApiDoc;
@@ -121,6 +128,7 @@ pub struct AppState {
     pub app_db: String,
     pub static_dir: String,
     pub semantic: Arc<semantic_search::SemanticSearchService>,
+    pub accounts: Arc<accounts::AccountsService>,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -158,11 +166,23 @@ async fn main() {
         return;
     }
 
+    // Relying-party identity for passkeys (docs/adr/0019). Must match the
+    // origin the browser is on, so it is configuration, not a constant; the
+    // defaults are the local dev server.
+    let accounts = Arc::new(
+        accounts::AccountsService::new(
+            &env_or("SCHRECKNET_RP_ID", "localhost"),
+            &env_or("SCHRECKNET_RP_ORIGIN", "http://localhost:8000"),
+        )
+        .expect("configure the WebAuthn relying party"),
+    );
+
     let state = AppState {
         data_dir: data_dir.clone(),
         app_db: app_db.clone(),
         static_dir: static_dir.clone(),
         semantic: Arc::clone(&semantic),
+        accounts,
     };
 
     let mcp_data_dir = data_dir.clone();
@@ -197,6 +217,21 @@ async fn main() {
         .route("/api/v1/decks/export", post(api::export_deck))
         .route("/api/v1/twda/search", get(api::search_twda_decks))
         .route("/api/v1/twda/{id}", get(api::get_twda_deck))
+        .route(
+            "/api/v1/account/register/start",
+            post(api::account_register_start),
+        )
+        .route(
+            "/api/v1/account/register/finish",
+            post(api::account_register_finish),
+        )
+        .route("/api/v1/account/login/start", post(api::account_login_start))
+        .route(
+            "/api/v1/account/login/finish",
+            post(api::account_login_finish),
+        )
+        .route("/api/v1/account/logout", post(api::account_logout))
+        .route("/api/v1/account", get(api::get_account))
         .route("/api/v1/groups", post(api::create_game_group))
         .route("/api/v1/groups/{code}", get(api::get_game_group))
         .route(

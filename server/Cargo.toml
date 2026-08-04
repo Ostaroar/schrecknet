@@ -25,6 +25,14 @@ schemars = "1.2.1"
 rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 regex = "1.13.1"
 argon2 = "0.5.3"
+# Passkey accounts (docs/adr/0019-passkey-only-accounts-no-email.md). The only
+# new crate that ADR authorizes: randomness comes from SQLite's randomblob and
+# hashing from argon2 above, both already here.
+webauthn-rs = "0.5.5"
+# Already in the build graph via schrecknet-core's native deps; promoted to a
+# direct dependency for session-token hashing (same reasoning as `tower`
+# above, not a new addition to the dependency tree).
+sha2 = "0.10"
 # docs/adr/0017-utoipa-for-openapi.md
 utoipa = { version = "5", features = ["axum_extras"] }
 # 8.1.1 is yanked; pin >=9.0.2 (matches our axum 0.8, same utoipa 5.x pairing).

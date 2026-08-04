@@ -53,12 +53,17 @@ CREATE TABLE users(
 
 -- One row per passkey. Several per user is the normal case, not an edge case:
 -- it is the primary multi-device and device-loss story (ADR 0019).
+--
+-- Refined during A1: the credential is stored as webauthn-rs's own serialized
+-- `Passkey` (which is Serialize/Deserialize) rather than hand-unpacked
+-- public-key/sign-count columns. The internals are opaque by design and
+-- reaching into them needs the crate's `danger-credential-internals` feature;
+-- `Passkey::update_credential()` also maintains the signature counter for us.
 CREATE TABLE user_credentials(
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  credential_id BLOB NOT NULL UNIQUE,
-  public_key BLOB NOT NULL,
-  sign_count INTEGER NOT NULL DEFAULT 0,
+  credential_id BLOB NOT NULL UNIQUE,   -- lookup key WebAuthn hands back
+  passkey_json TEXT NOT NULL,
   nickname TEXT,
   created_at TEXT NOT NULL,
   last_used_at TEXT
@@ -208,10 +213,19 @@ Recorded here so a future reviewer doesn't read it as a hard-rule violation.
 
 Each ends deployable. A1–A2 ship no user-visible feature; that is intentional.
 
-- **A1 — schema + WebAuthn ceremonies.** `migrations/0008_accounts.sql`,
-  `server/src/accounts.rs`, `webauthn-rs` wired, register/login/logout over
-  REST, sessions. Tests: full ceremony round-trip, session expiry, `sign_count`
-  regression rejected.
+- **A1 — schema + WebAuthn ceremonies. ☑ shipped 2026-08-04.**
+  `migrations/0008_accounts.sql` (all five tables), `server/src/accounts.rs`,
+  `webauthn-rs` wired, register/login/logout/whoami over REST, sessions with
+  SHA-256-hashed tokens and a `__Host-` cookie. Recovery-code *generation*
+  landed here too rather than in A2, because `users.recovery_code_hash` is
+  `NOT NULL`; A2 adds redemption.
+  Tests cover display-name normalization and case-insensitive collision,
+  recovery code stored only as an Argon2id hash, session round-trip/logout,
+  raw token never persisted, expired sessions rejected and swept, and
+  ceremony single-use + TTL.
+  **Not yet covered:** a full ceremony round-trip needs a virtual authenticator
+  (`webauthn-authenticator-rs` as a dev-dependency) — worth adding in A2 rather
+  than leaving the happy path untested forever.
 - **A2 — recovery code + credential management.** Generate/hash/redeem, add and
   remove passkeys, "last passkey" guard (removing it must require the recovery
   code to be re-shown or the action refused).
