@@ -79,25 +79,32 @@ export async function getInventoryQtyMap(cardIds: number[]): Promise<Map<number,
 }
 
 /**
- * Sets a card's owned quantity; exactly 0 removes the row entirely. Negative
- * values are allowed and persisted — they record a deficit (e.g. cards lost
- * after a precon bulk-add) independently of the precon's own owned count.
+ * Sets a card's owned quantity, including 0 or negative — negative records a
+ * deficit (e.g. cards lost after a precon bulk-add), independent of the
+ * precon's own owned count. Never deletes the row; use
+ * `removeInventoryEntry` to actually forget a card.
  */
 export async function setInventoryQty(cardId: number, qty: number): Promise<void> {
-  if (qty === 0) {
-    await userRun('DELETE FROM inventory WHERE card_id = ?1', [cardId])
-    return
-  }
   await userRun(
     'INSERT INTO inventory (card_id, qty) VALUES (?1, ?2) ON CONFLICT(card_id) DO UPDATE SET qty = ?2',
     [cardId, qty],
   )
 }
 
+/** Forgets a card entirely — the explicit removal action (vs. stepping to 0, which is a normal quantity). */
+export async function removeInventoryEntry(cardId: number): Promise<void> {
+  await userRun('DELETE FROM inventory WHERE card_id = ?1', [cardId])
+}
+
+/** Clamped at 0 — for callers outside the inventory page's own list (search-page quick-adjust, text import) where a negative deficit isn't meaningful and reaching 0 means "forget it". */
 export async function adjustInventoryQty(cardId: number, delta: number): Promise<number> {
   const current = await getInventoryQty(cardId)
   const next = Math.max(0, current + delta)
-  await setInventoryQty(cardId, next)
+  if (next === 0) {
+    await removeInventoryEntry(cardId)
+  } else {
+    await setInventoryQty(cardId, next)
+  }
   return next
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   getInventoryCardDetails,
   setInventoryQty,
+  removeInventoryEntry,
   adjustInventoryQtyByMap,
   exportInventoryText,
   importInventoryText,
@@ -60,10 +61,12 @@ function QtyStepper({
 function CardRow({
   card,
   onQty,
+  onRemove,
   ui,
 }: {
   card: InventoryCardDetail
   onQty: (qty: number) => void
+  onRemove: () => void
   ui: UiStrings['inventory']
 }) {
   return (
@@ -87,7 +90,7 @@ function CardRow({
       )}
       <QtyStepper qty={card.qty} onChange={onQty} />
       <button
-        onClick={() => onQty(0)}
+        onClick={onRemove}
         aria-label={ui.removeAria(card.name)}
         className="text-ink-dim hover:text-blood-hi"
       >
@@ -407,6 +410,11 @@ export default function InventoryPage() {
     refresh()
   }
 
+  const removeCard = async (cardId: number) => {
+    await removeInventoryEntry(cardId)
+    refresh()
+  }
+
   if (status === 'loading') return <p className="text-sm text-ink-dim">{ui.loading}</p>
   if (status === 'error') return <p className="text-sm text-blood-hi">{ui.loadError}: {error}</p>
 
@@ -434,7 +442,7 @@ export default function InventoryPage() {
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {cryptCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">{ui.noCryptOwned}</p>}
             {cryptCards.map((c) => (
-              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} ui={ui} />
+              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} onRemove={() => removeCard(c.id)} ui={ui} />
             ))}
           </div>
         </section>
@@ -445,7 +453,7 @@ export default function InventoryPage() {
           <div className="divide-y divide-line-soft rounded-lg border border-line bg-surface">
             {libraryCards.length === 0 && <p className="px-3 py-4 text-center text-xs text-ink-dim">{ui.noLibraryOwned}</p>}
             {libraryCards.map((c) => (
-              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} ui={ui} />
+              <CardRow key={c.id} card={c} onQty={(qty) => changeQty(c.id, qty)} onRemove={() => removeCard(c.id)} ui={ui} />
             ))}
           </div>
         </section>
