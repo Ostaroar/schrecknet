@@ -297,9 +297,16 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       own hard/soft claiming algorithm (see inventory-plan.md § 1a)
 
 ## Accounts (`/account`)
-- ☐ Register: username, password, optional email (for password reset only)
-- ☐ Login / logout, forgot-password flow (email reset)
-- ☐ Change password / email; delete account ✎
+_Design complete, unimplemented — [ADR 0019](adr/0019-passkey-only-accounts-no-email.md)
++ [docs/accounts-plan.md](accounts-plan.md). **Deliberate divergence from vdb:** vdb uses
+username + password with optional email reset; SchreckNet uses passkeys only and stores
+no email address, because its server is a replica (decks live in the browser and ADR 0016
+backs them up) rather than the source of truth. Same capability — an account that syncs
+your decks — reached without mail infrastructure or personal data._
+- ☐ Register: display name + passkey; one-time recovery code (no email, by design)
+- ☐ Login / logout (passkey ceremony); recovery code redeems to register a new passkey
+- ☐ Manage passkeys (add/rename/remove); delete account (hard delete)
+- ☐ Encrypted sync of decks + inventory (ADR 0016 envelope, user-resolved conflicts)
 
 ## SchreckNet additions beyond VDB parity
 - ☑ Offline semantic card search — additive local concept retrieval, never a

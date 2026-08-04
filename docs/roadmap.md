@@ -248,14 +248,28 @@ Keep control." stays the default, account-free experience — everything shipped
 far (search, decks, inventory, limited format, game-groups) keeps working with zero
 login. Accounts/cloud sync are purely additive on top, for whoever wants their decks
 follow them across devices._
-- Register/login/reset (parity) + passkeys; server-synced decks & branches
-- **Login via Google/Apple OAuth** (in addition to email/password) — the two
-  providers users actually already have on their phone/desktop, avoiding yet another
-  password to manage. Needs its own design pass when picked up: OAuth client
-  registration/secrets handling, and a real server-side user-account store (today
-  `app.sqlite` only holds the code-gated, account-free game-groups tables — this
-  would be the first *identity-bound* server data, a meaningfully bigger trust
-  boundary than anything shipped so far).
+**Design pass complete (2026-08-04), no implementation yet:**
+[ADR 0019](adr/0019-passkey-only-accounts-no-email.md) fixes the auth decision and
+[docs/accounts-plan.md](accounts-plan.md) holds the data model, auth boundary, sync
+semantics and A1–A6 milestones.
+
+- **Passkeys (WebAuthn) only — no passwords, and therefore no email address at all.**
+  Recovery is a one-time Argon2id-hashed recovery code, not a reset mail. This works
+  *here* specifically because the server is a replica, not the source of truth: decks
+  and inventory stay in the browser and ADR 0016 already backs them up, so losing
+  account access does not lose data. Avoids standing up mail infrastructure
+  (SPF/DKIM/DMARC, a transactional-mail sub-processor, spam-folder risk exactly when
+  a locked-out user needs the mail) and keeps personal data at zero.
+- ~~Login via Google/Apple OAuth~~ — **dropped** (ADR 0019 § 4): it discloses
+  SchreckNet usage to a third party, adds a sub-processor and client secrets, and its
+  one benefit ("no new password") is already what passkeys deliver, since on those
+  devices the passkey *is* the Apple/Google-synced credential.
+- Server-synced decks & branches: the ADR 0016 envelope, AES-GCM-encrypted in the
+  browser (WebCrypto, no new dependency) so the server stores opaque blobs and
+  "für uns nicht einsehbar" stays true. Conflicts are user-resolved, never merged.
+- First *identity-bound* server data — until now `app.sqlite` held only the
+  code-gated, account-free game-groups tables. Session cookie is strictly necessary,
+  so still no consent banner.
 - Inventory **sync** (the inventory feature itself is local-first and pulled
   forward — full design & milestones in [docs/inventory-plan.md](inventory-plan.md);
   Phase 3 only adds server storage + the `get_inventory`/`update_inventory`
