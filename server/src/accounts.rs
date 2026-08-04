@@ -844,7 +844,11 @@ pub fn create_api_token(
     params: &CreateApiTokenParams,
 ) -> Result<NewApiToken, AccountError> {
     let token = random_token(conn, API_TOKEN_BYTES)?;
-    let nickname = params.nickname.as_deref().map(str::trim).filter(|n| !n.is_empty());
+    let nickname = params
+        .nickname
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty());
     conn.execute(
         "INSERT INTO user_api_tokens(token_hash, user_id, nickname, created_at)
          VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
@@ -881,7 +885,11 @@ pub struct RevokeApiTokenParams {
     pub id: i64,
 }
 
-pub fn revoke_api_token(conn: &Connection, user_id: i64, token_id: i64) -> Result<(), AccountError> {
+pub fn revoke_api_token(
+    conn: &Connection,
+    user_id: i64,
+    token_id: i64,
+) -> Result<(), AccountError> {
     let removed = conn.execute(
         "DELETE FROM user_api_tokens WHERE rowid = ?1 AND user_id = ?2",
         rusqlite::params![token_id, user_id],
@@ -906,9 +914,10 @@ pub fn api_token_user(conn: &Connection, token: &str) -> Result<Option<i64>, Acc
     let Some((user_id, expires_at)) = row else {
         return Ok(None);
     };
-    let now: String = conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |row| {
-        row.get(0)
-    })?;
+    let now: String =
+        conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |row| {
+            row.get(0)
+        })?;
     if expires_at.is_some_and(|expiry| expiry <= now) {
         return Ok(None);
     }
@@ -1236,9 +1245,16 @@ mod tests {
             .unwrap();
 
         let users_remaining: i64 = conn
-            .query_row("SELECT COUNT(*) FROM users WHERE id = ?1", [user_id], |row| row.get(0))
+            .query_row(
+                "SELECT COUNT(*) FROM users WHERE id = ?1",
+                [user_id],
+                |row| row.get(0),
+            )
             .unwrap();
-        assert_eq!(users_remaining, 0, "users still had a row after its own deletion");
+        assert_eq!(
+            users_remaining, 0,
+            "users still had a row after its own deletion"
+        );
 
         for table in [
             "user_credentials",
@@ -1253,7 +1269,10 @@ mod tests {
                     |row| row.get(0),
                 )
                 .unwrap();
-            assert_eq!(remaining, 0, "{table} still had rows after the user was deleted");
+            assert_eq!(
+                remaining, 0,
+                "{table} still had rows after the user was deleted"
+            );
         }
     }
 

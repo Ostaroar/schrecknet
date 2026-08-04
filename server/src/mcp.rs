@@ -328,7 +328,10 @@ impl SchreckNetMcp {
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let user_id = self.authenticated_user(&parts)?;
         let conn = self.open_app()?;
-        account_result(accounts::revoke_api_token(&conn, user_id, params.id), account_error)
+        account_result(
+            accounts::revoke_api_token(&conn, user_id, params.id),
+            account_error,
+        )
     }
 
     #[tool(
@@ -465,7 +468,9 @@ fn account_error(error: AccountError) -> rmcp::ErrorData {
         | AccountError::NotAuthenticated
         | AccountError::RecoveryCodeRejected
         | AccountError::TooManyAttempts
-        | AccountError::DisplayNameTaken => rmcp::ErrorData::invalid_params(error.to_string(), None),
+        | AccountError::DisplayNameTaken => {
+            rmcp::ErrorData::invalid_params(error.to_string(), None)
+        }
         AccountError::Sqlite(_) | AccountError::PasswordHash | AccountError::Serialization => {
             rmcp::ErrorData::internal_error(error.to_string(), None)
         }
@@ -480,7 +485,9 @@ fn sync_error(error: crate::sync::SyncError) -> rmcp::ErrorData {
         crate::sync::SyncError::TooLarge | crate::sync::SyncError::Conflict { .. } => {
             rmcp::ErrorData::invalid_params(error.to_string(), None)
         }
-        crate::sync::SyncError::Sqlite(_) => rmcp::ErrorData::internal_error(error.to_string(), None),
+        crate::sync::SyncError::Sqlite(_) => {
+            rmcp::ErrorData::internal_error(error.to_string(), None)
+        }
     }
 }
 

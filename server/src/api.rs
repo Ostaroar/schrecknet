@@ -945,7 +945,9 @@ fn sync_error_response(error: SyncError) -> axum::response::Response {
         SyncError::NotFound => (StatusCode::NOT_FOUND, "no synced data yet").into_response(),
         SyncError::TooLarge => (StatusCode::PAYLOAD_TOO_LARGE, error.to_string()).into_response(),
         SyncError::Conflict { current } => (StatusCode::CONFLICT, Json(current)).into_response(),
-        SyncError::Sqlite(_) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+        SyncError::Sqlite(_) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
+        }
     }
 }
 
@@ -1001,7 +1003,11 @@ where
     ),
     tag = "account")]
 pub async fn get_sync_blob(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
-    match with_caller(state, &headers, |conn, user_id| sync::get_blob(conn, user_id)).await {
+    match with_caller(state, &headers, |conn, user_id| {
+        sync::get_blob(conn, user_id)
+    })
+    .await
+    {
         Ok(blob) => Json(blob).into_response(),
         Err(response) => response,
     }
@@ -1062,7 +1068,10 @@ pub async fn account_create_token(
         (status = 401, description = "Not signed in", body = String),
     ),
     tag = "account")]
-pub async fn account_list_tokens(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+pub async fn account_list_tokens(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
     match with_session(state, &headers, |conn, _, user_id| {
         accounts::list_api_tokens(conn, user_id)
     })
@@ -1108,14 +1117,20 @@ pub async fn account_revoke_token(
         (status = 401, description = "Not signed in", body = String),
     ),
     tag = "account")]
-pub async fn delete_account(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+pub async fn delete_account(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
     match with_session(state, &headers, |conn, _, user_id| {
         conn.execute("DELETE FROM users WHERE id = ?1", [user_id])?;
         Ok::<(), AccountError>(())
     })
     .await
     {
-        Ok(()) => with_cookie(StatusCode::NO_CONTENT.into_response(), &cleared_session_cookie()),
+        Ok(()) => with_cookie(
+            StatusCode::NO_CONTENT.into_response(),
+            &cleared_session_cookie(),
+        ),
         Err(response) => response,
     }
 }

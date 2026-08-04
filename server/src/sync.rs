@@ -21,7 +21,9 @@ pub enum SyncError {
     NotFound,
     /// Carries the caller's stale version so the client can report *which*
     /// version it thought it had, alongside the current one from `SyncBlob`.
-    Conflict { current: SyncBlob },
+    Conflict {
+        current: SyncBlob,
+    },
     TooLarge,
 }
 
@@ -36,9 +38,8 @@ impl std::fmt::Display for SyncError {
         match self {
             Self::Sqlite(error) => error.fmt(formatter),
             Self::NotFound => formatter.write_str("no synced data yet"),
-            Self::Conflict { .. } => {
-                formatter.write_str("another device has a newer version — resolve the conflict first")
-            }
+            Self::Conflict { .. } => formatter
+                .write_str("another device has a newer version — resolve the conflict first"),
             Self::TooLarge => formatter.write_str("encrypted payload is too large"),
         }
     }
@@ -211,7 +212,10 @@ mod tests {
     fn pushing_as_first_when_a_blob_already_exists_is_also_a_conflict() {
         let conn = open();
         push(&conn, 1, None).unwrap();
-        assert!(matches!(push(&conn, 1, None), Err(SyncError::Conflict { .. })));
+        assert!(matches!(
+            push(&conn, 1, None),
+            Err(SyncError::Conflict { .. })
+        ));
     }
 
     #[test]
@@ -251,4 +255,3 @@ mod tests {
         assert_eq!(get_blob(&conn, 1).unwrap().version, 1);
     }
 }
-
