@@ -759,7 +759,11 @@ pub async fn get_account(State(state): State<AppState>, headers: HeaderMap) -> i
 
 /// Resolves the session cookie to a user id inside the blocking closure, so
 /// callers get `user_id` without each one repeating the lookup.
-async fn with_session<T, F>(state: AppState, headers: &HeaderMap, f: F) -> Result<T, axum::response::Response>
+async fn with_session<T, F>(
+    state: AppState,
+    headers: &HeaderMap,
+    f: F,
+) -> Result<T, axum::response::Response>
 where
     T: Send + 'static,
     F: FnOnce(&rusqlite::Connection, &accounts::AccountsService, i64) -> Result<T, AccountError>

@@ -76,9 +76,8 @@ impl std::fmt::Display for AccountError {
             Self::TooManyAttempts => {
                 formatter.write_str("too many attempts, wait a few minutes and try again")
             }
-            Self::LastPasskey => formatter.write_str(
-                "this is your only passkey — add another one before removing it",
-            ),
+            Self::LastPasskey => formatter
+                .write_str("this is your only passkey — add another one before removing it"),
             Self::UnknownCredential => formatter.write_str("no such passkey on this account"),
             Self::PasswordHash => formatter.write_str("could not secure the recovery code"),
             Self::Serialization => formatter.write_str("could not store the passkey"),
@@ -708,7 +707,12 @@ pub fn add_passkey_finish(
         .map_err(|_| AccountError::CredentialRejected)?;
 
     insert_credential(conn, user_id, &passkey)?;
-    if let Some(nickname) = params.nickname.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
+    if let Some(nickname) = params
+        .nickname
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+    {
         conn.execute(
             "UPDATE user_credentials SET nickname = ?1 WHERE user_id = ?2 AND credential_id = ?3",
             rusqlite::params![nickname, user_id, passkey.cred_id().to_vec()],
@@ -1013,7 +1017,9 @@ mod tests {
 
         rename_credential(&conn, user_id, credential, Some("  iPhone  ")).unwrap();
         assert_eq!(
-            list_credentials(&conn, user_id).unwrap()[0].nickname.as_deref(),
+            list_credentials(&conn, user_id).unwrap()[0]
+                .nickname
+                .as_deref(),
             Some("iPhone")
         );
 
@@ -1033,9 +1039,14 @@ mod tests {
 
         for table in ["user_credentials", "user_sessions"] {
             let remaining: i64 = conn
-                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| {
+                    row.get(0)
+                })
                 .unwrap();
-            assert_eq!(remaining, 0, "{table} still had rows after the user was deleted");
+            assert_eq!(
+                remaining, 0,
+                "{table} still had rows after the user was deleted"
+            );
         }
     }
 

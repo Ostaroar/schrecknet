@@ -253,10 +253,7 @@ async fn main() {
             "/api/v1/account/passkeys/finish",
             post(api::account_add_passkey_finish),
         )
-        .route(
-            "/api/v1/account/passkeys",
-            get(api::account_list_passkeys),
-        )
+        .route("/api/v1/account/passkeys", get(api::account_list_passkeys))
         .route(
             "/api/v1/account/passkeys/{id}",
             delete(api::account_remove_passkey).put(api::account_rename_passkey),
