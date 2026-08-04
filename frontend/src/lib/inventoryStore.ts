@@ -78,9 +78,13 @@ export async function getInventoryQtyMap(cardIds: number[]): Promise<Map<number,
   return map
 }
 
-/** Sets a card's owned quantity; a qty of 0 or less removes the row entirely. */
+/**
+ * Sets a card's owned quantity; exactly 0 removes the row entirely. Negative
+ * values are allowed and persisted — they record a deficit (e.g. cards lost
+ * after a precon bulk-add) independently of the precon's own owned count.
+ */
 export async function setInventoryQty(cardId: number, qty: number): Promise<void> {
-  if (qty <= 0) {
+  if (qty === 0) {
     await userRun('DELETE FROM inventory WHERE card_id = ?1', [cardId])
     return
   }
@@ -202,7 +206,9 @@ export async function computeDeckMissing(cardIds: number[]): Promise<Map<number,
     const claims = claimsByCard.get(cardId) ?? []
     const fixedQtys = claims.filter((c) => c.mode === 'fixed').map((c) => c.qty)
     const flexibleQtys = claims.filter((c) => c.mode === 'flexible').map((c) => c.qty)
-    const owned = ownedByCard.get(cardId) ?? 0
+    // Owned may be negative (a recorded deficit) — the wasm call takes a u16,
+    // so clamp here; a negative owned still correctly means "need more".
+    const owned = Math.max(0, ownedByCard.get(cardId) ?? 0)
     result.set(cardId, await computeMissingQty(fixedQtys, flexibleQtys, owned))
   }
   return result

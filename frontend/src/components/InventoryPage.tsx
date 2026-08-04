@@ -13,6 +13,7 @@ import {
 } from '../lib/inventoryStore'
 import {
   listPrecons,
+  listOwnedPrecons,
   getPreconCardCounts,
   adjustOwnedPreconQty,
   getOwnedPreconQty,
@@ -23,22 +24,32 @@ import { useUiStrings, type UiStrings } from '../lib/i18n'
 import AddCardBox from './AddCardBox'
 import { CardTypeSummary, ClanSymbol } from './VtesSymbol'
 
-function QtyStepper({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
+function QtyStepper({
+  qty,
+  onChange,
+  disabled,
+}: {
+  qty: number
+  onChange: (next: number) => void
+  disabled?: boolean
+}) {
   const ui = useUiStrings().inventory
   return (
     <span className="flex items-center gap-1.5">
       <button
         onClick={() => onChange(qty - 1)}
+        disabled={disabled}
         aria-label={ui.decreaseQty}
-        className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
+        className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted disabled:opacity-50"
       >
         −
       </button>
-      <span className="w-4 text-center font-mono text-xs text-ink">{qty}</span>
+      <span className={'w-4 text-center font-mono text-xs ' + (qty < 0 ? 'text-blood-hi' : 'text-ink')}>{qty}</span>
       <button
         onClick={() => onChange(qty + 1)}
+        disabled={disabled}
         aria-label={ui.increaseQty}
-        className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted"
+        className="grid size-5 place-items-center rounded border border-line text-xs text-ink-dim hover:text-ink-muted disabled:opacity-50"
       >
         +
       </button>
@@ -165,6 +176,65 @@ function ImportExportPanel({ onImported, ui }: { onImported: () => void; ui: UiS
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Every precon that exists, cross-referenced against what's owned — an
+ * always-visible overview so "which precons do I still need" doesn't require
+ * clicking through the add/remove dropdown one at a time. */
+function PreconOverviewPanel({
+  refreshKey,
+  onChanged,
+  ui,
+}: {
+  refreshKey: number
+  onChanged: () => void
+  ui: UiStrings['inventory']
+}) {
+  const [precons, setPrecons] = useState<PreconSummary[]>([])
+  const [owned, setOwned] = useState<Map<string, number>>(new Map())
+  const [busyKey, setBusyKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    Promise.all([listPrecons(), listOwnedPrecons()]).then(([list, ownedList]) => {
+      setPrecons(list)
+      setOwned(new Map(ownedList.map((o) => [`${o.set}:${o.precon}`, o.qty])))
+    })
+  }, [refreshKey])
+
+  const applyDelta = async (set: string, precon: string, next: number) => {
+    const key = `${set}:${precon}`
+    const delta = Math.max(0, next) - (owned.get(key) ?? 0)
+    if (delta === 0) return
+    setBusyKey(key)
+    const counts = await getPreconCardCounts(set, precon)
+    const deltas = new Map([...counts].map(([cardId, copies]) => [cardId, delta * copies]))
+    await adjustInventoryQtyByMap(deltas)
+    await adjustOwnedPreconQty(set, precon, delta)
+    setBusyKey(null)
+    onChanged()
+  }
+
+  return (
+    <div className="grid min-w-0 gap-3 rounded-lg border border-line bg-surface p-4">
+      <h2 className="text-xs uppercase tracking-wide text-ink-dim">{ui.preconOverviewTitle}</h2>
+      <ul className="grid max-h-80 gap-1 divide-y divide-line-soft overflow-y-auto rounded-lg border border-line bg-ground text-sm">
+        {precons.map((p) => {
+          const key = `${p.set}:${p.precon}`
+          const qty = owned.get(key) ?? 0
+          return (
+            <li key={key} className="flex items-center gap-3 px-3 py-1.5">
+              <span className={'min-w-0 flex-1 truncate ' + (qty > 0 ? 'text-ink' : 'text-ink-dim')}>
+                {qty > 0 && <span className="text-blood-hi">✓ </span>}
+                {p.set} — {p.precon}
+              </span>
+              <span className="shrink-0 text-xs text-ink-dim">{p.card_count}</span>
+              <QtyStepper qty={qty} onChange={(next) => applyDelta(p.set, p.precon, next)} disabled={busyKey === key} />
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -353,6 +423,7 @@ export default function InventoryPage() {
       </div>
 
       <ImportExportPanel onImported={refresh} ui={ui} />
+      <PreconOverviewPanel refreshKey={refreshKey} onChanged={refresh} ui={ui} />
       <AddPreconPanel onChanged={refresh} ui={ui} />
       <MissingCardsPanel refreshKey={refreshKey} ui={ui} />
 
