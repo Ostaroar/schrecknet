@@ -223,11 +223,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     // Tournament data (docs/adr/0018) — confirmed V5 only: every card in a
     // fetched TWDA deck must already be in the `cards` table we just built,
     // checked here, not guessed from the deck's date.
-    let v5_card_ids: std::collections::HashSet<i64> = {
-        let mut stmt = conn.prepare("SELECT id FROM cards")?;
-        stmt.query_map([], |row| row.get(0))?
-            .collect::<rusqlite::Result<_>>()?
-    };
+    let mut v5_ids_stmt = conn.prepare("SELECT id FROM cards")?;
+    let v5_card_ids: std::collections::HashSet<i64> = v5_ids_stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    drop(v5_ids_stmt);
     let twda_decks = twda::fetch_decks(&cache_dir)?;
     let twda_stats = twda::ingest(&conn, &twda_decks, &v5_card_ids)?;
     eprintln!(

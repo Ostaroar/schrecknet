@@ -251,8 +251,7 @@ mod tests {
     fn keeps_a_deck_when_every_card_is_v5_confirmed() {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(schema()).unwrap();
-        let v5_ids: std::collections::HashSet<i64> =
-            [200001, 100001, 100002].into_iter().collect();
+        let v5_ids: std::collections::HashSet<i64> = [200001, 100001, 100002].into_iter().collect();
 
         let stats = ingest(&conn, &[sample_deck()], &v5_ids).unwrap();
         assert_eq!(stats.confirmed, 1);

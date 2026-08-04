@@ -245,14 +245,9 @@ mod tests {
     #[test]
     fn get_deck_returns_full_crypt_and_library_breakdown() {
         let conn = open_test_db();
-        let deck = get_deck(
-            &conn,
-            &TwdaDeckParams {
-                id: "2024a".into(),
-            },
-        )
-        .unwrap()
-        .unwrap();
+        let deck = get_deck(&conn, &TwdaDeckParams { id: "2024a".into() })
+            .unwrap()
+            .unwrap();
         assert_eq!(deck.crypt.len(), 1);
         assert_eq!(deck.crypt[0].name, "Alpha");
         assert_eq!(deck.library[0].name, "Villein");
@@ -261,13 +256,8 @@ mod tests {
     #[test]
     fn get_deck_returns_none_for_unknown_id() {
         let conn = open_test_db();
-        assert!(get_deck(
-            &conn,
-            &TwdaDeckParams {
-                id: "nope".into()
-            }
-        )
-        .unwrap()
-        .is_none());
+        assert!(get_deck(&conn, &TwdaDeckParams { id: "nope".into() })
+            .unwrap()
+            .is_none());
     }
 }

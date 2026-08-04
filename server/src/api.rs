@@ -131,7 +131,10 @@ pub async fn search_twda_decks(
         (status = 404, description = "No confirmed-V5 deck with that id", body = String),
     ),
     tag = "twda")]
-pub async fn get_twda_deck(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+pub async fn get_twda_deck(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
     let data_dir = state.data_dir.clone();
     let result = tokio::task::spawn_blocking(move || -> rusqlite::Result<_> {
         let conn = cards_db::open(&data_dir)?;

@@ -11,5 +11,5 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 schrecknet-core = { path = "../core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-ureq = "2"
+ureq = { version = "2", features = ["json"] }
 zip = { version = "8.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
