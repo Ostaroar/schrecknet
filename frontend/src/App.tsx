@@ -207,7 +207,13 @@ export default function App() {
       <KofiButton label={ui.footer.support} />
 
       <footer className="grid justify-items-center gap-2 py-6 text-center text-xs text-ink-dim">
-        <img src="/dark-pack-logo.png" alt="Dark Pack" className="h-10 w-10" />
+        <a
+          href="https://www.paradoxinteractive.com/games/world-of-darkness/community/dark-pack-agreement"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img src="/dark-pack-logo.png" alt="Dark Pack" className="h-10 w-10" />
+        </a>
         <span>{ui.footer.copyright}</span>
         <span>{ui.footer.disclaimer}</span>
         <span className="flex justify-center gap-3">
