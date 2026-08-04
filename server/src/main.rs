@@ -174,9 +174,6 @@ async fn main() {
         Default::default(),
     );
 
-    // Annotated `Router<()>` so the whole chain's `with_state<S2>` resolves
-    // S2 = () right here, rather than leaving it a free type variable for
-    // the later `.merge(SwaggerUi...)` to fail to pin down on its own.
     let app: Router<()> = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/api/v1/meta", get(meta))
@@ -218,9 +215,7 @@ async fn main() {
         .route("/about", get(api::get_prerendered_about))
         .route("/changelog", get(api::get_prerendered_changelog))
         .with_state(state)
-        // `SwaggerUi: From<SwaggerUi> for Router<S> where S: Clone + Send + Sync
-        // + 'static` needs the "axum" feature at >=8.1 — an earlier 8.x point
-        // release resolved by a loose "8" requirement lacked the generic impl.
+        // Swagger UI needs no AppState (`impl<S> From<SwaggerUi> for Router<S>`).
         .merge(SwaggerUi::new("/api/v1/docs").url("/api/v1/openapi.json", ApiDoc::openapi()))
         // Vite's hashed build output — safe to cache forever (see
         // cache_control_for_mount's doc comment).
