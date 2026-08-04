@@ -3,7 +3,7 @@ import {
   getInventoryCardDetails,
   setInventoryQty,
   removeInventoryEntry,
-  adjustInventoryQtyByMap,
+  adjustInventoryPreconQtyByMap,
   exportInventoryText,
   importInventoryText,
   computeGlobalMissing,
@@ -87,6 +87,14 @@ function CardRow({
           types={card.types}
           className="max-w-48 shrink-0 text-xs text-ink-muted"
         />
+      )}
+      {card.preconQty !== 0 && (
+        <span className="shrink-0 font-mono text-xs">
+          <span className="text-ink-dim">{card.preconQty}</span>
+          <span className="text-ink-dim"> ↔ </span>
+          <span className="text-blood-hi">{card.qty}</span>
+          <span className="text-ink-dim"> = {card.preconQty + card.qty}</span>
+        </span>
       )}
       <QtyStepper qty={card.qty} onChange={onQty} />
       <button
@@ -213,7 +221,7 @@ function PreconOverviewPanel({
     setBusyKey(key)
     const counts = await getPreconCardCounts(set, precon)
     const deltas = new Map([...counts].map(([cardId, copies]) => [cardId, delta * copies]))
-    await adjustInventoryQtyByMap(deltas)
+    await adjustInventoryPreconQtyByMap(deltas)
     await adjustOwnedPreconQty(set, precon, delta)
     setBusyKey(null)
     onChanged()
@@ -268,7 +276,7 @@ function AddPreconPanel({ onChanged, ui }: { onChanged: () => void; ui: UiString
     const counts = await getPreconCardCounts(selectedPrecon.set, selectedPrecon.precon)
     const sign = mode === 'add' ? 1 : -1
     const deltas = new Map([...counts].map(([cardId, copies]) => [cardId, sign * amount * copies]))
-    await adjustInventoryQtyByMap(deltas)
+    await adjustInventoryPreconQtyByMap(deltas)
     await adjustOwnedPreconQty(selectedPrecon.set, selectedPrecon.precon, sign * amount)
     setStatus(
       mode === 'add' ? ui.addedCopies(amount, counts.size) : ui.removedCopies(amount, counts.size),
@@ -420,8 +428,8 @@ export default function InventoryPage() {
 
   const cryptCards = cards.filter((c) => c.kind === 'crypt')
   const libraryCards = cards.filter((c) => c.kind === 'library')
-  const cryptCount = cryptCards.reduce((sum, c) => sum + c.qty, 0)
-  const libraryCount = libraryCards.reduce((sum, c) => sum + c.qty, 0)
+  const cryptCount = cryptCards.reduce((sum, c) => sum + c.qty + c.preconQty, 0)
+  const libraryCount = libraryCards.reduce((sum, c) => sum + c.qty + c.preconQty, 0)
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">

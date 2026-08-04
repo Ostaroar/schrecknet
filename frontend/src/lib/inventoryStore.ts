@@ -11,18 +11,22 @@ import { parseDeckText, formatDeckText, computeMissingQty } from './core'
 export interface InventoryEntry {
   cardId: number
   qty: number
+  preconQty: number
 }
 
 export async function listInventory(): Promise<InventoryEntry[]> {
-  const rows = await userQuery<{ card_id: number; qty: number }>(
-    'SELECT card_id, qty FROM inventory ORDER BY card_id ASC',
+  const rows = await userQuery<{ card_id: number; qty: number; precon_qty: number }>(
+    'SELECT card_id, qty, precon_qty FROM inventory ORDER BY card_id ASC',
   )
-  return rows.map((r) => ({ cardId: r.card_id, qty: r.qty }))
+  return rows.map((r) => ({ cardId: r.card_id, qty: r.qty, preconQty: r.precon_qty }))
 }
 
 export interface InventoryCardDetail {
   id: number
+  /** Individually added/adjusted — what the qty stepper edits. */
   qty: number
+  /** Attributed to owned precons (frontend/src/lib/precons.ts), tracked separately. */
+  preconQty: number
   kind: 'crypt' | 'library'
   name: string
   clan: string | null
@@ -34,7 +38,7 @@ export interface InventoryCardDetail {
 export async function getInventoryCardDetails(): Promise<InventoryCardDetail[]> {
   const rows = await listInventory()
   if (rows.length === 0) return []
-  const qtyById = new Map(rows.map((r) => [r.cardId, r.qty]))
+  const byId = new Map(rows.map((r) => [r.cardId, r]))
   const placeholders = rows.map((_, i) => `?${i + 1}`).join(',')
   const cards = await cardsQuery<{
     id: number
@@ -50,7 +54,8 @@ export async function getInventoryCardDetails(): Promise<InventoryCardDetail[]> 
   return cards
     .map((c) => ({
       id: c.id,
-      qty: qtyById.get(c.id) ?? 0,
+      qty: byId.get(c.id)?.qty ?? 0,
+      preconQty: byId.get(c.id)?.preconQty ?? 0,
       kind: c.kind as 'crypt' | 'library',
       name: c.name,
       clan: c.clan || null,
@@ -60,21 +65,25 @@ export async function getInventoryCardDetails(): Promise<InventoryCardDetail[]> 
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** Total owned — individually added plus precon-attributed, combined. */
 export async function getInventoryQty(cardId: number): Promise<number> {
-  const rows = await userQuery<{ qty: number }>('SELECT qty FROM inventory WHERE card_id = ?1', [cardId])
-  return rows[0]?.qty ?? 0
+  const rows = await userQuery<{ total: number }>(
+    'SELECT qty + precon_qty AS total FROM inventory WHERE card_id = ?1',
+    [cardId],
+  )
+  return rows[0]?.total ?? 0
 }
 
-/** Batch lookup of owned quantities, defaulting missing ids to 0. */
+/** Batch lookup of total owned quantities, defaulting missing ids to 0. */
 export async function getInventoryQtyMap(cardIds: number[]): Promise<Map<number, number>> {
   if (cardIds.length === 0) return new Map()
   const placeholders = cardIds.map((_, i) => `?${i + 1}`).join(',')
-  const rows = await userQuery<{ card_id: number; qty: number }>(
-    `SELECT card_id, qty FROM inventory WHERE card_id IN (${placeholders})`,
+  const rows = await userQuery<{ card_id: number; total: number }>(
+    `SELECT card_id, qty + precon_qty AS total FROM inventory WHERE card_id IN (${placeholders})`,
     cardIds,
   )
   const map = new Map(cardIds.map((id) => [id, 0]))
-  for (const row of rows) map.set(row.card_id, row.qty)
+  for (const row of rows) map.set(row.card_id, row.total)
   return map
 }
 
@@ -96,27 +105,63 @@ export async function removeInventoryEntry(cardId: number): Promise<void> {
   await userRun('DELETE FROM inventory WHERE card_id = ?1', [cardId])
 }
 
-/** Clamped at 0 — for callers outside the inventory page's own list (search-page quick-adjust, text import) where a negative deficit isn't meaningful and reaching 0 means "forget it". */
-export async function adjustInventoryQty(cardId: number, delta: number): Promise<number> {
-  const current = await getInventoryQty(cardId)
-  const next = Math.max(0, current + delta)
-  if (next === 0) {
-    await removeInventoryEntry(cardId)
-  } else {
-    await setInventoryQty(cardId, next)
-  }
-  return next
+async function getInventoryRow(cardId: number): Promise<{ qty: number; preconQty: number }> {
+  const rows = await userQuery<{ qty: number; precon_qty: number }>(
+    'SELECT qty, precon_qty FROM inventory WHERE card_id = ?1',
+    [cardId],
+  )
+  return { qty: rows[0]?.qty ?? 0, preconQty: rows[0]?.precon_qty ?? 0 }
 }
 
 /**
- * Adjusts several cards' owned quantity, each by its own delta — used for
- * add/remove-N-precons, where each card's delta is `precons * that card's
- * real per-precon copy count` (see lib/precons.ts::getPreconCardCounts,
- * sourced from KRCG's own per-printing "copies" field).
+ * Clamped at 0 — for callers outside the inventory page's own list (search-page
+ * quick-adjust, text import) where a negative deficit isn't meaningful. Adjusts
+ * only the individually-owned portion, leaving any precon-attributed qty
+ * (adjustInventoryPreconQty) untouched; the row is only forgotten once *both*
+ * parts reach 0. Returns the new total (individual + precon-attributed).
+ */
+export async function adjustInventoryQty(cardId: number, delta: number): Promise<number> {
+  const { qty, preconQty } = await getInventoryRow(cardId)
+  const nextQty = Math.max(0, qty + delta)
+  if (nextQty === 0 && preconQty === 0) {
+    await removeInventoryEntry(cardId)
+  } else {
+    await setInventoryQty(cardId, nextQty)
+  }
+  return nextQty + preconQty
+}
+
+/**
+ * Adjusts several cards' individually-owned quantity, each by its own delta.
+ * Used by text import, where imported quantities are additions a person typed
+ * or pasted, not precon-attributed.
  */
 export async function adjustInventoryQtyByMap(deltas: Map<number, number>): Promise<void> {
   for (const [cardId, delta] of deltas) {
     await adjustInventoryQty(cardId, delta)
+  }
+}
+
+/**
+ * Adjusts several cards' precon-attributed quantity, each by its own delta —
+ * used for add/remove-N-precons, where each card's delta is `precons * that
+ * card's real per-precon copy count` (see lib/precons.ts::getPreconCardCounts,
+ * sourced from KRCG's own per-printing "copies" field). Clamped at 0; the row
+ * is only forgotten once the individually-owned portion is also 0.
+ */
+export async function adjustInventoryPreconQtyByMap(deltas: Map<number, number>): Promise<void> {
+  for (const [cardId, delta] of deltas) {
+    const { qty, preconQty } = await getInventoryRow(cardId)
+    const nextPreconQty = Math.max(0, preconQty + delta)
+    if (qty === 0 && nextPreconQty === 0) {
+      await removeInventoryEntry(cardId)
+    } else {
+      await userRun(
+        `INSERT INTO inventory (card_id, qty, precon_qty) VALUES (?1, ?2, ?3)
+         ON CONFLICT(card_id) DO UPDATE SET precon_qty = ?3`,
+        [cardId, qty, nextPreconQty],
+      )
+    }
   }
 }
 
@@ -272,8 +317,12 @@ export async function exportGlobalMissingText(): Promise<string> {
 /** Formats the inventory as a plain-text (Lackey/JOL-style) card list for export. */
 export async function exportInventoryText(): Promise<string> {
   const cards = await getInventoryCardDetails()
-  const crypt = cards.filter((c) => c.kind === 'crypt').map((c) => ({ name: c.name, qty: c.qty }))
-  const library = cards.filter((c) => c.kind === 'library').map((c) => ({ name: c.name, qty: c.qty }))
+  const crypt = cards
+    .filter((c) => c.kind === 'crypt')
+    .map((c) => ({ name: c.name, qty: c.qty + c.preconQty }))
+  const library = cards
+    .filter((c) => c.kind === 'library')
+    .map((c) => ({ name: c.name, qty: c.qty + c.preconQty }))
   return formatDeckText(crypt, library)
 }
 

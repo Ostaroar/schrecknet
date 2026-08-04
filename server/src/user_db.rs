@@ -9,6 +9,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0006_inventory_precons.sql"),
     include_str!("../../migrations/0007_game_group_write_passphrase.sql"),
     include_str!("../../migrations/0008_accounts.sql"),
+    include_str!("../../migrations/0009_inventory_precon_split.sql"),
 ];
 
 pub fn migrate(path: &str) -> rusqlite::Result<()> {

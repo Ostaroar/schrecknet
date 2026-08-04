@@ -35,6 +35,7 @@ import migration005 from '../../../migrations/0005_game_group_archetypes.sql?raw
 import migration006 from '../../../migrations/0006_inventory_precons.sql?raw'
 import migration007 from '../../../migrations/0007_game_group_write_passphrase.sql?raw'
 import migration008 from '../../../migrations/0008_accounts.sql?raw'
+import migration009 from '../../../migrations/0009_inventory_precon_split.sql?raw'
 
 type Params = (string | number | null)[]
 type CardsMsg =
@@ -181,6 +182,7 @@ const USER_MIGRATIONS = [
   migration006,
   migration007,
   migration008,
+  migration009,
 ]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
