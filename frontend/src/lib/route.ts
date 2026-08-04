@@ -18,6 +18,8 @@ export type Route =
   | { page: 'share'; token: string }
   | { page: 'diff' }
   | { page: 'precons' }
+  | { page: 'twda' }
+  | { page: 'twda-deck'; id: string }
   | { page: 'inventory' }
   | { page: 'limited' }
   | { page: 'table' }
@@ -45,6 +47,9 @@ export function parsePath(pathname: string): Route {
   if (path === 'decks') return { page: 'decks' }
   if (path === 'diff') return { page: 'diff' }
   if (path === 'precons') return { page: 'precons' }
+  const twdaDeckMatch = /^twda\/(.+)$/.exec(path)
+  if (twdaDeckMatch) return { page: 'twda-deck', id: twdaDeckMatch[1] }
+  if (path === 'twda') return { page: 'twda' }
   if (path === 'inventory') return { page: 'inventory' }
   if (path === 'limited') return { page: 'limited' }
   if (path === 'table') return { page: 'table' }
@@ -83,6 +88,10 @@ export function routeTo(route: Route): string {
       return '/diff'
     case 'precons':
       return '/precons'
+    case 'twda':
+      return '/twda'
+    case 'twda-deck':
+      return `/twda/${route.id}`
     case 'inventory':
       return '/inventory'
     case 'limited':

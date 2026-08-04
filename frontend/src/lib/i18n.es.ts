@@ -14,6 +14,7 @@ const es: UiStrings = {
     inventory: 'inventario',
     limited: 'formato limitado',
     precons: 'premontados',
+    twda: 'torneos',
     table: 'mesa',
     rules: 'reglas',
     changelog: 'novedades',
@@ -142,6 +143,9 @@ const es: UiStrings = {
   },
   precons: {
     title: 'Mazos premontados', intro: 'Mazos preconstruidos oficiales de la línea moderna BCP/V5, agrupados por edición.', cardCountNote: 'Lista lista para jugar con la cantidad real de cada carta.', loading: 'Cargando premontados…', loadError: (error) => `No se pudieron cargar los premontados: ${error}`, backToPrecons: '← Premontados', cardsSuffix: (count) => `${count} cartas distintas`, cryptCount: (count) => `Cripta · ${count}`, libraryCount: (count) => `Biblioteca · ${count}`, none: 'Ninguna', ownedOverview: (copies, distinct) => `${copies} premontado${copies === 1 ? '' : 's'} · ${distinct} diferente${distinct === 1 ? '' : 's'}`, ownedOverviewNote: 'Cuenta productos añadidos desde el inventario; las cartas sueltas no se confunden con premontados físicos.', ownedCopies: (count) => `${count} propio${count === 1 ? '' : 's'}`, notOwned: 'no propio',
+  },
+  twda: {
+    title: 'Mazos ganadores de torneos', intro: 'Ganadores de torneos V5 confirmados, tomados de la TWDA — cada carta de cada mazo mostrado aquí se ha verificado contra el conjunto V5.', playerLabel: 'Jugador', cardLabel: 'Carta', dateFromLabel: 'Desde', dateToLabel: 'Hasta', search: 'Buscar', loading: 'Cargando…', loadError: (error) => `No se pudieron cargar los mazos: ${error}`, none: 'Ningún mazo coincide con esos filtros.', resultsCount: (count) => `${count} mazo${count === 1 ? '' : 's'}`, backToSearch: '← Mazos de torneo', playersCount: (count) => `${count} jugadores`, cryptCount: (count) => `Cripta · ${count}`, libraryCount: (count) => `Biblioteca · ${count}`, notFound: 'Mazo no encontrado.',
   },
   decks: {
     newDeckPlaceholder: 'Nombre del mazo nuevo', createDeck: 'Crear mazo', compareTwoDecks: 'Comparar dos mazos →', loading: 'Cargando mazos…', loadError: (error) => `No se pudieron cargar tus mazos: ${error}`, noDecks: 'Aún no hay mazos — los mazos se guardan localmente en este navegador (sin necesidad de cuenta).', ownsCopies: 'Posee copias', sharesCopies: 'Comparte copias', missingSuffix: (count) => `${count} faltantes`, byAuthor: (author) => `por ${author}`, clone: 'Clonar', delete: 'Eliminar', confirmDelete: (name) => `¿Eliminar "${name}"? Esto no se puede deshacer.`,

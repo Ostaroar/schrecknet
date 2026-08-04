@@ -4,11 +4,12 @@ Source of truth for "no missing features". Compiled from a live survey of https:
 (2026-07-18) and the `smeea/vdb` source tree (`frontend/src/pages/`). Every item must be
 checked off (or explicitly descoped with a note) before v1.0.
 
-**Scope note (2026-07-19):** SchreckNet is card search/research + deck building only —
-no tournament/community-data features. Explicitly out of scope and removed from this
-list: TWD (Tournament Winning Decks) browser, TDA (Tournament Decks Archive), PDA
-(Public Deck Archive), the playtest program, Hall of Fame, table seating utilities,
-and any recommendation engine built on tournament co-occurrence data. Deck
+**Scope note (2026-08-04, supersedes 2026-07-19):** tournament data is back in scope,
+narrowly — **TWD (Tournament Winning Decks)**, a read-only browser sourced from
+`api.krcg.org`'s TWDA, confirmed V5 by checking every card against our own pool at
+ingestion time (docs/adr/0018). Still out of scope: TDA, PDA (Public Deck Archive),
+the playtest program, Hall of Fame, table seating utilities, and any recommendation
+engine built on tournament co-occurrence data — see ADR 0018 for the reasoning. Deck
 import/export still supports common plaintext deck-list formats (Lackey, JOL, etc.)
 since that's interop, not a tournament feature; deck-in-URL sharing (for a deck you
 built) also stays — publishing to a public community archive does not.
@@ -261,6 +262,17 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       separately from loose card inventory and shown as a total plus per-precon
       badges, avoiding false ownership inferred from overlapping cards
 - ☐ Works logged-out (localStorage decks) and logged-in (server-synced) ✎
+
+## Tournament data (`/twda`)
+_Reactivated 2026-08-04, narrowly — see docs/adr/0018. TDA, PDA, Hall of Fame, the
+playtest program, seating utilities, and co-occurrence recommendations remain out of
+scope._
+- ☑ TWD (Tournament Winning Decks) browser — search confirmed-V5 tournament-winning
+      decks by player, card name, and/or date range, sourced from `api.krcg.org`'s
+      TWDA. A deck is only shown if 100% of its cards are confirmed in our own V5
+      pool at ingestion time (never guessed from the tournament date); a deck with
+      even one non-V5 card is dropped whole. `search_twda_decks` / `get_twda_deck`
+      live on both MCP and REST (`/api/v1/twda/search`, `/api/v1/twda/{id}`).
 
 ## Inventory (`/inventory`)
 _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-first

@@ -3,9 +3,10 @@
 Phases are vertical slices — each ends with a deployable Docker image and a demo.
 Feature-parity items (docs/feature-parity.md) get checked off as they land.
 
-**Scope:** card search/research + deck building only — no tournament/community-data
-phase (TWD/TDA/PDA/playtest program are explicitly out of scope, see
-docs/feature-parity.md's scope note).
+**Scope:** card search/research + deck building, plus a narrow, V5-confirmed TWD
+(Tournament Winning Decks) browser as of docs/adr/0018. TDA/PDA/playtest program/Hall
+of Fame/seating utilities/co-occurrence recommendations remain out of scope — see
+docs/feature-parity.md's scope note and ADR 0018.
 
 ## Phase 0 — Foundations (repo bootstrap)
 - Monorepo scaffolding: `core/` (Rust, wasm-pack), `server/` (axum), `frontend/`

@@ -23,6 +23,7 @@ const ProxySheet = lazy(() => import('./components/ProxySheet'))
 const SharedDeckPreview = lazy(() => import('./components/SharedDeckPreview'))
 const DeckDiff = lazy(() => import('./components/DeckDiff'))
 const PreconBrowser = lazy(() => import('./components/PreconBrowser'))
+const TwdaBrowser = lazy(() => import('./components/TwdaBrowser'))
 const RulesPage = lazy(() => import('./components/RulesPage'))
 const ChangelogPage = lazy(() => import('./components/ChangelogPage'))
 const LimitedFormatPage = lazy(() => import('./components/LimitedFormatPage'))
@@ -32,7 +33,7 @@ const SettingsPage = lazy(() => import('./components/SettingsPage'))
 const AboutPage = lazy(() => import('./components/InfoPages').then((m) => ({ default: m.AboutPage })))
 const HelpPage = lazy(() => import('./components/InfoPages').then((m) => ({ default: m.HelpPage })))
 
-const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'table', 'precons', 'rules', 'changelog', 'help', 'about'] as const
+const TABS = ['crypt', 'library', 'decks', 'inventory', 'limited', 'table', 'precons', 'twda', 'rules', 'changelog', 'help', 'about'] as const
 const LANGUAGE_FLAGS: Record<string, string> = { en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪' }
 
 export default function App() {
@@ -115,7 +116,8 @@ export default function App() {
         route.page !== 'proxy' &&
         route.page !== 'review' &&
         route.page !== 'share' &&
-        route.page !== 'diff' && (
+        route.page !== 'diff' &&
+        route.page !== 'twda-deck' && (
         <nav className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
           {TABS.map((t) => (
             <button
@@ -141,6 +143,8 @@ export default function App() {
                           ? ui.nav.table
                         : t === 'precons'
                           ? ui.nav.precons
+                          : t === 'twda'
+                            ? ui.nav.twda
                           : t === 'rules'
                           ? ui.nav.rules
                           : t === 'changelog'
@@ -169,6 +173,10 @@ export default function App() {
           <DeckDiff />
         ) : route.page === 'precons' ? (
           <PreconBrowser />
+        ) : route.page === 'twda' ? (
+          <TwdaBrowser />
+        ) : route.page === 'twda-deck' ? (
+          <TwdaBrowser deckId={route.id} />
         ) : route.page === 'inventory' ? (
           <>
             <BackupReminder ui={ui.settings} />

@@ -16,6 +16,7 @@ use crate::game_groups::{
     PlayerResultInput, UpdateGameParams,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams};
+use crate::twda_db::{self, TwdaDeckParams, TwdaSearchParams};
 use crate::AppState;
 
 #[utoipa::path(get, path = "/api/v1/crypt/search", params(CryptSearchParams),
@@ -111,6 +112,39 @@ pub async fn export_deck(
     Json(params): Json<ExportDeckParams>,
 ) -> impl IntoResponse {
     run(state, move |conn| deck_tools::export_deck(conn, &params)).await
+}
+
+#[utoipa::path(get, path = "/api/v1/twda/search", params(TwdaSearchParams),
+    responses((status = 200, description = "Confirmed-V5 tournament-winning decks matching the filters", body = Vec<twda_db::TwdaDeckSummary>)),
+    tag = "twda")]
+pub async fn search_twda_decks(
+    State(state): State<AppState>,
+    Query(params): Query<TwdaSearchParams>,
+) -> impl IntoResponse {
+    run(state, move |conn| twda_db::search_decks(conn, &params)).await
+}
+
+#[utoipa::path(get, path = "/api/v1/twda/{id}",
+    params(("id" = String, Path, description = "The deck's TWDA id, as returned by search_twda_decks")),
+    responses(
+        (status = 200, description = "Full crypt/library breakdown", body = twda_db::TwdaDeckDetail),
+        (status = 404, description = "No confirmed-V5 deck with that id", body = String),
+    ),
+    tag = "twda")]
+pub async fn get_twda_deck(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let data_dir = state.data_dir.clone();
+    let result = tokio::task::spawn_blocking(move || -> rusqlite::Result<_> {
+        let conn = cards_db::open(&data_dir)?;
+        twda_db::get_deck(&conn, &TwdaDeckParams { id })
+    })
+    .await;
+
+    match result {
+        Ok(Ok(Some(deck))) => Json(deck).into_response(),
+        Ok(Ok(None)) => (StatusCode::NOT_FOUND, "deck not found").into_response(),
+        Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
 }
 
 #[utoipa::path(post, path = "/api/v1/cards/semantic", request_body = SemanticSearchParams,

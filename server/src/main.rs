@@ -10,6 +10,7 @@ mod draw_hand;
 mod game_groups;
 mod mcp;
 mod semantic_search;
+mod twda_db;
 mod user_db;
 
 use std::sync::Arc;
@@ -58,6 +59,8 @@ use utoipa_swagger_ui::SwaggerUi;
         api::get_group_leaderboard,
         api::delete_group_game,
         api::update_group_game,
+        api::search_twda_decks,
+        api::get_twda_deck,
     )
 )]
 struct ApiDoc;
@@ -192,6 +195,8 @@ async fn main() {
         .route("/api/v1/decks/diff", post(api::diff_decks))
         .route("/api/v1/decks/import", post(api::import_deck))
         .route("/api/v1/decks/export", post(api::export_deck))
+        .route("/api/v1/twda/search", get(api::search_twda_decks))
+        .route("/api/v1/twda/{id}", get(api::get_twda_deck))
         .route("/api/v1/groups", post(api::create_game_group))
         .route("/api/v1/groups/{code}", get(api::get_game_group))
         .route(

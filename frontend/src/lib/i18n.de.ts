@@ -18,6 +18,7 @@ const de: UiStrings = {
     inventory: 'Inventar',
     limited: 'Limitiert',
     precons: 'Vorkonstruiert',
+    twda: 'Turniere',
     table: 'Tisch',
     rules: 'Regeln',
     changelog: 'Änderungen',
@@ -142,6 +143,9 @@ const de: UiStrings = {
   },
   precons: {
     title: 'Vorkonstruierte Decks', intro: 'Offizielle vorkonstruierte Decks der modernen BCP-/V5-Produktlinie, gruppiert nach Set.', cardCountNote: 'Spielfertige Deckliste mit der echten Anzahl jeder enthaltenen Karte.', loading: 'Lade Vorkonstruktionen…', loadError: (error) => `Vorkonstruktionen konnten nicht geladen werden: ${error}`, backToPrecons: '← Vorkonstruktionen', cardsSuffix: (count) => `${count} verschiedene Karten`, cryptCount: (count) => `Krypta · ${count}`, libraryCount: (count) => `Bibliothek · ${count}`, none: 'Keine', ownedOverview: (copies, distinct) => `${copies} Vorkonstruktion${copies === 1 ? '' : 'en'} besessen · ${distinct} verschiedene`, ownedOverviewNote: 'Zählt Produkte, die über das Inventar hinzugefügt wurden; lose Karten werden nicht fälschlich als physische Vorkonstruktionen gezählt.', ownedCopies: (count) => `${count} besessen`, notOwned: 'nicht besessen',
+  },
+  twda: {
+    title: 'Turniersiegerdecks', intro: 'Bestätigte V5-Turniersieger aus der TWDA — jede Karte in jedem hier gezeigten Deck wurde gegen den V5-Pool geprüft.', playerLabel: 'Spieler', cardLabel: 'Karte', dateFromLabel: 'Von', dateToLabel: 'Bis', search: 'Suchen', loading: 'Lade…', loadError: (error) => `Decks konnten nicht geladen werden: ${error}`, none: 'Keine Decks entsprechen diesen Filtern.', resultsCount: (count) => `${count} Deck${count === 1 ? '' : 's'}`, backToSearch: '← Turnierdecks', playersCount: (count) => `${count} Spieler`, cryptCount: (count) => `Krypta · ${count}`, libraryCount: (count) => `Bibliothek · ${count}`, notFound: 'Deck nicht gefunden.',
   },
   decks: {
     newDeckPlaceholder: 'Name des neuen Decks', createDeck: 'Deck erstellen', compareTwoDecks: 'Zwei Decks vergleichen →', loading: 'Lade Decks…', loadError: (error) => `Deine Decks konnten nicht geladen werden: ${error}`, noDecks: 'Noch keine Decks — Decks werden lokal in diesem Browser gespeichert (kein Konto nötig).', ownsCopies: 'Besitzt Exemplare', sharesCopies: 'Teilt Exemplare', missingSuffix: (count) => `${count} fehlend`, byAuthor: (author) => `von ${author}`, clone: 'Klonen', delete: 'Löschen', confirmDelete: (name) => `"${name}" löschen? Dies kann nicht rückgängig gemacht werden.`,

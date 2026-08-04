@@ -25,6 +25,8 @@ instantiate the identical `SchreckNetMcp` handler and expose the same tools/reso
 | `diff_decks` | **Live.** Structured card-by-card diff of two decks (crypt/library compared separately) by id/quantity — stateless, no deck storage. REST mirror: `POST /api/v1/decks/diff` |
 | `draw_hand` | **Live.** Deterministic opening crypt (4) or library (7) hand from card-id/quantity rows. An optional unsigned 64-bit decimal `seed` reproduces a draw; REST mirror: `POST /api/v1/decks/draw-hand` |
 | `get_inventory` / `update_inventory` | Collection management |
+| `search_twda_decks` | **Live.** Confirmed-V5 tournament-winning decks (docs/adr/0018) by player, card name, and/or date range. Every deck is 100% V5-confirmed at build time — no partial matches. REST mirror: `GET /api/v1/twda/search` |
+| `get_twda_deck` | **Live.** Full crypt/library breakdown for one TWDA deck by id. REST mirror: `GET /api/v1/twda/{id}` |
 
 ### Resources
 

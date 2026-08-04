@@ -14,6 +14,7 @@ const fr: UiStrings = {
     inventory: 'inventaire',
     limited: 'format limité',
     precons: 'préconstruits',
+    twda: 'tournois',
     table: 'table',
     rules: 'règles',
     changelog: 'nouveautés',
@@ -142,6 +143,9 @@ const fr: UiStrings = {
   },
   precons: {
     title: 'Decks préconstruits', intro: 'Decks préconstruits officiels de la gamme moderne BCP/V5, groupés par extension.', cardCountNote: 'Liste prête à jouer avec le nombre réel de chaque carte.', loading: 'Chargement des préconstruits…', loadError: (error) => `Impossible de charger les préconstruits : ${error}`, backToPrecons: '← Préconstruits', cardsSuffix: (count) => `${count} cartes distinctes`, cryptCount: (count) => `Crypte · ${count}`, libraryCount: (count) => `Bibliothèque · ${count}`, none: 'Aucune', ownedOverview: (copies, distinct) => `${copies} préconstruit${copies === 1 ? '' : 's'} possédé${copies === 1 ? '' : 's'} · ${distinct} différent${distinct === 1 ? '' : 's'}`, ownedOverviewNote: "Compte les produits ajoutés via l'inventaire ; les cartes seules ne sont pas prises pour des préconstruits physiques.", ownedCopies: (count) => `${count} possédé${count === 1 ? '' : 's'}`, notOwned: 'non possédé',
+  },
+  twda: {
+    title: 'Decks gagnants de tournois', intro: 'Vainqueurs de tournois V5 confirmés, tirés de la TWDA — chaque carte de chaque deck ici a été vérifiée par rapport au pool V5.', playerLabel: 'Joueur', cardLabel: 'Carte', dateFromLabel: 'Du', dateToLabel: 'Au', search: 'Rechercher', loading: 'Chargement…', loadError: (error) => `Impossible de charger les decks : ${error}`, none: 'Aucun deck ne correspond à ces filtres.', resultsCount: (count) => `${count} deck${count === 1 ? '' : 's'}`, backToSearch: '← Decks de tournoi', playersCount: (count) => `${count} joueurs`, cryptCount: (count) => `Crypte · ${count}`, libraryCount: (count) => `Bibliothèque · ${count}`, notFound: 'Deck introuvable.',
   },
   decks: {
     newDeckPlaceholder: 'Nom du nouveau deck', createDeck: 'Créer un deck', compareTwoDecks: 'Comparer deux decks →', loading: 'Chargement des decks…', loadError: (error) => `Impossible de charger vos decks : ${error}`, noDecks: "Pas encore de decks — les decks sont stockés localement dans ce navigateur (aucun compte requis).", ownsCopies: 'Possède des copies', sharesCopies: 'Partage des copies', missingSuffix: (count) => `${count} manquante${count === 1 ? '' : 's'}`, byAuthor: (author) => `par ${author}`, clone: 'Cloner', delete: 'Supprimer', confirmDelete: (name) => `Supprimer « ${name} » ? Cette action est irréversible.`,

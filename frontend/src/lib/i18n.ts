@@ -18,6 +18,7 @@ export interface UiStrings {
     inventory: string
     limited: string
     precons: string
+    twda: string
     table: string
     rules: string
     changelog: string
@@ -301,6 +302,24 @@ export interface UiStrings {
     ownedOverviewNote: string
     ownedCopies: (count: number) => string
     notOwned: string
+  }
+  twda: {
+    title: string
+    intro: string
+    playerLabel: string
+    cardLabel: string
+    dateFromLabel: string
+    dateToLabel: string
+    search: string
+    loading: string
+    loadError: (error: string) => string
+    none: string
+    resultsCount: (count: number) => string
+    backToSearch: string
+    playersCount: (count: number) => string
+    cryptCount: (count: number) => string
+    libraryCount: (count: number) => string
+    notFound: string
   }
   decks: {
     newDeckPlaceholder: string
@@ -610,6 +629,7 @@ const en: UiStrings = {
     inventory: 'inventory',
     limited: 'limited',
     precons: 'precons',
+    twda: 'twd',
     table: 'table',
     rules: 'rules',
     changelog: 'changelog',
@@ -689,6 +709,9 @@ const en: UiStrings = {
   },
   precons: {
     title: 'Precon decks', intro: 'Official preconstructed decks from the modern BCP/V5 product line, grouped by set.', cardCountNote: 'Ready-to-play decklist with the real number of copies printed in one precon.', loading: 'Loading precons…', loadError: (error) => `Couldn't load precons: ${error}`, backToPrecons: '← Precons', cardsSuffix: (count) => `${count} distinct cards`, cryptCount: (count) => `Crypt · ${count}`, libraryCount: (count) => `Library · ${count}`, none: 'None', ownedOverview: (copies, distinct) => `${copies} precon${copies === 1 ? '' : 's'} owned · ${distinct} different`, ownedOverviewNote: 'Counts products added through Inventory; loose cards are not miscounted as physical precons.', ownedCopies: (count) => `${count} owned`, notOwned: 'not owned',
+  },
+  twda: {
+    title: 'Tournament-winning decks', intro: 'Confirmed-V5 tournament winners, sourced from the TWDA — every card in every deck shown here has been checked against the V5 pool.', playerLabel: 'Player', cardLabel: 'Card', dateFromLabel: 'From', dateToLabel: 'To', search: 'Search', loading: 'Loading…', loadError: (error) => `Couldn't load decks: ${error}`, none: 'No decks match those filters.', resultsCount: (count) => `${count} deck${count === 1 ? '' : 's'}`, backToSearch: '← Tournament decks', playersCount: (count) => `${count} players`, cryptCount: (count) => `Crypt · ${count}`, libraryCount: (count) => `Library · ${count}`, notFound: 'Deck not found.',
   },
   decks: {
     newDeckPlaceholder: 'New deck name', createDeck: 'Create deck', compareTwoDecks: 'Compare two decks →', loading: 'Loading decks…', loadError: (error) => `Couldn't load your decks: ${error}`, noDecks: 'No decks yet — decks are stored locally in this browser (no account needed).', ownsCopies: 'Owns copies', sharesCopies: 'Shares copies', missingSuffix: (count) => `${count} missing`, byAuthor: (author) => `by ${author}`, clone: 'Clone', delete: 'Delete', confirmDelete: (name) => `Delete "${name}"? This can't be undone.`,

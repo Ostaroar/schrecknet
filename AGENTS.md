@@ -19,17 +19,22 @@ Its architecture consists of:
   offline-first
 - **Docker** image built by GitHub Actions → GHCR
 
-**Scope: V5 only, card search/research + deck building only.** The site hosts
+**Scope: V5 only, everywhere — cards and tournament data alike.** The site hosts
 exclusively the V5 format of VTES: the card pool is the VEKN V5-legal list
 (Fifth Edition-era products). The data pipeline filters to that pool; legality
 checking implements V5 rules (plus custom limited formats *within* the V5
 pool); filter options (clans, sects, titles, disciplines, sets, precons) are
 derived from the pool at build time, never hardcoded from the full VTES
-universe. **No tournament/community-data features** — TWD (Tournament Winning
-Decks), TDA, PDA, and the playtest program are explicitly out of scope; don't
-add them even if a vdb-parity instinct says to. Deck-in-URL sharing and common
-plaintext import/export formats (Lackey, JOL) stay in scope — that's deck
-building interop, not a tournament feature.
+universe. **Tournament data (TWD)** — a read-only browser over
+Tournament-Winning Decks — is in scope as of docs/adr/0018, sourced from
+`api.krcg.org`'s TWDA endpoints and **confirmed V5 by card-membership check
+against our own pool at ingestion time, never by release-date guessing**
+(see `data/src/v5pool.rs`'s doc comment for why guessing is a real, repeated
+incident class). TDA, PDA, the playtest program, Hall of Fame, seating
+utilities, and co-occurrence recommendations remain out of scope — see ADR
+0018 for the line between "reactivated" and "still excluded." Deck-in-URL
+sharing and common plaintext import/export formats (Lackey, JOL) stay in
+scope — that's deck building interop, not a tournament feature.
 
 **Prime directive: feature parity.** The independent implementation must not lose a single in-scope vdb feature.
 `docs/feature-parity.md` is the authoritative checklist — when you implement something,

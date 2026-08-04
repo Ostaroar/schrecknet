@@ -24,6 +24,7 @@ use crate::game_groups::{
     UpdateGameParams,
 };
 use crate::semantic_search::{SemanticError, SemanticSearchParams, SemanticSearchService};
+use crate::twda_db::{self, TwdaDeckParams, TwdaSearchParams};
 
 #[derive(Clone)]
 pub struct SchreckNetMcp {
@@ -220,6 +221,33 @@ impl SchreckNetMcp {
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         let conn = self.open()?;
         json_result(deck_tools::export_deck(&conn, &params))
+    }
+
+    #[tool(
+        description = "Search confirmed-V5 tournament-winning decks (TWDA, docs/adr/0018) by \
+        player name, a card it contains, and/or a date range. Every returned deck has 100% of \
+        its cards confirmed in the V5 pool — no partial or guessed matches. Results are newest \
+        first, capped at `limit` (default 50, max 200)."
+    )]
+    async fn search_twda_decks(
+        &self,
+        Parameters(params): Parameters<TwdaSearchParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(twda_db::search_decks(&conn, &params))
+    }
+
+    #[tool(
+        description = "Get one confirmed-V5 tournament-winning deck's full crypt/library \
+        breakdown by its TWDA id (as returned by search_twda_decks). Returns null if the id \
+        doesn't match any confirmed-V5 deck."
+    )]
+    async fn get_twda_deck(
+        &self,
+        Parameters(params): Parameters<TwdaDeckParams>,
+    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let conn = self.open()?;
+        json_result(twda_db::get_deck(&conn, &params))
     }
 
     #[tool(

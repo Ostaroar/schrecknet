@@ -10,6 +10,7 @@ mod ingest;
 mod krcg;
 mod prerender;
 mod semantic;
+mod twda;
 mod v5pool;
 mod vekn;
 
@@ -59,6 +60,23 @@ CREATE TABLE card_embeddings(
   PRIMARY KEY(card_id, model_id)
 ) WITHOUT ROWID;
 CREATE VIRTUAL TABLE cards_fts USING fts5(name, aka, card_text, content=cards, content_rowid=id);
+-- Tournament-winning decks (docs/adr/0018) — only decks where every card is
+-- confirmed present in the `cards` table above are ingested (data/src/twda.rs).
+CREATE TABLE twda_decks(
+  id TEXT PRIMARY KEY,
+  name TEXT, event TEXT, place TEXT, date TEXT,
+  player TEXT, author TEXT, players_count INT,
+  tournament_format TEXT, score TEXT, comments TEXT
+);
+CREATE INDEX twda_decks_date_idx ON twda_decks(date);
+CREATE TABLE twda_deck_cards(
+  deck_id TEXT REFERENCES twda_decks(id),
+  card_id INT REFERENCES cards(id),
+  section TEXT CHECK(section IN ('crypt','library')),
+  quantity INT
+);
+CREATE INDEX twda_deck_cards_deck_idx ON twda_deck_cards(deck_id);
+CREATE INDEX twda_deck_cards_card_idx ON twda_deck_cards(card_id);
 ";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -202,6 +220,21 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let semantic_model = semantic::prepare_model(&cache_dir, &out_dir)?;
     let embedding_count = semantic::embed_cards(&conn, &semantic_model)?;
 
+    // Tournament data (docs/adr/0018) — confirmed V5 only: every card in a
+    // fetched TWDA deck must already be in the `cards` table we just built,
+    // checked here, not guessed from the deck's date.
+    let v5_card_ids: std::collections::HashSet<i64> = {
+        let mut stmt = conn.prepare("SELECT id FROM cards")?;
+        stmt.query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?
+    };
+    let twda_decks = twda::fetch_decks(&cache_dir)?;
+    let twda_stats = twda::ingest(&conn, &twda_decks, &v5_card_ids)?;
+    eprintln!(
+        "twda: {} of {} fetched decks are confirmed V5 (100% of cards in pool)",
+        twda_stats.confirmed, twda_stats.fetched
+    );
+
     conn.execute(
         "INSERT INTO cards_fts(rowid, name, aka, card_text) SELECT id, name, aka, card_text FROM cards",
         [],
@@ -210,7 +243,7 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let total = stats.crypt + stats.library;
     conn.execute(
         "INSERT INTO meta(key, value) VALUES
-         ('schema_version', '10'), ('data_version', '15'), ('scope', 'v5'),
+         ('schema_version', '11'), ('data_version', '16'), ('scope', 'v5'),
          ('crypt_count', ?1), ('library_count', ?2),
          ('semantic_model_id', ?3), ('semantic_dimensions', ?4),
          ('semantic_document_version', ?5)",
@@ -237,8 +270,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // indexed, ~2ms; v10: added printings.scan_url — KRCG's per-card `scans`
         // object is keyed by set name, i.e. one scan photo per (card, set) pair,
         // not per card overall (cards.image_url stays the single canonical scan;
-        // this is the per-printing alternate).
-        // data_version changes whenever emitted content changes (v15 fills
+        // this is the per-printing alternate); v11: added twda_decks/
+        // twda_deck_cards (docs/adr/0018).
+        // data_version changes whenever emitted content changes (v16 adds the
+        // confirmed-V5 TWDA decks themselves, see schema_version v11 above;
+        // v15 fills
         // printings.scan_url from KRCG's `scans` field, keyed by set name, see
         // schema_version v10 above; v14 swaps
         // Tegyrius, Vizier (G2) for the group-6 promo printing: KRCG's
@@ -258,8 +294,8 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // from KRCG's per-printing "copies" field; v8 fills card_traits plus
         // official library Burn Option/Banned; v7 filled crypt sect/title/vote/
         // advancement/banned columns).
-        "schema_version": 10,
-        "data_version": 15,
+        "schema_version": 11,
+        "data_version": 16,
         "scope": "v5",
         "cards": total,
         "crypt": stats.crypt,
@@ -302,6 +338,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         // rather than via a V5 product (docs/adr/0014). Emitted so the shipped
         // database states its own pool rule, not just its contents.
         "v5_exception_card_ids": v5_exception_ids,
+        "twda": {
+            "decks_fetched": twda_stats.fetched,
+            "decks_confirmed_v5": twda_stats.confirmed,
+            "source": twda::API_URL,
+        },
     });
     std::fs::write(
         out_dir.join("cards.meta.json"),
@@ -309,10 +350,11 @@ fn build(out_dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     println!(
-        "built {} — {total} V5-pool cards ({} crypt, {} library)",
+        "built {} — {total} V5-pool cards ({} crypt, {} library), {} confirmed-V5 TWDA decks",
         db_path.display(),
         stats.crypt,
-        stats.library
+        stats.library,
+        twda_stats.confirmed
     );
     Ok(())
 }
