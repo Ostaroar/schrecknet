@@ -78,6 +78,18 @@ kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
+**Editing `deployment.yaml` later needs a manual re-apply.** The CI deploy job
+only runs `rollout restart` — it tracks the mutable `:main` image tag and never
+applies manifests — so a changed env var or resource limit does nothing until
+someone runs `kubectl apply -f k8s/deployment.yaml` again.
+
+That currently matters for the passkey relying-party settings
+(`SCHRECKNET_RP_ID` / `SCHRECKNET_RP_ORIGIN`, docs/adr/0019). WebAuthn compares
+them against the origin the browser is on; the code defaults to
+`localhost:8000` for local dev, so **until the manifest is re-applied, passkey
+registration and login on the live site will fail the origin check** while
+every other endpoint keeps working normally.
+
 Check rollout and certificate:
 
 ```bash

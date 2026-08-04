@@ -25,6 +25,17 @@ spec:
           # IfNotPresent policy would keep reusing whatever digest is already
           # cached on the node even after a newer image is pushed.
           imagePullPolicy: Always
+          env:
+            # Passkey relying party (docs/adr/0019). WebAuthn checks these
+            # against the origin the browser is actually on, so they belong
+            # with the deployment rather than baked into the image — and the
+            # code's localhost defaults are for local dev only. RP ID must be
+            # the registrable domain serving the app; only the apex resolves
+            # (there is no www record), so no subdomain scope is needed.
+            - name: SCHRECKNET_RP_ID
+              value: schreck-net.com
+            - name: SCHRECKNET_RP_ORIGIN
+              value: https://schreck-net.com
           ports:
             - containerPort: 8000
           volumeMounts:
