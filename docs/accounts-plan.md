@@ -252,6 +252,22 @@ Each ends deployable. A1–A2 ship no user-visible feature; that is intentional.
   round-trip proving the server never sees plaintext.
 - **A4 — frontend.** `/account`, recovery-code UI, sync controls in `/settings`,
   conflict resolution UI, four languages.
+  **Must correct a specific misconception, because it is the one people
+  actually have** (raised by the project owner, 2026-08-04): *"do I lose my
+  account if I clear browser data?"* The answer is no, and the UI has to say so,
+  because the truth is counter-intuitive and inverted:
+  - **Passkey — survives.** It lives in the authenticator (platform keychain,
+    1Password/Bitwarden, hardware key), not in site storage. Nothing we control.
+  - **Session — lost.** You get signed out. Sign in again, that's all.
+  - **Decks and inventory — destroyed.** This is the real risk, and it predates
+    accounts entirely (ADR 0015/0016). The backup is the mitigation.
+
+  So the account page should push **"add a second passkey"** as the primary
+  safeguard (it is the one that works before anything goes wrong), present the
+  recovery code as the fallback, and *not* imply that having an account protects
+  local data — only sync (A3) does that. Mentioning that passkeys can live in
+  1Password/iCloud/Google is worth a line: it requires nothing from us, it is
+  entirely the user's choice, and it is what makes device loss a non-event.
 - **A5 — MCP + API tokens.** Bearer auth, the four MCP tools, token management
   UI, privilege separation enforced by test.
 - **A6 — legal + deletion.** Datenschutzerklärung section, § 3 qualifier, hard
