@@ -213,7 +213,9 @@ docs/feature-parity.md's scope note).
   `.txt` file. Verified live: imported a pasted list with a comment, a
   header line, and one deliberately-invalid card name — got back
   "Added 2 cards. Couldn't match: Not A Real Card.", and the exported text
-  round-tripped exactly. ☐ still missing: JOL-specific format, XLSX
+  round-tripped exactly. JOL's actual export variant (`"<qty> x <name>"`,
+  space before `x`) is also handled — verified against smeea/vdb#40 and its
+  fix, commit fe3feb8. ☐ still missing: Amaranth link import, XLSX
 - ☑ Deck diff — compare any two saved local decks at `#/diff`; shared Rust
   core classifies additions, removals, quantity changes, and unchanged cards
 - ☑ Precon browser — `#/precons`, all 3 surfaces (`list_precons` in

@@ -1,9 +1,13 @@
 //! Plain-text deck list parsing/formatting — Lackey/JOL-style: one card per
-//! line as `"<qty>x <name>"` (the `x` is optional), blank lines/comments
-//! (`#`/`//`) and header-only lines ignored. VTES card names are globally
-//! unique, so resolving a name to a card id/kind is a frontend concern (it
-//! needs `cards.sqlite`); this module only owns the text <-> (name, qty)
-//! shape (AGENTS.md hard rule #1: domain serialization lives in core/).
+//! line as `"<qty>x <name>"` or `"<qty> x <name>"` (the space before `x`,
+//! and `x` itself, are each independently optional — verified against JOL's
+//! actual export via smeea/vdb#40 and its fix, commit fe3feb8, whose own
+//! parser uses `^\s*([0-9]+) ?x?\s*(.*)`; this mirrors that), blank
+//! lines/comments (`#`/`//`) and header-only lines ignored. VTES card names
+//! are globally unique, so resolving a name to a card id/kind is a frontend
+//! concern (it needs `cards.sqlite`); this module only owns the text <->
+//! (name, qty) shape (AGENTS.md hard rule #1: domain serialization lives in
+//! core/).
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NamedQty {
@@ -22,15 +26,19 @@ fn parse_line(line: &str) -> Option<NamedQty> {
     if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
         return None;
     }
-    let mut parts = line.splitn(2, char::is_whitespace);
-    let qty_token = parts.next()?;
-    let name = parts.next()?.trim();
-    if name.is_empty() {
+    let digits_end = line.find(|c: char| !c.is_ascii_digit())?;
+    if digits_end == 0 {
         return None;
     }
-    let qty_str = qty_token.trim_end_matches(['x', 'X']);
-    let qty: u16 = qty_str.parse().ok()?;
+    let qty: u16 = line[..digits_end].parse().ok()?;
     if qty == 0 {
+        return None;
+    }
+    let after_qty = &line[digits_end..];
+    let rest = after_qty.strip_prefix(' ').unwrap_or(after_qty);
+    let rest = rest.strip_prefix(['x', 'X']).unwrap_or(rest);
+    let name = rest.trim_start();
+    if name.is_empty() {
         return None;
     }
     Some(NamedQty {
@@ -83,6 +91,43 @@ mod tests {
                 NamedQty {
                     name: "Villein".into(),
                     qty: 2
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn parses_jol_export_format_with_space_before_x() {
+        // Verbatim sample from smeea/vdb#40 (the JOL-format import bug
+        // report) that VDB itself fixed in commit fe3feb8 — locks the exact
+        // input real JOL exports produce, not a guessed shape.
+        let text = "4 x Handsome Dan\n\
+                     1 x Laura Goldman\n\
+                     4 x Alabástrom\n\
+                     2 x Malachai\n\
+                     3 x Anarch Convert";
+        assert_eq!(
+            parse(text),
+            vec![
+                NamedQty {
+                    name: "Handsome Dan".into(),
+                    qty: 4
+                },
+                NamedQty {
+                    name: "Laura Goldman".into(),
+                    qty: 1
+                },
+                NamedQty {
+                    name: "Alabástrom".into(),
+                    qty: 4
+                },
+                NamedQty {
+                    name: "Malachai".into(),
+                    qty: 2
+                },
+                NamedQty {
+                    name: "Anarch Convert".into(),
+                    qty: 3
                 },
             ]
         );

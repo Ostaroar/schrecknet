@@ -218,13 +218,16 @@ Legend: ☐ todo · 🌓 partial · ☑ done · ✎ verify exact behavior agains
       existing free-text tag system (no new tagging mechanism)
 - ☐ Branches / revisions of a deck ✎ (vdb supports deck branches)
 - ☑ Clone / copy deck — live, from both the deck list and the editor
-- ☑ Import: paste text, Lackey-style `"<qty>x <name>"` — live
-      (core/src/dtext.rs parses; frontend resolves names against
+- ☑ Import: paste text, Lackey-style `"<qty>x <name>"` **and** JOL's actual
+      `"<qty> x <name>"` variant (space before `x` is optional independently
+      of `x` itself — verified against smeea/vdb#40 and its fix, commit
+      fe3feb8, whose parser regex `^\s*([0-9]+) ?x?\s*(.*)` this mirrors) —
+      live (core/src/dtext.rs parses; frontend resolves names against
       cards.sqlite, reports unmatched names rather than dropping them
-      silently); local `.txt` file loading is also live; ☐ still missing: JOL
-      format specifics and Amaranth link import
+      silently); local `.txt` file loading is also live; ☐ still missing:
+      Amaranth link import
 - ☑ Export: plain text (Lackey-style) with section headers, file download, and
-      clipboard copy — live; ☐ still missing: JOL-specific format and XLSX
+      clipboard copy — live; ☐ still missing: XLSX
 - ☑ Proxy printing — live at `#/decks/{id}/proxy`: every card in a deck
       (one image per copy, actual quantities) laid out at physical card size
       (2.5"×3.5", 9 per US Letter page). No PDF library dependency — uses
@@ -267,8 +270,10 @@ _Design & milestone plan: [docs/inventory-plan.md](inventory-plan.md) — local-
       steppers, remove, precon bulk add/remove with a "how many precons do you
       own" quantity field, applying each card's real per-precon copy count
       (not a flat amount — see the precon browser entry above)
-- ☑ Import/export inventory (text/file) ✎ — Lackey/JOL-style `<qty>x <name>`,
-      unresolved names reported rather than dropped, matches deck import/export
+- ☑ Import/export inventory (text/file) — Lackey/JOL-style `<qty>x <name>`
+      (both spacing variants, verified against smeea/vdb#40 — see the deck
+      import entry above), unresolved names reported rather than dropped,
+      matches deck import/export
 - ☑ Usage view: how many copies used across decks, missing counts — deck
       editor shows per-card Fixed/Flexible badges + an expandable missing-cards
       list; inventory page shows the collection-wide want-list (exportable)
