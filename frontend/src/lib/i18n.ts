@@ -40,6 +40,7 @@ export interface UiStrings {
     legal: string
     support: string
     settings: string
+    account: string
   }
   settings: {
     title: string
@@ -77,6 +78,53 @@ export interface UiStrings {
     refreshCardData: string
     refreshing: string
     refreshDone: string
+  }
+  account: {
+    title: string
+    signedOutIntro: string
+    whatItsFor: string
+    passkeyNote: string
+    displayNameLabel: string
+    displayNamePlaceholder: string
+    registerButton: string
+    registering: string
+    loginButton: string
+    loggingIn: string
+    switchToLogin: string
+    switchToRegister: string
+    recoveryInstead: string
+    recoveryCodeLabel: string
+    recoverButton: string
+    recovering: string
+    backToLogin: string
+    signedInAs: (name: string) => string
+    memberSince: (date: string) => string
+    logout: string
+    loggingOut: string
+    dataSafetyTitle: string
+    dataSafetyPasskey: string
+    dataSafetySession: string
+    dataSafetyDecks: string
+    passkeyManagerNote: string
+    passkeysTitle: string
+    passkeysNote: string
+    loadingPasskeys: string
+    addPasskeyButton: string
+    addingPasskey: string
+    lastPasskeyBadge: string
+    unnamedPasskey: string
+    renamePasskey: string
+    removePasskey: string
+    removing: string
+    nicknamePrompt: string
+    recoveryCodeTitle: string
+    recoveryCodeIntro: string
+    recoveryCodeSavedConfirm: string
+    recoveryCodeContinue: string
+    newRecoveryCodeTitle: string
+    newRecoveryCodeIntro: string
+    unsupportedBrowser: string
+    error: (message: string) => string
   }
   help: {
     eyebrow: string
@@ -652,6 +700,54 @@ const en: UiStrings = {
     legal: 'Legal notice',
     support: 'Support this project',
     settings: 'Data & backup',
+    account: 'Account',
+  },
+  account: {
+    title: 'Account',
+    signedOutIntro: 'Optional. SchreckNet works fully with zero account — this is only for whoever wants their decks to follow them across devices.',
+    whatItsFor: 'An account does one thing: it lets your decks and inventory sync to another device. Everything else keeps working exactly the same without one.',
+    passkeyNote: 'No password, no email. Sign in with a passkey — the same technology behind "sign in with Face ID/fingerprint" — stored by your device or password manager (1Password, Bitwarden, iCloud Keychain, Google Password Manager all work, entirely your choice).',
+    displayNameLabel: 'Display name',
+    displayNamePlaceholder: 'How you’ll be identified — this is also your login name',
+    registerButton: 'Create account',
+    registering: 'Creating…',
+    loginButton: 'Sign in with passkey',
+    loggingIn: 'Signing in…',
+    switchToLogin: 'Already have an account? Sign in',
+    switchToRegister: "Don't have an account? Create one",
+    recoveryInstead: 'Lost every passkey? Use your recovery code',
+    recoveryCodeLabel: 'Recovery code',
+    recoverButton: 'Recover account',
+    recovering: 'Recovering…',
+    backToLogin: '← Back to sign in',
+    signedInAs: (name) => `Signed in as ${name}`,
+    memberSince: (date) => `Member since ${date}`,
+    logout: 'Sign out',
+    loggingOut: 'Signing out…',
+    dataSafetyTitle: 'What survives clearing browser data?',
+    dataSafetyPasskey: 'Your passkey — it lives in your device or password manager, not in this site’s storage. Unaffected.',
+    dataSafetySession: 'Your sign-in — you’ll be signed out. Just sign in again.',
+    dataSafetyDecks: 'Your local decks and inventory — destroyed, exactly as without an account. Keep a backup from Data & backup.',
+    passkeyManagerNote: 'The single best safeguard: add a second passkey on another device before you need it.',
+    passkeysTitle: 'Your passkeys',
+    passkeysNote: 'One row per device or password manager that can sign you in. Add another before you lose access to this one.',
+    loadingPasskeys: 'Loading passkeys…',
+    addPasskeyButton: 'Add a passkey',
+    addingPasskey: 'Adding…',
+    lastPasskeyBadge: 'only passkey',
+    unnamedPasskey: 'Unnamed passkey',
+    renamePasskey: 'Rename',
+    removePasskey: 'Remove',
+    removing: 'Removing…',
+    nicknamePrompt: 'Label this passkey (e.g. "iPhone", "work laptop")',
+    recoveryCodeTitle: 'Save your recovery code',
+    recoveryCodeIntro: 'This is the only way back into your account if you lose every passkey. It is shown once and never recoverable — save it somewhere safe, like a password manager.',
+    recoveryCodeSavedConfirm: "I've saved my recovery code",
+    recoveryCodeContinue: 'Continue',
+    newRecoveryCodeTitle: 'Your recovery code has changed',
+    newRecoveryCodeIntro: 'Redeeming a recovery code retires it. Here is your new one — save it the same way.',
+    unsupportedBrowser: 'This browser does not support passkeys, so accounts are unavailable here. Everything else on SchreckNet still works.',
+    error: (message) => `Something went wrong: ${message}`,
   },
   settings: {
     title: 'Data & backup',

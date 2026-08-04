@@ -30,6 +30,7 @@ const LimitedFormatPage = lazy(() => import('./components/LimitedFormatPage'))
 const TablePage = lazy(() => import('./components/TablePage'))
 const LegalPage = lazy(() => import('./components/LegalPage'))
 const SettingsPage = lazy(() => import('./components/SettingsPage'))
+const AccountPage = lazy(() => import('./components/AccountPage'))
 const AboutPage = lazy(() => import('./components/InfoPages').then((m) => ({ default: m.AboutPage })))
 const HelpPage = lazy(() => import('./components/InfoPages').then((m) => ({ default: m.HelpPage })))
 
@@ -117,7 +118,8 @@ export default function App() {
         route.page !== 'review' &&
         route.page !== 'share' &&
         route.page !== 'diff' &&
-        route.page !== 'twda-deck' && (
+        route.page !== 'twda-deck' &&
+        route.page !== 'account' && (
         <nav className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
           {TABS.map((t) => (
             <button
@@ -198,6 +200,8 @@ export default function App() {
           <LegalPage />
         ) : route.page === 'settings' ? (
           <SettingsPage ui={ui.settings} cardVersion={cardDbVersion()} />
+        ) : route.page === 'account' ? (
+          <AccountPage />
         ) : route.page === 'decks' ? (
           <>
             <BackupReminder ui={ui.settings} />
@@ -229,6 +233,7 @@ export default function App() {
           <button onClick={() => navigate({ page: 'about' })} className="hover:text-ink-muted">{ui.footer.about}</button>
           <button onClick={() => navigate({ page: 'legal' })} className="hover:text-ink-muted">{ui.footer.legal}</button>
           <button onClick={() => navigate({ page: 'settings' })} className="hover:text-ink-muted">{ui.footer.settings}</button>
+          <button onClick={() => navigate({ page: 'account' })} className="hover:text-ink-muted">{ui.footer.account}</button>
           <a href="https://ko-fi.com/jannikostertag" target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted">{ui.footer.support}</a>
         </span>
       </footer>

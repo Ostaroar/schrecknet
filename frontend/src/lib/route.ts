@@ -31,6 +31,7 @@ export type Route =
   // Backup/restore + storage status (docs/adr/0016). Not `/data`, which is the
   // server's static mount for cards.sqlite.
   | { page: 'settings' }
+  | { page: 'account' }
 
 export function parsePath(pathname: string): Route {
   const path = pathname.replace(/^\/+/, '').replace(/\/+$/, '')
@@ -58,6 +59,7 @@ export function parsePath(pathname: string): Route {
   if (path === 'help') return { page: 'help' }
   if (path === 'about') return { page: 'about' }
   if (path === 'settings') return { page: 'settings' }
+  if (path === 'account') return { page: 'account' }
   // German legal-notice aliases: an Impressum must be easy to find, so the
   // obvious German URLs all resolve to the same page.
   if (path === 'legal' || path === 'imprint' || path === 'impressum' || path === 'datenschutz')
@@ -110,6 +112,8 @@ export function routeTo(route: Route): string {
       return '/legal'
     case 'settings':
       return '/settings'
+    case 'account':
+      return '/account'
   }
 }
 
